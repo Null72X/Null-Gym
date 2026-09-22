@@ -1,0 +1,749 @@
+'use client';
+
+import React, { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
+import {
+  WorkoutHistoryEntry,
+  PersonalRecord,
+  WeekPlan,
+} from '../../types/workout';
+import { getSavedHistory, getSavedWeeks } from '../../lib/storage';
+import {
+  getPersonalRecords,
+  getExerciseProgression,
+} from '../../lib/history';
+import { ProgressionChart, WeeklyBarChart } from '../../components/Charts';
+import {
+  TrendingUp,
+  Trophy,
+  Calendar,
+  Flame,
+  Dumbbell,
+  CheckCircle,
+  ChevronDown,
+  ChevronUp,
+  Search,
+  Activity,
+  Layers,
+  Clock,
+  ArrowRight,
+} from 'lucide-react';
+
+export default function ProgressPage() {
+  const [history, setHistory] = useState<WorkoutHistoryEntry[]>([]);
+  const [weeks, setWeeks] = useState<WeekPlan[]>([]);
+  const [personalRecords, setPersonalRecords] = useState<PersonalRecord[]>([]);
+  const [selectedExercise, setSelectedExercise] = useState<string>('');
+  const [expandedHistId, setExpandedHistId] = useState<string | null>(null);
+
+  // Filters
+  const [prSearch, setPrSearch] = useState<string>('');
+  const [historyFilterWeek, setHistoryFilterWeek] = useState<number | 'all'>('all');
+  const [historySearch, setHistorySearch] = useState<string>('');
+
+  useEffect(() => {
+    const loadedHistory = getSavedHistory();
+    const loadedWeeks = getSavedWeeks();
+
+    setHistory(loadedHistory);
+    setWeeks(loadedWeeks);
+
+    const prs = getPersonalRecords(loadedHistory);
+    setPersonalRecords(prs);
+
+    // Default selected exercise for chart
+    if (prs.length > 0) {
+      setSelectedExercise(prs[0].exerciseName);
+    } else if (loadedWeeks[0]?.days[0]?.exercises[0]) {
+      setSelectedExercise(loadedWeeks[0].days[0].exercises[0].name);
+    }
+  }, []);
+
+  // Compute 4-Week Completion Rates
+  const weeklyRates = useMemo(() => {
+    return [1, 2, 3, 4].map((wNum) => {
+      const week = weeks[wNum - 1];
+      if (!week) return { week: wNum, percent: 0, completedSets: 0, totalSets: 0 };
+
+      let totalSets = 0;
+      let completedSets = 0;
+
+      week.days.forEach((d) => {
+        d.exercises.forEach((ex) => {
+          totalSets += ex.sets.length;
+          completedSets += ex.sets.filter((s) => s.completed).length;
+        });
+      });
+
+      const percent = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0;
+      return { week: wNum, percent, completedSets, totalSets };
+    });
+  }, [weeks]);
+
+  // Overall Statistics
+  const totalWorkoutsLogged = history.length;
+  const totalSetsLogged = history.reduce((acc, h) => acc + h.completedSets, 0);
+  const totalVolumeLifted = Math.round(
+    history.reduce((acc, h) => acc + (h.totalVolumeKg || 0), 0)
+  );
+
+  // List of all unique exercise names ever recorded in history or plan
+  const allExerciseNames = useMemo(() => {
+    return Array.from(
+      new Set([
+        ...personalRecords.map((p) => p.exerciseName),
+        ...weeks.flatMap((w) => w.days.flatMap((d) => d.exercises.map((e) => e.name))),
+      ])
+    ).sort();
+  }, [personalRecords, weeks]);
+
+  // Progression data for selected exercise
+  const progressionData = useMemo(() => {
+    return selectedExercise ? getExerciseProgression(selectedExercise, history) : [];
+  }, [selectedExercise, history]);
+
+  // Selected exercise PR summary & stats
+  const selectedExPR = useMemo(() => {
+    return personalRecords.find(
+      (p) => p.exerciseName.toLowerCase() === selectedExercise.toLowerCase()
+    );
+  }, [personalRecords, selectedExercise]);
+
+  const estimated1RM = useMemo(() => {
+    if (!selectedExPR || !selectedExPR.maxWeight) return null;
+    const repsNum =
+      typeof selectedExPR.maxWeightReps === 'number'
+        ? selectedExPR.maxWeightReps
+        : parseInt(String(selectedExPR.maxWeightReps || 1), 10);
+    if (isNaN(repsNum) || repsNum < 1) return selectedExPR.maxWeight;
+    if (repsNum === 1) return selectedExPR.maxWeight;
+    // Brzycki Formula: Weight * (36 / (37 - Reps))
+    if (repsNum <= 10) {
+      return Math.round(selectedExPR.maxWeight * (36 / (37 - repsNum)));
+    }
+    // Epley Formula for higher reps: Weight * (1 + 0.0333 * reps)
+    return Math.round(selectedExPR.maxWeight * (1 + 0.0333 * repsNum));
+  }, [selectedExPR]);
+
+  // Filtered PR list
+  const filteredPRs = useMemo(() => {
+    if (!prSearch.trim()) return personalRecords;
+    const q = prSearch.toLowerCase().trim();
+    return personalRecords.filter((pr) => pr.exerciseName.toLowerCase().includes(q));
+  }, [personalRecords, prSearch]);
+
+  // Filtered History list
+  const filteredHistory = useMemo(() => {
+    return history.filter((entry) => {
+      const matchesWeek =
+        historyFilterWeek === 'all' || entry.weekNumber === historyFilterWeek;
+      const matchesSearch =
+        !historySearch.trim() ||
+        entry.workoutTitle.toLowerCase().includes(historySearch.toLowerCase().trim()) ||
+        entry.dayOfWeek.toLowerCase().includes(historySearch.toLowerCase().trim()) ||
+        entry.exercises.some((e) =>
+          e.exerciseName.toLowerCase().includes(historySearch.toLowerCase().trim())
+        );
+
+      return matchesWeek && matchesSearch;
+    });
+  }, [history, historyFilterWeek, historySearch]);
+
+  return (
+    <div>
+      {/* Header */}
+      <section className="day-summary-card">
+        <div className="day-summary-info">
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <TrendingUp size={18} color="var(--accent-red)" />
+            <span>Progress &amp; Performance Analytics</span>
+          </h2>
+          <p>
+            4-week progression metrics, personal records, load volume, and completed workout logs.
+          </p>
+        </div>
+
+        <div className="progress-pill">
+          <div className="progress-num">{totalWorkoutsLogged}</div>
+          <div className="progress-label">Workouts Logged</div>
+        </div>
+      </section>
+
+      {/* Summary Stat Cards */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+          gap: '8px',
+          marginBottom: '16px',
+        }}
+      >
+        <div
+          style={{
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            borderRadius: '12px',
+            padding: '12px 10px',
+            textAlign: 'center',
+          }}
+        >
+          <div style={{ color: 'var(--accent-red)', marginBottom: '4px' }}>
+            <Flame size={16} style={{ margin: '0 auto' }} />
+          </div>
+          <div
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '1.15rem',
+              fontWeight: 800,
+              color: '#fff',
+            }}
+          >
+            {totalWorkoutsLogged}
+          </div>
+          <div
+            style={{
+              fontSize: '0.62rem',
+              color: 'var(--text-dim)',
+              textTransform: 'uppercase',
+              fontWeight: 700,
+            }}
+          >
+            Sessions Done
+          </div>
+        </div>
+
+        <div
+          style={{
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            borderRadius: '12px',
+            padding: '12px 10px',
+            textAlign: 'center',
+          }}
+        >
+          <div style={{ color: 'var(--accent-amber)', marginBottom: '4px' }}>
+            <Dumbbell size={16} style={{ margin: '0 auto' }} />
+          </div>
+          <div
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '1.15rem',
+              fontWeight: 800,
+              color: '#fff',
+            }}
+          >
+            {totalSetsLogged}
+          </div>
+          <div
+            style={{
+              fontSize: '0.62rem',
+              color: 'var(--text-dim)',
+              textTransform: 'uppercase',
+              fontWeight: 700,
+            }}
+          >
+            Sets Completed
+          </div>
+        </div>
+
+        <div
+          style={{
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            borderRadius: '12px',
+            padding: '12px 10px',
+            textAlign: 'center',
+          }}
+        >
+          <div style={{ color: '#38bdf8', marginBottom: '4px' }}>
+            <Activity size={16} style={{ margin: '0 auto' }} />
+          </div>
+          <div
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '1.15rem',
+              fontWeight: 800,
+              color: '#fff',
+            }}
+          >
+            {totalVolumeLifted > 0 ? `${totalVolumeLifted.toLocaleString()} kg` : '--'}
+          </div>
+          <div
+            style={{
+              fontSize: '0.62rem',
+              color: 'var(--text-dim)',
+              textTransform: 'uppercase',
+              fontWeight: 700,
+            }}
+          >
+            Tonnage Lifted
+          </div>
+        </div>
+
+        <div
+          style={{
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            borderRadius: '12px',
+            padding: '12px 10px',
+            textAlign: 'center',
+          }}
+        >
+          <div style={{ color: 'var(--accent-green)', marginBottom: '4px' }}>
+            <Trophy size={16} style={{ margin: '0 auto' }} />
+          </div>
+          <div
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '1.15rem',
+              fontWeight: 800,
+              color: '#fff',
+            }}
+          >
+            {personalRecords.length}
+          </div>
+          <div
+            style={{
+              fontSize: '0.62rem',
+              color: 'var(--text-dim)',
+              textTransform: 'uppercase',
+              fontWeight: 700,
+            }}
+          >
+            PRs Established
+          </div>
+        </div>
+      </div>
+
+      {/* 4-Week Completion Rates Bar Chart */}
+      <WeeklyBarChart weeklyRates={weeklyRates} />
+
+      {/* Exercise Progression Analytics & Chart */}
+      <div className="clean-card" style={{ marginBottom: '16px' }}>
+        <h3
+          style={{
+            fontSize: '0.9rem',
+            fontWeight: 800,
+            color: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            marginBottom: '10px',
+          }}
+        >
+          <TrendingUp size={15} color="var(--accent-red)" />
+          <span>Exercise Progression &amp; 1RM Strength Curve</span>
+        </h3>
+
+        <div style={{ marginBottom: '10px' }}>
+          <label className="clean-label">Select Exercise to Inspect Progression</label>
+          <select
+            className="clean-input"
+            value={selectedExercise}
+            onChange={(e) => setSelectedExercise(e.target.value)}
+          >
+            {allExerciseNames.length === 0 && <option value="">No exercises tracked yet</option>}
+            {allExerciseNames.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Quick Highlights for Selected Exercise */}
+        {selectedExercise && (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+              gap: '6px',
+              marginBottom: '12px',
+            }}
+          >
+            <div
+              style={{
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                padding: '8px 10px',
+              }}
+            >
+              <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textTransform: 'uppercase' }}>
+                All-Time PR
+              </div>
+              <div
+                style={{
+                  fontSize: '0.95rem',
+                  fontWeight: 800,
+                  color: 'var(--accent-red)',
+                  fontFamily: 'var(--font-mono)',
+                  marginTop: '2px',
+                }}
+              >
+                {selectedExPR ? `${selectedExPR.maxWeight} ${selectedExPR.maxWeightUnit}` : '--'}
+              </div>
+              <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)' }}>
+                {selectedExPR?.maxWeightReps ? `× ${selectedExPR.maxWeightReps} reps` : 'No PR logged'}
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                padding: '8px 10px',
+              }}
+            >
+              <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textTransform: 'uppercase' }}>
+                Estimated 1RM
+              </div>
+              <div
+                style={{
+                  fontSize: '0.95rem',
+                  fontWeight: 800,
+                  color: '#6ee7b7',
+                  fontFamily: 'var(--font-mono)',
+                  marginTop: '2px',
+                }}
+              >
+                {estimated1RM ? `${estimated1RM} ${selectedExPR?.maxWeightUnit || 'kg'}` : '--'}
+              </div>
+              <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)' }}>
+                Brzycki / Epley calculation
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                padding: '8px 10px',
+              }}
+            >
+              <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textTransform: 'uppercase' }}>
+                Sessions Tracked
+              </div>
+              <div
+                style={{
+                  fontSize: '0.95rem',
+                  fontWeight: 800,
+                  color: '#fff',
+                  fontFamily: 'var(--font-mono)',
+                  marginTop: '2px',
+                }}
+              >
+                {progressionData.length}
+              </div>
+              <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)' }}>
+                Total recorded history
+              </div>
+            </div>
+          </div>
+        )}
+
+        <ProgressionChart
+          data={progressionData}
+          exerciseName={selectedExercise || 'Exercise'}
+          unit={selectedExPR?.maxWeightUnit || 'kg'}
+        />
+      </div>
+
+      {/* Personal Records Leaderboard */}
+      <div className="clean-card" style={{ marginBottom: '16px' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '10px',
+            flexWrap: 'wrap',
+            gap: '8px',
+          }}
+        >
+          <h3
+            style={{
+              fontSize: '0.9rem',
+              fontWeight: 800,
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <Trophy size={15} color="var(--accent-amber)" />
+            <span>Personal Records Leaderboard ({personalRecords.length})</span>
+          </h3>
+
+          {personalRecords.length > 5 && (
+            <div style={{ position: 'relative', width: '200px' }}>
+              <input
+                type="text"
+                className="clean-input"
+                placeholder="Search PRs..."
+                value={prSearch}
+                onChange={(e) => setPrSearch(e.target.value)}
+                style={{ fontSize: '0.72rem', padding: '4px 8px 4px 26px' }}
+              />
+              <Search
+                size={12}
+                color="var(--text-dim)"
+                style={{ position: 'absolute', left: '8px', top: '8px' }}
+              />
+            </div>
+          )}
+        </div>
+
+        {personalRecords.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-dim)', fontSize: '0.8rem' }}>
+            <Trophy size={28} color="var(--text-dim)" style={{ margin: '0 auto 8px', opacity: 0.5 }} />
+            <div>No Personal Records established yet.</div>
+            <p style={{ fontSize: '0.74rem', marginTop: '4px' }}>
+              Log workout sets with loads in the tracker to automatically establish PRs.
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '340px', overflowY: 'auto' }}>
+            {filteredPRs.map((pr, idx) => (
+              <div
+                key={idx}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid rgba(255, 255, 255, 0.04)',
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  cursor: 'pointer',
+                  transition: 'border-color 0.15s ease',
+                }}
+                onClick={() => setSelectedExercise(pr.exerciseName)}
+                title="Click to view progression curve"
+              >
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '0.84rem', color: '#fff' }}>
+                    {pr.exerciseName}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '0.66rem',
+                      color: 'var(--text-dim)',
+                      fontFamily: 'var(--font-mono)',
+                      marginTop: '1px',
+                    }}
+                  >
+                    Week {pr.weekNumber || 1} · {pr.date ? new Date(pr.date).toLocaleDateString() : 'Recorded'}
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <div
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '0.95rem',
+                      fontWeight: 800,
+                      color: '#f87171',
+                    }}
+                  >
+                    {pr.maxWeight} {pr.maxWeightUnit}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '0.68rem',
+                      color: 'var(--text-muted)',
+                      fontFamily: 'var(--font-mono)',
+                    }}
+                  >
+                    × {pr.maxWeightReps} reps
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Workout History Log */}
+      <div className="clean-card">
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '10px',
+            flexWrap: 'wrap',
+            gap: '8px',
+          }}
+        >
+          <h3
+            style={{
+              fontSize: '0.9rem',
+              fontWeight: 800,
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <Calendar size={15} color="var(--accent-red)" />
+            <span>Workout History Log ({history.length})</span>
+          </h3>
+
+          {/* Week Filter Tabs */}
+          <div style={{ display: 'flex', gap: '4px' }}>
+            {(['all', 1, 2, 3, 4] as const).map((w) => (
+              <button
+                key={w}
+                type="button"
+                className={`btn-clean btn-sm ${historyFilterWeek === w ? 'btn-primary' : ''}`}
+                style={{ padding: '2px 8px', fontSize: '0.68rem' }}
+                onClick={() => setHistoryFilterWeek(w)}
+              >
+                {w === 'all' ? 'All Weeks' : `Wk ${w}`}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {history.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '28px 0', color: 'var(--text-dim)', fontSize: '0.8rem' }}>
+            <Calendar size={28} color="var(--text-dim)" style={{ margin: '0 auto 8px', opacity: 0.5 }} />
+            <div>No completed workouts logged yet.</div>
+            <p style={{ fontSize: '0.74rem', marginTop: '4px', maxWidth: '320px', margin: '4px auto 14px' }}>
+              When you finish your session in the tracker and click &ldquo;Save Workout to History&rdquo;, it will appear here.
+            </p>
+            <Link href="/" className="btn-clean btn-primary btn-sm">
+              <span>Go to Today&apos;s Workout</span>
+              <ArrowRight size={13} />
+            </Link>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {filteredHistory.map((entry) => {
+              const isExpanded = expandedHistId === entry.id;
+
+              return (
+                <div
+                  key={entry.id}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '10px',
+                    padding: '10px 12px',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => setExpandedHistId(isExpanded ? null : entry.id)}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div
+                        style={{
+                          fontWeight: 800,
+                          fontSize: '0.86rem',
+                          color: '#fff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <CheckCircle size={13} color="var(--accent-green)" />
+                        <span>
+                          Week {entry.weekNumber} · {entry.dayOfWeek} ({entry.workoutTitle})
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '0.68rem',
+                          color: 'var(--text-dim)',
+                          fontFamily: 'var(--font-mono)',
+                          marginTop: '2px',
+                        }}
+                      >
+                        {new Date(entry.date).toLocaleDateString()} · {entry.completedExercises} Exercises ·{' '}
+                        {entry.completedSets} Sets
+                        {entry.totalVolumeKg ? ` · ${Math.round(entry.totalVolumeKg)} kg volume` : ''}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="icon-action-btn"
+                      style={{ border: 'none', background: 'none' }}
+                    >
+                      {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                    </button>
+                  </div>
+
+                  {/* Expanded exercise details */}
+                  {isExpanded && (
+                    <div
+                      style={{
+                        marginTop: '10px',
+                        paddingTop: '8px',
+                        borderTop: '1px solid var(--border)',
+                      }}
+                    >
+                      {entry.exercises.map((ex, exIdx) => (
+                        <div key={exIdx} style={{ marginBottom: '8px' }}>
+                          <div
+                            style={{
+                              fontSize: '0.78rem',
+                              fontWeight: 700,
+                              color: '#cbd5e1',
+                              marginBottom: '3px',
+                            }}
+                          >
+                            {ex.exerciseName}
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                            {ex.sets.map((s, sIdx) => {
+                              const isWu = s.type === 'warmup';
+                              const label = isWu ? `W${sIdx + 1}` : `S${sIdx + 1}`;
+
+                              let metricStr = '';
+                              if (s.duration && s.distance) {
+                                metricStr = `${s.duration} · ${s.distance}`;
+                              } else if (s.duration) {
+                                metricStr = `${s.duration}`;
+                              } else if (s.load && s.load > 0) {
+                                metricStr = `${s.load} ${s.unit} × ${s.reps}`;
+                              } else {
+                                metricStr = `BW × ${s.reps}`;
+                              }
+
+                              return (
+                                <span
+                                  key={sIdx}
+                                  className="clean-badge"
+                                  style={{
+                                    fontSize: '0.64rem',
+                                    background: isWu
+                                      ? 'rgba(245,158,11,0.1)'
+                                      : 'rgba(239,68,68,0.1)',
+                                    color: isWu ? '#fde68a' : '#fca5a5',
+                                    fontFamily: 'var(--font-mono)',
+                                    padding: '2px 6px',
+                                  }}
+                                >
+                                  <strong>{label}:</strong> {metricStr}
+                                  {s.rpe ? ` @ RPE ${s.rpe}` : ''}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
