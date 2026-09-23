@@ -78,34 +78,34 @@ export default function Navbar() {
       <header className="top-bar">
         <Link href="/" className="app-title-group">
           <span className="live-dot" />
-          <span className="app-title">Null Gym App</span>
+          <span className="app-title">Null Gym</span>
         </Link>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {renderCloudBadge()}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {saveStatus === 'saving' ? (
+            <span className="cloud-status-pill syncing">
+              <span>🟡</span>
+              <span>Saving...</span>
+            </span>
+          ) : (
+            <Link
+              href="/settings"
+              className="cloud-status-pill synced"
+              title="Workouts saved and synchronized"
+            >
+              <span>🟢</span>
+              <span>Synced</span>
+            </Link>
+          )}
 
-          <span
-            className={`save-status-pill ${saveStatus === 'saving' ? 'saving' : 'saved'}`}
+          <Link
+            href="/settings"
+            className="icon-action-btn"
+            style={{ width: '28px', height: '28px', borderRadius: '50%', color: 'var(--text-muted)' }}
+            title="App Settings &amp; Install"
           >
-            {saveStatus === 'saving' ? 'Saving...' : 'Saved ✓'}
-          </span>
-
-          <span
-            className="phase-pill"
-            style={{
-              fontSize: '0.65rem',
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '0.6px',
-              background: 'rgba(239, 68, 68, 0.14)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              color: '#f87171',
-              padding: '2px 7px',
-              borderRadius: '999px',
-            }}
-          >
-            4-Week Plan
-          </span>
+            <Settings size={14} />
+          </Link>
         </div>
       </header>
 

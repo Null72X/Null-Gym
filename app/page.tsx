@@ -327,6 +327,7 @@ export default function DashboardPage() {
                 defaultUnit={unit}
                 lastPerformance={lastPerf}
                 mode="tracker"
+                weekNumber={currentWeek}
                 onUpdate={(updated) => handleUpdateExercise(exIdx, updated)}
                 onStartRest={handleStartRest}
               />

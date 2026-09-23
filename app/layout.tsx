@@ -3,8 +3,13 @@ import './globals.css';
 import Navbar from '../components/Navbar';
 
 export const metadata: Metadata = {
-  title: 'Null Gym App · 4-Week Planner & Tracker',
-  description: 'Private personal 4-week workout management, tracking, and progression website.',
+  title: 'Null Gym · 4-Week Workout Planner & Tracker',
+  description: 'Private 4-week workout planner, progressive overload tracker, and 570 exercise library.',
+  manifest: '/manifest.json',
+  icons: {
+    icon: '/icons/icon-192.svg',
+    apple: '/icons/icon-192.svg',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -29,6 +34,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="theme-color" content="#070709" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link

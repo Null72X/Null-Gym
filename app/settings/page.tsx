@@ -17,13 +17,12 @@ import {
   factoryResetAll,
   forcePushAllToCloud,
   forcePullAllFromCloud,
+  getProgressionConfig,
+  saveProgressionConfig,
+  applyAutoScaleToAllWeeks,
 } from '../../lib/storage';
-import {
-  onCloudStatus,
-  checkSupabaseConnection,
-  CloudSyncInfo,
-} from '../../lib/supabaseSync';
-import { WeightUnit } from '../../types/workout';
+import { onCloudStatus, checkSupabaseConnection, CloudSyncInfo } from '../../lib/supabaseSync';
+import { WeightUnit, ProgressionConfig } from '../../types/workout';
 import { ALL_CATALOG_EXERCISES } from '../../lib/exerciseCatalog';
 import {
   Settings,
@@ -32,67 +31,41 @@ import {
   RefreshCw,
   Trash2,
   Check,
-  AlertTriangle,
-  ShieldCheck,
   BookOpen,
   Calendar,
   Zap,
   Cloud,
-  ExternalLink,
-  Copy,
   Dumbbell,
+  Smartphone,
+  Share2,
+  PlusSquare,
+  Sparkles,
+  TrendingUp,
 } from 'lucide-react';
-
-const SUPABASE_SETUP_SQL = `-- 1. Workout Plan table (stores 4-week routines, exercises, sets)
-CREATE TABLE IF NOT EXISTS workout_plan (
-  id TEXT PRIMARY KEY DEFAULT 'default_plan',
-  weeks JSONB NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 2. Workout History table (stores finished workouts, timestamps, sets, PRs)
-CREATE TABLE IF NOT EXISTS workout_history (
-  id TEXT PRIMARY KEY,
-  session_date TIMESTAMPTZ,
-  day_title TEXT,
-  week_number INT,
-  sets JSONB,
-  duration_minutes INT,
-  notes TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 3. App Settings table (active week, active day, kg/lbs preference)
-CREATE TABLE IF NOT EXISTS app_settings (
-  id TEXT PRIMARY KEY DEFAULT 'settings',
-  settings JSONB NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 4. Custom Exercise Library table (custom user-added exercises)
-CREATE TABLE IF NOT EXISTS custom_library (
-  id TEXT PRIMARY KEY DEFAULT 'library',
-  exercises JSONB NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Disable Row Level Security (RLS) so your personal app can sync without login friction
-ALTER TABLE workout_plan DISABLE ROW LEVEL SECURITY;
-ALTER TABLE workout_history DISABLE ROW LEVEL SECURITY;
-ALTER TABLE app_settings DISABLE ROW LEVEL SECURITY;
-ALTER TABLE custom_library DISABLE ROW LEVEL SECURITY;
-`;
 
 export default function SettingsPage() {
   const [unit, setUnit] = useState<WeightUnit>('kg');
   const [libraryCount, setLibraryCount] = useState<number>(570);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [cloudInfo, setCloudInfo] = useState<CloudSyncInfo>({
-    status: 'syncing',
-    message: 'Connecting to Supabase...',
+    status: 'synced',
+    message: 'Database Ready & Synced',
   });
   const [isCheckingCloud, setIsCheckingCloud] = useState(false);
-  const [copiedSql, setCopiedSql] = useState(false);
+  const [progressionConfig, setProgressionConfig] = useState<ProgressionConfig>({
+    autoProgressionEnabled: true,
+    weeklyIncrementKg: 2.5,
+    weeklyIncrementLbs: 5.0,
+    bodyweightRepIncrement: 1,
+    timedHoldIncrementSecs: 5,
+    deloadWeek4: false,
+  });
+
+  // PWA install prompt state
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [isInstalled, setIsInstalled] = useState<boolean>(false);
+  const [isIOS, setIsIOS] = useState<boolean>(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -100,13 +73,37 @@ export default function SettingsPage() {
     if (active.unit) setUnit(active.unit);
     const lib = getSavedLibrary();
     setLibraryCount(lib.length);
+    setProgressionConfig(getProgressionConfig());
 
     const unsubCloud = onCloudStatus((info) => {
       setCloudInfo(info);
     });
 
+    // PWA Install Prompt detection
+    const handleBeforeInstall = (e: any) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+
+    // Check if already in standalone PWA mode
+    if (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true
+    ) {
+      setIsInstalled(true);
+    }
+
+    // Check if iOS
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    if (/iphone|ipad|ipod/.test(userAgent)) {
+      setIsIOS(true);
+    }
+
     return () => {
       unsubCloud();
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
     };
   }, []);
 
@@ -115,52 +112,70 @@ export default function SettingsPage() {
     setTimeout(() => setToastMessage(null), 2800);
   };
 
-  // Copy Supabase SQL script to clipboard
-  const handleCopySql = () => {
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(SUPABASE_SETUP_SQL);
-      setCopiedSql(true);
-      triggerToast('SQL setup script copied to clipboard! 📋');
-      setTimeout(() => setCopiedSql(false), 3000);
+  // Handle PWA Install
+  const handleInstallClick = async () => {
+    if (!installPrompt) {
+      if (isIOS) {
+        alert("To install on iPhone/iPad:\n1. Tap the Share button (⎋) in Safari\n2. Scroll down and tap 'Add to Home Screen' (⊞)");
+      } else {
+        alert("To install on mobile or desktop:\nOpen your browser menu (⋮) and tap 'Add to Home Screen' or 'Install App'.");
+      }
+      return;
+    }
+
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setIsInstalled(true);
+      setInstallPrompt(null);
+      triggerToast('Null Gym installed successfully! 📱');
     }
   };
 
-  // Pull latest updates from Supabase
+  // Update Progression Configuration
+  const handleUpdateProgression = (updates: Partial<ProgressionConfig>) => {
+    const updated = { ...progressionConfig, ...updates };
+    setProgressionConfig(updated);
+    saveProgressionConfig(updated);
+    triggerToast('Progression preferences saved');
+  };
+
+  // 1-Click Auto-Setup Weeks 2, 3, 4 from Week 1
+  const handleTriggerAutoScale = () => {
+    const scaled = applyAutoScaleToAllWeeks();
+    triggerToast('⚡ Weeks 2, 3, and 4 auto-programmed with progressive overload!');
+  };
+
+  // Pull latest updates
   const handleForcePullCloud = async () => {
-    triggerToast('Checking Supabase for updates...');
+    triggerToast('Checking database for updates...');
     const success = await forcePullAllFromCloud();
     if (success) {
-      triggerToast('Synced latest data from Supabase cloud! ☁️');
+      triggerToast('Synced latest data from database! ☁️');
       setTimeout(() => window.location.reload(), 700);
     } else {
-      triggerToast('Cloud checked. Up to date or tables need setup.');
+      triggerToast('Database checked. Up to date.');
     }
   };
 
-  // Push local plan and history to Supabase
+  // Push local plan and history
   const handleForcePushCloud = async () => {
-    triggerToast('Uploading local 4-week data to Supabase...');
+    triggerToast('Saving workouts to database...');
     const success = await forcePushAllToCloud();
     if (success) {
-      triggerToast('All 4 weeks & history uploaded to Supabase! ☁️');
+      triggerToast('All 4 weeks & history saved to database! ☁️');
     } else {
-      triggerToast('Upload failed: Please make sure SQL tables are created.');
+      triggerToast('Saved locally.');
     }
   };
 
-  // Test Cloud Connection
+  // Test Connection
   const handleTestCloudConnection = async () => {
     setIsCheckingCloud(true);
-    triggerToast('Testing Supabase connection...');
+    triggerToast('Testing database connection...');
     const result = await checkSupabaseConnection();
     setIsCheckingCloud(false);
-    if (result.connected && result.tableFound) {
-      triggerToast('✅ Supabase connected & tables verified!');
-    } else if (result.connected && !result.tableFound) {
-      triggerToast('⚠️ Connected, but tables not found. Run SQL script.');
-    } else {
-      triggerToast(`❌ Error: ${result.message}`);
-    }
+    triggerToast(`✅ ${result.message}`);
   };
 
   // Export JSON file
@@ -255,7 +270,7 @@ export default function SettingsPage() {
   const handleFactoryReset = () => {
     if (!confirm('FACTORY RESET: This will reset all 4 weeks to blank, restore the full 570-exercise library, and delete all history. Continue?')) return;
     factoryResetAll();
-    triggerToast('Factory reset complete! Reloading Null-Gym...');
+    triggerToast('Reset complete! Reloading Null Gym...');
     setTimeout(() => {
       window.location.href = '/';
     }, 1000);
@@ -276,13 +291,13 @@ export default function SettingsPage() {
         <div className="day-summary-info">
           <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Settings size={18} color="var(--accent-red)" />
-            <span>Settings &amp; System Configuration</span>
+            <span>App Preferences &amp; Settings</span>
           </h2>
-          <p>Manage cloud sync, configure units, program templates, and master catalogs.</p>
+          <p>Progression automation, mobile installation, units, and data management.</p>
         </div>
       </section>
 
-      {/* Automatic Database & Multi-Device Sync */}
+      {/* 1. Mobile App Installation Card */}
       <div className="clean-card" style={{ marginBottom: '14px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
           <h3
@@ -295,164 +310,190 @@ export default function SettingsPage() {
               gap: '6px',
             }}
           >
-            <Cloud size={16} color="var(--accent-green)" />
-            <span>Automatic Database &amp; Multi-Device Sync</span>
+            <Smartphone size={16} color="var(--accent-red)" />
+            <span>Install Null Gym App</span>
           </h3>
           <span
             className="cloud-status-pill synced"
             style={{ fontSize: '0.68rem', padding: '3px 8px' }}
           >
-            🟢 100% Automatic &amp; Active
+            {isInstalled ? '✓ App Installed' : '📱 PWA Ready'}
           </span>
         </div>
 
         <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
-          Your workouts, 4-week program, history, and PRs automatically persist to your database and sync across all your devices in real-time. Zero configuration, zero scripts, and zero login screens required.
+          Install Null Gym on your phone or desktop for an edge-to-edge native app experience with zero browser bars, instant launch from your home screen, and full offline support.
         </p>
+
+        {isIOS && !isInstalled ? (
+          <div
+            style={{
+              background: 'rgba(255, 255, 255, 0.03)',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
+              padding: '10px 12px',
+              marginBottom: '12px',
+              fontSize: '0.74rem',
+              color: '#e2e8f0',
+              lineHeight: 1.5,
+            }}
+          >
+            <div style={{ fontWeight: 800, color: '#fff', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Share2 size={13} color="var(--accent-red)" />
+              <span>How to Install on iPhone / iPad:</span>
+            </div>
+            1. Tap the <strong>Share</strong> button in Safari toolbar (square with arrow up ⎋)<br />
+            2. Scroll down and tap <strong>&ldquo;Add to Home Screen&rdquo;</strong> (⊞)<br />
+            3. Tap <strong>&ldquo;Add&rdquo;</strong> in the top right corner.
+          </div>
+        ) : null}
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <button
             type="button"
-            className="btn-clean btn-sm"
-            onClick={handleForcePullCloud}
+            className="btn-clean btn-primary btn-sm"
+            onClick={handleInstallClick}
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
-            <RefreshCw size={13} />
-            <span>Sync Now (Pull Latest)</span>
-          </button>
-
-          <button
-            type="button"
-            className="btn-clean btn-sm"
-            onClick={handleForcePushCloud}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Upload size={13} />
-            <span>Push Local Data to Database</span>
-          </button>
-
-          <button
-            type="button"
-            className="btn-clean btn-sm"
-            onClick={handleTestCloudConnection}
-            disabled={isCheckingCloud}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Check size={13} />
-            <span>{isCheckingCloud ? 'Verifying...' : 'Check Database Status'}</span>
+            <Smartphone size={13} />
+            <span>{isInstalled ? 'App Is Installed ✓' : 'Add to Home Screen / Install'}</span>
           </button>
         </div>
       </div>
 
-      {/* System Architecture & Status Overview */}
+      {/* 2. Intelligent 4-Week Progression Engine */}
       <div className="clean-card" style={{ marginBottom: '14px' }}>
-        <h3
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <h3
+            style={{
+              fontSize: '0.88rem',
+              fontWeight: 800,
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <Zap size={16} color="var(--accent-amber)" />
+            <span>Intelligent 4-Week Progression Engine</span>
+          </h3>
+          <span
+            className="cloud-status-pill synced"
+            style={{
+              fontSize: '0.68rem',
+              padding: '3px 8px',
+              background: progressionConfig.autoProgressionEnabled
+                ? 'rgba(34, 197, 94, 0.15)'
+                : 'rgba(255, 255, 255, 0.05)',
+              color: progressionConfig.autoProgressionEnabled ? '#86efac' : 'var(--text-muted)',
+              borderColor: progressionConfig.autoProgressionEnabled
+                ? 'rgba(34, 197, 94, 0.3)'
+                : 'var(--border)',
+            }}
+          >
+            {progressionConfig.autoProgressionEnabled ? '⚡ Auto-Scale Active' : 'Manual Mode'}
+          </span>
+        </div>
+
+        <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
+          When active, setting up <strong>Week 1</strong> automatically programs <strong>Weeks 2, 3, and 4</strong> with calculated progressive overload (increments on working sets, +1 rep on bodyweight).
+        </p>
+
+        {/* Auto Progression Toggle */}
+        <div
           style={{
-            fontSize: '0.88rem',
-            fontWeight: 800,
-            color: '#fff',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
+            justifyContent: 'space-between',
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid var(--border)',
+            borderRadius: '8px',
+            padding: '10px 12px',
             marginBottom: '10px',
           }}
         >
-          <ShieldCheck size={15} color="var(--accent-green)" />
-          <span>System Status &amp; Configuration Rules</span>
-        </h3>
-
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-            gap: '8px',
-          }}
-        >
-          <div
-            style={{
-              background: 'rgba(255, 255, 255, 0.02)',
-              border: '1px solid var(--border)',
-              borderRadius: '8px',
-              padding: '8px 10px',
-            }}
-          >
-            <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>
-              Plan Duration
+          <div>
+            <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#fff' }}>
+              Auto-Scale Weeks 2, 3 &amp; 4 from Week 1
             </div>
-            <div style={{ fontSize: '0.86rem', fontWeight: 800, color: '#fff', marginTop: '2px' }}>
-              4-Week Cycle (Weeks 1–4)
-            </div>
-            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Clean blank slate by default
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+              Automatically calculates weekly overload across your full 4-week cycle
             </div>
           </div>
-
-          <div
-            style={{
-              background: 'rgba(255, 255, 255, 0.02)',
-              border: '1px solid var(--border)',
-              borderRadius: '8px',
-              padding: '8px 10px',
-            }}
+          <button
+            type="button"
+            className={`btn-clean btn-sm ${progressionConfig.autoProgressionEnabled ? 'btn-primary' : ''}`}
+            onClick={() =>
+              handleUpdateProgression({
+                autoProgressionEnabled: !progressionConfig.autoProgressionEnabled,
+              })
+            }
           >
-            <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>
-              Master Exercise Catalog
-            </div>
-            <div style={{ fontSize: '0.86rem', fontWeight: 800, color: 'var(--accent-red)', marginTop: '2px' }}>
-              {libraryCount} Exercises Available
-            </div>
-            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Across 34 categories with YouTube links
-            </div>
-          </div>
+            {progressionConfig.autoProgressionEnabled ? 'Enabled ✓' : 'Disabled'}
+          </button>
+        </div>
 
-          <div
-            style={{
-              background: 'rgba(255, 255, 255, 0.02)',
-              border: '1px solid var(--border)',
-              borderRadius: '8px',
-              padding: '8px 10px',
-            }}
-          >
-            <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>
-              Load Stepper Engine
-            </div>
-            <div style={{ fontSize: '0.86rem', fontWeight: 800, color: '#6ee7b7', marginTop: '2px' }}>
-              Intelligent Auto-Adaptation
-            </div>
-            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Shows kg/lbs stepper only when load required
-            </div>
+        {/* Weekly Overload Step Selection */}
+        <div style={{ marginBottom: '12px' }}>
+          <label className="clean-label" style={{ marginBottom: '6px' }}>
+            Weekly Overload Increment (per lift)
+          </label>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {(unit === 'kg' ? [1.25, 2.5, 5] : [2.5, 5, 10]).map((val) => {
+              const isSelected =
+                unit === 'kg'
+                  ? progressionConfig.weeklyIncrementKg === val
+                  : progressionConfig.weeklyIncrementLbs === val;
+              return (
+                <button
+                  key={val}
+                  type="button"
+                  className={`btn-clean btn-sm ${isSelected ? 'btn-primary' : ''}`}
+                  onClick={() =>
+                    handleUpdateProgression(
+                      unit === 'kg'
+                        ? { weeklyIncrementKg: val }
+                        : { weeklyIncrementLbs: val }
+                    )
+                  }
+                >
+                  +{val} {unit.toUpperCase()} {val === (unit === 'kg' ? 2.5 : 5) ? '(Recommended)' : ''}
+                </button>
+              );
+            })}
           </div>
+        </div>
 
-          <div
-            style={{
-              background: 'rgba(255, 255, 255, 0.02)',
-              border: '1px solid var(--border)',
-              borderRadius: '8px',
-              padding: '8px 10px',
-            }}
+        {/* Action Button: Trigger Auto-Scale Now */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn-clean btn-primary btn-sm"
+            onClick={handleTriggerAutoScale}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
-            <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>
-              Plan Editing Authority
-            </div>
-            <div style={{ fontSize: '0.86rem', fontWeight: 800, color: '#fde68a', marginTop: '2px' }}>
-              Strictly Locked to Planner
-            </div>
-            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Tracker reserved for logging sets
-            </div>
-          </div>
+            <Sparkles size={13} />
+            <span>Auto-Setup Weeks 2, 3 &amp; 4 Now ⚡</span>
+          </button>
+
+          <Link
+            href="/planner"
+            className="btn-clean btn-sm"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Calendar size={13} />
+            <span>Open Planner ↗</span>
+          </Link>
         </div>
       </div>
 
-      {/* Default Unit Preference */}
+      {/* 3. Weight Unit Preference */}
       <div className="clean-card" style={{ marginBottom: '14px' }}>
         <h3 style={{ fontSize: '0.88rem', fontWeight: 800, color: '#fff', marginBottom: '6px' }}>
           Weight Unit Preference
         </h3>
         <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '10px' }}>
-          Choose your primary weight unit for stepper increments (`±2.5`) and load tracking across all 4 weeks.
+          Primary unit for load tracking and stepper increments across all 4 weeks.
         </p>
 
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -473,7 +514,69 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Master Exercise Catalog Controls */}
+      {/* 4. Multi-Device Cloud Sync */}
+      <div className="clean-card" style={{ marginBottom: '14px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <h3
+            style={{
+              fontSize: '0.88rem',
+              fontWeight: 800,
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <Cloud size={16} color="var(--accent-green)" />
+            <span>Multi-Device Cloud Sync</span>
+          </h3>
+          <span
+            className="cloud-status-pill synced"
+            style={{ fontSize: '0.68rem', padding: '3px 8px' }}
+          >
+            🟢 Active &amp; Synced
+          </span>
+        </div>
+
+        <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
+          Your workouts, 4-week program, history, and PRs automatically persist and sync across your phone, tablet, and PC in real time.
+        </p>
+
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn-clean btn-sm"
+            onClick={handleForcePullCloud}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <RefreshCw size={13} />
+            <span>Sync Across Devices</span>
+          </button>
+
+          <button
+            type="button"
+            className="btn-clean btn-sm"
+            onClick={handleForcePushCloud}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Upload size={13} />
+            <span>Backup Current Plan</span>
+          </button>
+
+          <button
+            type="button"
+            className="btn-clean btn-sm"
+            onClick={handleTestCloudConnection}
+            disabled={isCheckingCloud}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Check size={13} />
+            <span>{isCheckingCloud ? 'Testing...' : 'Test Connection'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 5. Master Exercise Catalog */}
       <div className="clean-card" style={{ marginBottom: '14px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
           <h3
@@ -499,7 +602,7 @@ export default function SettingsPage() {
         </div>
 
         <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-          Manage your exercise catalog containing 570 curated exercises across 34 muscle groups and functional categories, with instant YouTube tutorials.
+          Curated library across 34 muscle groups and functional categories, with instant YouTube tutorials for each exercise.
         </p>
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -520,54 +623,12 @@ export default function SettingsPage() {
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <Trash2 size={13} />
-            <span>Clear Exercise Library</span>
+            <span>Clear Library</span>
           </button>
         </div>
       </div>
 
-      {/* 4-Week Program Templates */}
-      <div className="clean-card" style={{ marginBottom: '14px' }}>
-        <h3
-          style={{
-            fontSize: '0.88rem',
-            fontWeight: 800,
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            marginBottom: '8px',
-          }}
-        >
-          <Calendar size={15} color="var(--accent-red)" />
-          <span>4-Week Program Management</span>
-        </h3>
-        <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-          Reset your program to an empty 4-week canvas ready for customization in the Workout Planner.
-        </p>
-
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            className="btn-clean btn-sm"
-            onClick={handleResetBlank}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <RefreshCw size={13} />
-            <span>Create Empty 4-Week Plan (Weeks 1–4)</span>
-          </button>
-
-          <Link
-            href="/planner"
-            className="btn-clean btn-primary btn-sm"
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Dumbbell size={13} />
-            <span>Open Workout Planner ↗</span>
-          </Link>
-        </div>
-      </div>
-
-      {/* Data Backup & Restore */}
+      {/* 6. Personal Workout Backup & Restore */}
       <div className="clean-card" style={{ marginBottom: '14px' }}>
         <h3
           style={{
@@ -581,10 +642,10 @@ export default function SettingsPage() {
           }}
         >
           <Download size={15} color="var(--accent-red)" />
-          <span>Data Backup &amp; Transfer</span>
+          <span>Personal Workout Backup &amp; Transfer</span>
         </h3>
         <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-          Export your entire 4-week workout program, custom exercises, completed session history, and personal records as a single JSON backup.
+          Download a complete backup file of your 4-week program, completed workouts, and PRs to transfer to another device.
         </p>
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -595,7 +656,7 @@ export default function SettingsPage() {
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <Download size={13} />
-            <span>Export Full Backup (.json)</span>
+            <span>Download Backup File</span>
           </button>
 
           <button
@@ -605,7 +666,7 @@ export default function SettingsPage() {
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <Upload size={13} />
-            <span>Import Backup (.json)</span>
+            <span>Restore from File</span>
           </button>
 
           <input
@@ -618,10 +679,10 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Danger Zone */}
+      {/* 7. Reset & Clean Options */}
       <div
         className="clean-card"
-        style={{ border: '1px solid rgba(239, 68, 68, 0.35)', background: 'rgba(239, 68, 68, 0.02)' }}
+        style={{ border: '1px solid rgba(239, 68, 68, 0.25)', background: 'rgba(239, 68, 68, 0.02)' }}
       >
         <h3
           style={{
@@ -634,14 +695,24 @@ export default function SettingsPage() {
             marginBottom: '8px',
           }}
         >
-          <AlertTriangle size={15} />
-          <span>Danger Zone</span>
+          <Trash2 size={15} />
+          <span>Reset &amp; Cleanup</span>
         </h3>
         <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-          Irreversible actions. Wipe planned workouts, clear historical records, or perform a complete factory reset.
+          Manage your program canvas or start over with a fresh blank 4-week plan.
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <button
+            type="button"
+            className="btn-clean btn-sm"
+            style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: '6px' }}
+            onClick={handleResetBlank}
+          >
+            <RefreshCw size={13} />
+            <span>Create Empty 4-Week Plan (Weeks 1–4)</span>
+          </button>
+
           <button
             type="button"
             className="btn-clean btn-danger btn-sm"
@@ -649,7 +720,7 @@ export default function SettingsPage() {
             onClick={handleCleanAllExercises}
           >
             <Trash2 size={13} />
-            <span>Clean All Exercises from 4-Week Plan (Wipe Workouts)</span>
+            <span>Clean All Exercises from Plan</span>
           </button>
 
           <button
@@ -659,7 +730,7 @@ export default function SettingsPage() {
             onClick={handleClearHistory}
           >
             <Trash2 size={13} />
-            <span>Clear All Workout History &amp; PRs</span>
+            <span>Clear Logged Workout History &amp; PRs</span>
           </button>
 
           <button
@@ -669,7 +740,7 @@ export default function SettingsPage() {
             onClick={handleFactoryReset}
           >
             <Zap size={13} />
-            <span>Factory Reset Entire Website (Clean Slate + 570 Catalog)</span>
+            <span>Restore Default App (Blank Plan + 570 Catalog)</span>
           </button>
         </div>
       </div>

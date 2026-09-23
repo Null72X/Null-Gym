@@ -22,6 +22,8 @@ import {
   saveLibrary,
   getActiveSelection,
   saveActiveSelection,
+  applyAutoScaleToAllWeeks,
+  getProgressionConfig,
 } from '../../lib/storage';
 import { getLastPerformance } from '../../lib/history';
 import {
@@ -35,6 +37,7 @@ import {
   Sparkles,
   Layers,
   Trash2,
+  Zap,
 } from 'lucide-react';
 
 export default function PlannerPage() {
@@ -271,6 +274,13 @@ export default function PlannerPage() {
     triggerToast(`Copied entire Week ${currentWeek} to Week ${targetWeekNum}!`);
   };
 
+  // 1-Click Auto-Scale Weeks 2, 3, and 4 from Week 1
+  const handleAutoScaleWeeks = () => {
+    const scaled = applyAutoScaleToAllWeeks();
+    setWeeks(scaled);
+    triggerToast('⚡ Weeks 2, 3 & 4 auto-scaled with progressive overload!');
+  };
+
   if (!isLoaded || weeks.length === 0) {
     return <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-dim)' }}>Loading Planner...</div>;
   }
@@ -279,6 +289,51 @@ export default function PlannerPage() {
     <div>
       {/* 4-Week Selector */}
       <WeekSelector selectedWeek={currentWeek} onSelectWeek={handleSelectWeek} />
+
+      {/* Week 1 Auto-Progression Banner */}
+      {currentWeek === 1 && (
+        <div
+          style={{
+            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(20, 20, 29, 0.7) 100%)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '10px',
+            padding: '10px 12px',
+            marginBottom: '10px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontSize: '0.8rem',
+                fontWeight: 800,
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <Zap size={14} color="var(--accent-red)" />
+              <span>Week 1 Baseline Routine</span>
+            </div>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Design Week 1, then 1-click auto-program Weeks 2, 3 &amp; 4 with progressive overload.
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn-clean btn-primary btn-sm"
+            onClick={handleAutoScaleWeeks}
+            style={{ fontSize: '0.72rem', padding: '6px 10px', whiteSpace: 'nowrap' }}
+          >
+            <Sparkles size={12} />
+            <span>Auto-Setup Weeks 2–4 ⚡</span>
+          </button>
+        </div>
+      )}
 
       {/* 7-Day Grid */}
       <DayGrid
@@ -465,6 +520,7 @@ export default function PlannerPage() {
                 defaultUnit={unit}
                 lastPerformance={lastPerf}
                 mode="planner"
+                weekNumber={currentWeek}
                 onUpdate={(updated) => handleUpdateExercise(exIdx, updated)}
                 onDelete={() => handleDeleteExercise(exIdx)}
                 onDuplicate={() => handleDuplicateExercise(exIdx)}

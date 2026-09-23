@@ -131,3 +131,12 @@ export interface PersonalRecord {
   weekNumber?: number;
   achievedDate?: string;
 }
+
+export interface ProgressionConfig {
+  autoProgressionEnabled: boolean;
+  weeklyIncrementKg: number;
+  weeklyIncrementLbs: number;
+  bodyweightRepIncrement: number;
+  timedHoldIncrementSecs: number;
+  deloadWeek4: boolean;
+}

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#14141d"/>
+      <stop offset="100%" stop-color="#070709"/>
+    </linearGradient>
+    <linearGradient id="redGlow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#b91c1c"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="14" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect width="504" height="504" x="4" y="4" rx="108" fill="none" stroke="rgba(239, 68, 68, 0.25)" stroke-width="4"/>
+
+  <!-- Glowing Accent Ring -->
+  <circle cx="256" cy="256" r="160" fill="none" stroke="rgba(239, 68, 68, 0.12)" stroke-width="32" filter="url(#glow)"/>
+
+  <!-- Centered Dumbbell Icon -->
+  <g transform="translate(256, 256) rotate(-45) translate(-256, -256)">
+    <!-- Barbell Center Bar -->
+    <rect x="136" y="240" width="240" height="32" rx="16" fill="#f8fafc" />
+
+    <!-- Left Inner Weight Collar -->
+    <rect x="180" y="210" width="18" height="92" rx="9" fill="url(#redGlow)" />
+    <!-- Left Main Weight Plate -->
+    <rect x="130" y="160" width="38" height="192" rx="19" fill="#ef4444" filter="url(#glow)" />
+    <!-- Left Outer Weight Plate -->
+    <rect x="88" y="190" width="30" height="132" rx="15" fill="#f8fafc" />
+
+    <!-- Right Inner Weight Collar -->
+    <rect x="314" y="210" width="18" height="92" rx="9" fill="url(#redGlow)" />
+    <!-- Right Main Weight Plate -->
+    <rect x="344" y="160" width="38" height="192" rx="19" fill="#ef4444" filter="url(#glow)" />
+    <!-- Right Outer Weight Plate -->
+    <rect x="394" y="190" width="30" height="132" rx="15" fill="#f8fafc" />
+  </g>
+
+  <!-- Badge Dot -->
+  <circle cx="410" cy="102" r="18" fill="#22c55e"/>
+</svg>

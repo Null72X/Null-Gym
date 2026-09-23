@@ -6,8 +6,10 @@ import {
   ExerciseLibraryItem,
   WorkoutHistoryEntry,
   WeightUnit,
+  ProgressionConfig,
 } from '../types/workout';
 import { ALL_CATALOG_EXERCISES } from './exerciseCatalog';
+import { DEFAULT_PROGRESSION_CONFIG, autoScaleWeek1ToAllWeeks } from './progressionEngine';
 import {
   debouncedPushPlanToCloud,
   pushPlanToCloud,
@@ -23,6 +25,7 @@ const STORAGE_KEYS = {
   HISTORY: 'gym_history_v6',
   LIBRARY: 'gym_library_v6',
   ACTIVE: 'gym_active_v6',
+  PROGRESSION: 'gym_progression_v6',
 };
 
 // 570 Master exercise library with YouTube search links and intelligent tracking types
@@ -199,6 +202,35 @@ export function saveActiveSelection(active: {
   } catch (err) {
     console.error('Failed to save active selection', err);
   }
+}
+
+export function getProgressionConfig(): ProgressionConfig {
+  if (typeof window === 'undefined') return DEFAULT_PROGRESSION_CONFIG;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.PROGRESSION);
+    if (!raw) return DEFAULT_PROGRESSION_CONFIG;
+    return { ...DEFAULT_PROGRESSION_CONFIG, ...JSON.parse(raw) };
+  } catch {
+    return DEFAULT_PROGRESSION_CONFIG;
+  }
+}
+
+export function saveProgressionConfig(config: ProgressionConfig) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEYS.PROGRESSION, JSON.stringify(config));
+  } catch (err) {
+    console.error('Failed to save progression config', err);
+  }
+}
+
+export function applyAutoScaleToAllWeeks(): WeekPlan[] {
+  const currentWeeks = getSavedWeeks();
+  const config = getProgressionConfig();
+  const active = getActiveSelection();
+  const scaled = autoScaleWeek1ToAllWeeks(currentWeeks, config, active.unit);
+  saveWeeks(scaled);
+  return scaled;
 }
 
 // -------------------------------------------------------------

@@ -29,6 +29,7 @@ interface ExerciseCardProps {
   defaultUnit: WeightUnit;
   lastPerformance: SavedExercisePerformance | null;
   mode?: 'planner' | 'tracker';
+  weekNumber?: number;
   onUpdate: (updated: Exercise) => void;
   onDelete?: () => void;
   onDuplicate?: () => void;
@@ -44,6 +45,7 @@ export default function ExerciseCard({
   defaultUnit,
   lastPerformance,
   mode = 'planner',
+  weekNumber,
   onUpdate,
   onDelete,
   onDuplicate,
@@ -213,6 +215,19 @@ export default function ExerciseCard({
 
       {/* Meta Row */}
       <div className="clean-meta-row" style={{ flexWrap: 'wrap', gap: '5px' }}>
+        {weekNumber && weekNumber > 1 && (
+          <span
+            className="clean-badge"
+            style={{
+              background: 'rgba(239, 68, 68, 0.15)',
+              color: '#f87171',
+              borderColor: 'rgba(239, 68, 68, 0.35)',
+              fontWeight: 800,
+            }}
+          >
+            ⚡ Week {weekNumber} Overload
+          </span>
+        )}
         <span className="clean-badge red">
           {wkCount} Working · {wuCount} Warmup
         </span>
