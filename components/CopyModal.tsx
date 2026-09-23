@@ -64,6 +64,7 @@ export default function CopyModal({
   return (
     <div className="clean-modal-backdrop" onClick={onClose}>
       <div className="clean-modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-handle" />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
           <h3 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Copy size={18} color="var(--accent-red)" />

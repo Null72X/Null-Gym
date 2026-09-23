@@ -37,7 +37,12 @@ export default function DayGrid({ days, selectedDayIndex, onSelectDay }: DayGrid
               className={`day-btn ${idx === selectedDayIndex ? 'active' : ''} ${
                 isDone ? 'done-all' : ''
               }`}
-              onClick={() => onSelectDay(idx)}
+              onClick={() => {
+                if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                  navigator.vibrate(15);
+                }
+                onSelectDay(idx);
+              }}
             >
               <span className="day-btn-name">{SHORT_NAMES[idx] || day.dayOfWeek.substring(0, 3)}</span>
               <span className="day-btn-title">{displayTitle}</span>

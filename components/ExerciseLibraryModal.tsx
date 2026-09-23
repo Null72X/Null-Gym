@@ -236,6 +236,8 @@ export default function ExerciseLibraryModal({
         style={{ maxWidth: '580px', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}
         onClick={(e) => e.stopPropagation()}
       >
+        <div className="sheet-handle" />
+
         {/* Modal Top Bar */}
         <div
           style={{

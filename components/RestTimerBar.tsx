@@ -61,6 +61,30 @@ export default function RestTimerBar({
     }
   }, [initialSeconds, mode, exerciseName]);
 
+  // Screen Wake Lock API to keep phone screen awake during active workout/rest
+  useEffect(() => {
+    let wakeLock: any = null;
+    const requestWakeLock = async () => {
+      try {
+        if (typeof window !== 'undefined' && 'wakeLock' in navigator && (navigator as any).wakeLock) {
+          wakeLock = await (navigator as any).wakeLock.request('screen');
+        }
+      } catch {
+        // Ignored if unsupported or visibility hidden
+      }
+    };
+
+    if (isRunning && seconds > 0) {
+      requestWakeLock();
+    }
+
+    return () => {
+      if (wakeLock && typeof wakeLock.release === 'function') {
+        wakeLock.release().catch(() => {});
+      }
+    };
+  }, [isRunning, seconds]);
+
   // Audio tone generator using Web Audio API
   const getAudioContext = () => {
     if (typeof window === 'undefined') return null;
@@ -279,10 +303,10 @@ export default function RestTimerBar({
       className={`floating-rest-bar ${initialSeconds !== null ? 'active' : ''}`}
       style={{
         position: 'fixed',
-        bottom: '68px',
+        bottom: 'calc(64px + var(--safe-bottom) + 8px)',
         left: '50%',
         transform: 'translateX(-50%)',
-        width: 'calc(100% - 24px)',
+        width: 'calc(100% - 20px)',
         maxWidth: '480px',
         background: 'rgba(14, 14, 20, 0.96)',
         backdropFilter: 'blur(16px)',
@@ -490,6 +514,7 @@ export default function RestTimerBar({
               background: isRunning ? 'rgba(239, 68, 68, 0.15)' : 'rgba(34, 197, 94, 0.15)',
               borderColor: isRunning ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)',
               color: isRunning ? '#fca5a5' : '#86efac',
+              minWidth: '28px',
             }}
             onClick={togglePause}
             title={isRunning ? 'Pause' : 'Resume'}
@@ -500,28 +525,9 @@ export default function RestTimerBar({
           <button
             type="button"
             className="timer-action-btn"
-            onClick={restartTimer}
-            title="Restart timer"
-          >
-            <RotateCcw size={13} />
-          </button>
-
-          <button
-            type="button"
-            className="timer-action-btn"
-            onClick={() => setIsMuted((prev) => !prev)}
-            title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
-            style={{ color: isMuted ? 'var(--text-dim)' : 'var(--accent-amber)' }}
-          >
-            {isMuted ? <VolumeX size={13} /> : <Volume2 size={13} />}
-          </button>
-
-          <button
-            type="button"
-            className="timer-action-btn"
             onClick={onDismiss}
             title="Close timer"
-            style={{ color: 'var(--text-dim)' }}
+            style={{ color: 'var(--text-dim)', minWidth: '28px' }}
           >
             <X size={13} />
           </button>
@@ -632,30 +638,53 @@ export default function RestTimerBar({
             })}
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              setSeconds(0);
-              setIsFinished(true);
-              setIsRunning(false);
-              playChime(isExerciseMode);
-              if (isExerciseMode && onCompleteExerciseSet) {
-                onCompleteExerciseSet();
-              }
-            }}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--accent-green)',
-              fontSize: '0.64rem',
-              fontWeight: 800,
-              cursor: 'pointer',
-              padding: '2px 4px',
-            }}
-            title={isExerciseMode ? 'Complete set' : 'Skip rest'}
-          >
-            {isExerciseMode ? 'Finish Set ✓' : 'Skip Rest ✓'}
-          </button>
+          {/* Utilities: Restart, Mute & Finish/Skip */}
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+            <button
+              type="button"
+              className="timer-action-btn"
+              onClick={restartTimer}
+              title="Restart timer"
+              style={{ padding: '2px 6px', fontSize: '0.64rem' }}
+            >
+              <RotateCcw size={11} />
+            </button>
+
+            <button
+              type="button"
+              className="timer-action-btn"
+              onClick={() => setIsMuted((prev) => !prev)}
+              title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
+              style={{ color: isMuted ? 'var(--text-dim)' : 'var(--accent-amber)', padding: '2px 6px', fontSize: '0.64rem' }}
+            >
+              {isMuted ? <VolumeX size={11} /> : <Volume2 size={11} />}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSeconds(0);
+                setIsFinished(true);
+                setIsRunning(false);
+                playChime(isExerciseMode);
+                if (isExerciseMode && onCompleteExerciseSet) {
+                  onCompleteExerciseSet();
+                }
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--accent-green)',
+                fontSize: '0.64rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                padding: '2px 4px',
+              }}
+              title={isExerciseMode ? 'Complete set' : 'Skip rest'}
+            >
+              {isExerciseMode ? 'Finish Set ✓' : 'Skip Rest ✓'}
+            </button>
+          </div>
         </div>
       )}
     </div>

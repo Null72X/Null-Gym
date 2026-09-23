@@ -31,6 +31,9 @@ export default function SetRow({
 }: SetRowProps) {
   // Stepper adjustment for load
   const handleStep = (delta: number) => {
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate(12);
+    }
     const cur = typeof set.load === 'number' ? set.load : 0;
     const next = Math.max(0, Math.round((cur + delta) * 2) / 2);
     onUpdate({
@@ -106,19 +109,23 @@ export default function SetRow({
           {/* Reps Input */}
           <input
             type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
             className="set-reps-target"
             value={set.reps}
             placeholder="Reps"
             title="Target / Achieved Reps"
             style={{
               background: 'transparent',
-              border: '1px solid rgba(255,255,255,0.06)',
-              borderRadius: '5px',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '6px',
               padding: '2px 4px',
               color: '#cbd5e1',
               outline: 'none',
-              width: '56px',
+              width: '54px',
+              height: '32px',
               textAlign: 'center',
+              fontSize: '0.8rem',
             }}
             onChange={(e) => onUpdate({ ...set, reps: e.target.value })}
           />
@@ -136,6 +143,7 @@ export default function SetRow({
             <input
               type="number"
               step="0.5"
+              inputMode="decimal"
               className="clean-load-input"
               value={set.load}
               placeholder="--"
@@ -289,17 +297,18 @@ export default function SetRow({
       {/* RPE input */}
       <input
         type="text"
+        inputMode="decimal"
         title="RPE (Rate of Perceived Exertion: 1-10)"
         placeholder="@"
         value={set.rpe}
         style={{
-          width: '40px',
-          height: '26px',
+          width: '38px',
+          height: '32px',
           background: 'transparent',
-          border: '1px solid rgba(255,255,255,0.06)',
-          borderRadius: '5px',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '6px',
           textAlign: 'center',
-          fontSize: '0.72rem',
+          fontSize: '0.75rem',
           fontFamily: 'var(--font-mono)',
           color: '#fde68a',
           outline: 'none',
