@@ -770,24 +770,23 @@ body {
 /* Floating Rest Bar */
 .floating-rest-bar {
   position: fixed;
-  bottom: 60px;
+  bottom: 68px;
   left: 50%;
-  transform: translateX(-50%) translateY(80px);
-  width: calc(100% - 28px);
+  transform: translateX(-50%) translateY(100px);
+  width: calc(100% - 24px);
   max-width: 480px;
-  background: rgba(20, 20, 28, 0.96);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--accent-red);
-  border-radius: 12px;
-  padding: 8px 14px;
+  background: rgba(14, 14, 20, 0.96);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 14px;
+  padding: 10px 14px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  flex-direction: column;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.75);
   opacity: 0;
   pointer-events: none;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: 100;
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 900;
 }
 .floating-rest-bar.active {
   transform: translateX(-50%) translateY(0);
@@ -796,23 +795,27 @@ body {
 }
 .timer-text {
   font-family: var(--font-mono);
-  font-size: 1.15rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: #ffffff;
 }
 .timer-action-btn {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--border);
   color: #fff;
   font-size: 0.7rem;
   font-weight: 700;
   padding: 5px 8px;
-  border-radius: 6px;
+  border-radius: 7px;
   cursor: pointer;
-  transition: background 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  transition: all 0.15s ease;
 }
 .timer-action-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.14);
 }
 
 /* Toast */

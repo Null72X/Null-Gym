@@ -58,8 +58,8 @@ export default function SetRow({
       if (typeof window !== 'undefined' && 'vibrate' in navigator) {
         navigator.vibrate(35);
       }
-      if (onStartRest && set.rest) {
-        onStartRest(set.rest);
+      if (onStartRest) {
+        onStartRest(set.rest || '90s');
       }
     }
   };

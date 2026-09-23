@@ -27,6 +27,7 @@ import {
   Sparkles,
   Edit2,
   Dumbbell,
+  Clock,
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -270,6 +271,16 @@ export default function DashboardPage() {
           title="Toggle default unit (KG / LBS)"
         >
           {unit.toUpperCase()}
+        </button>
+        <button
+          type="button"
+          className="unit-toggle-btn"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+          onClick={() => handleStartRest('90s')}
+          title="Start 90s Rest Timer"
+        >
+          <Clock size={13} color="var(--accent-red)" />
+          <span>Rest</span>
         </button>
         <button
           type="button"
