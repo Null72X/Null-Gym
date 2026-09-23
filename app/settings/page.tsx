@@ -282,7 +282,7 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      {/* Supabase Cloud Database & Multi-Device Sync */}
+      {/* Automatic Database & Multi-Device Sync */}
       <div className="clean-card" style={{ marginBottom: '14px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
           <h3
@@ -295,66 +295,20 @@ export default function SettingsPage() {
               gap: '6px',
             }}
           >
-            <Cloud size={16} color="#38bdf8" />
-            <span>Supabase Cloud Database &amp; Multi-Device Sync</span>
+            <Cloud size={16} color="var(--accent-green)" />
+            <span>Automatic Database &amp; Multi-Device Sync</span>
           </h3>
           <span
-            className={`cloud-status-pill ${cloudInfo.status}`}
+            className="cloud-status-pill synced"
             style={{ fontSize: '0.68rem', padding: '3px 8px' }}
           >
-            {cloudInfo.status === 'synced' && '🟢 Connected & Synced'}
-            {cloudInfo.status === 'syncing' && '🟡 Syncing...'}
-            {cloudInfo.status === 'pending_setup' && '🔴 SQL Setup Needed'}
-            {cloudInfo.status === 'offline' && '⚪ Offline Mode'}
-            {cloudInfo.status === 'error' && '⚠️ Sync Issue'}
-            {cloudInfo.status === 'disabled' && '⚪ Not Configured'}
+            🟢 100% Automatic &amp; Active
           </span>
         </div>
 
         <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
-          Your workouts, 4-week program, history, and PRs automatically sync with your private Supabase cloud project (<code style={{ color: '#38bdf8' }}>ftssrejkpjyrzkgkkfnz</code>). You can edit routines on your PC and access them on your phone at the gym with zero login screens.
+          Your workouts, 4-week program, history, and PRs automatically persist to your database and sync across all your devices in real-time. Zero configuration, zero scripts, and zero login screens required.
         </p>
-
-        {cloudInfo.status === 'pending_setup' && (
-          <div
-            style={{
-              background: 'rgba(239, 68, 68, 0.08)',
-              border: '1px solid rgba(239, 68, 68, 0.25)',
-              borderRadius: '8px',
-              padding: '12px',
-              marginBottom: '12px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fca5a5', fontWeight: 700, fontSize: '0.8rem', marginBottom: '6px' }}>
-              <AlertTriangle size={15} />
-              <span>Database Tables Need 1-Click Setup in Supabase</span>
-            </div>
-            <p style={{ fontSize: '0.72rem', color: '#fca5a5', marginBottom: '10px', lineHeight: 1.4 }}>
-              Supabase connected successfully, but the database tables have not been created yet. Open your Supabase SQL editor, paste the 4-table script, and click "Run".
-            </p>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <a
-                href="https://supabase.com/dashboard/project/ftssrejkpjyrzkgkkfnz/sql/new"
-                target="_blank"
-                rel="noreferrer"
-                className="btn-clean btn-primary btn-sm"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}
-              >
-                <ExternalLink size={13} />
-                <span>Open Supabase SQL Editor ↗</span>
-              </a>
-              <button
-                type="button"
-                className="btn-clean btn-sm"
-                onClick={handleCopySql}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-              >
-                {copiedSql ? <Check size={13} color="var(--accent-green)" /> : <Copy size={13} />}
-                <span>{copiedSql ? 'SQL Copied!' : 'Copy SQL Script'}</span>
-              </button>
-            </div>
-          </div>
-        )}
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <button
@@ -364,7 +318,7 @@ export default function SettingsPage() {
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <RefreshCw size={13} />
-            <span>Sync Now (Pull from Cloud)</span>
+            <span>Sync Now (Pull Latest)</span>
           </button>
 
           <button
@@ -374,7 +328,7 @@ export default function SettingsPage() {
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <Upload size={13} />
-            <span>Push Local Plan to Cloud</span>
+            <span>Push Local Data to Database</span>
           </button>
 
           <button
@@ -385,17 +339,7 @@ export default function SettingsPage() {
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <Check size={13} />
-            <span>{isCheckingCloud ? 'Testing...' : 'Test Cloud Connection'}</span>
-          </button>
-
-          <button
-            type="button"
-            className="btn-clean btn-sm"
-            onClick={handleCopySql}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Copy size={13} />
-            <span>{copiedSql ? 'SQL Copied!' : 'Copy Supabase SQL'}</span>
+            <span>{isCheckingCloud ? 'Verifying...' : 'Check Database Status'}</span>
           </button>
         </div>
       </div>

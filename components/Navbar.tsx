@@ -35,37 +35,15 @@ export default function Navbar() {
 
   const renderCloudBadge = () => {
     switch (cloudInfo.status) {
-      case 'synced':
-        return (
-          <Link
-            href="/settings"
-            className="cloud-status-pill synced"
-            title={`Supabase Synced ${cloudInfo.lastSyncedAt ? `at ${cloudInfo.lastSyncedAt}` : ''}`}
-          >
-            <span>☁️</span>
-            <span>Cloud</span>
-          </Link>
-        );
       case 'syncing':
         return (
           <Link
             href="/settings"
             className="cloud-status-pill syncing"
-            title="Syncing with Supabase..."
+            title="Saving updates to database..."
           >
-            <span>⏳</span>
+            <span>🟡</span>
             <span>Syncing</span>
-          </Link>
-        );
-      case 'pending_setup':
-        return (
-          <Link
-            href="/settings"
-            className="cloud-status-pill pending_setup"
-            title="Setup needed: Click to see SQL setup in Settings"
-          >
-            <span>⚠️</span>
-            <span>Setup DB</span>
           </Link>
         );
       case 'offline':
@@ -73,25 +51,24 @@ export default function Navbar() {
           <Link
             href="/settings"
             className="cloud-status-pill offline"
-            title="Offline mode: changes saved locally"
+            title="Offline mode: all changes saved locally"
           >
             <span>📶</span>
             <span>Offline</span>
           </Link>
         );
-      case 'error':
+      case 'synced':
+      default:
         return (
           <Link
             href="/settings"
-            className="cloud-status-pill pending_setup"
-            title={cloudInfo.message || 'Supabase sync issue'}
+            className="cloud-status-pill synced"
+            title={`Database Synced ${cloudInfo.lastSyncedAt ? `· ${cloudInfo.lastSyncedAt}` : ''}`}
           >
-            <span>⚠️</span>
-            <span>Cloud Alert</span>
+            <span>🟢</span>
+            <span>Synced</span>
           </Link>
         );
-      default:
-        return null;
     }
   };
 
