@@ -18,7 +18,9 @@ import {
   pullHistoryFromCloud,
   pushSettingsToCloud,
   pullSettingsFromCloud,
+  notifyCloudStatus,
 } from './supabaseSync';
+import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const STORAGE_KEYS = {
   WEEKS: 'gym_weeks_v6',
@@ -84,6 +86,46 @@ export function onCloudPlanUpdated(listener: CloudPlanListener) {
   };
 }
 
+// Event bus for cloud history updates
+type CloudHistoryListener = (history: WorkoutHistoryEntry[]) => void;
+const historyListeners: Set<CloudHistoryListener> = new Set();
+
+export function onCloudHistoryUpdated(listener: CloudHistoryListener) {
+  historyListeners.add(listener);
+  return () => {
+    historyListeners.delete(listener);
+  };
+}
+
+// Event bus for active selection / settings updates
+type CloudSettingsListener = (settings: { weekNumber: number; dayIndex: number; unit: WeightUnit }) => void;
+const settingsListeners: Set<CloudSettingsListener> = new Set();
+
+export function onCloudSettingsUpdated(listener: CloudSettingsListener) {
+  settingsListeners.add(listener);
+  return () => {
+    settingsListeners.delete(listener);
+  };
+}
+
+// Instant cross-tab sync channel
+let crossTabChannel: any = null;
+if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+  try {
+    crossTabChannel = new BroadcastChannel('null_gym_cross_tab_sync');
+    crossTabChannel.onmessage = (event: any) => {
+      const { type, data } = event.data || {};
+      if (type === 'plan' && Array.isArray(data)) {
+        planListeners.forEach((l) => l(data));
+      } else if (type === 'history' && Array.isArray(data)) {
+        historyListeners.forEach((l) => l(data));
+      } else if (type === 'settings' && data) {
+        settingsListeners.forEach((l) => l(data));
+      }
+    };
+  } catch {}
+}
+
 // STORAGE ACCESSORS
 export function getSavedWeeks(): WeekPlan[] {
   if (typeof window === 'undefined') return createBlankWeeks();
@@ -130,6 +172,7 @@ export function saveWeeks(weeks: WeekPlan[]) {
   emitSave('saving');
   try {
     localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(weeks));
+    crossTabChannel?.postMessage({ type: 'plan', data: weeks });
     debouncedPushPlanToCloud(weeks);
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
@@ -180,6 +223,7 @@ export function saveHistory(history: WorkoutHistoryEntry[]) {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+    crossTabChannel?.postMessage({ type: 'history', data: history });
     pushHistoryToCloud(history);
   } catch (err) {
     console.error('Failed to save history', err);
@@ -208,6 +252,7 @@ export function saveActiveSelection(active: {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(STORAGE_KEYS.ACTIVE, JSON.stringify(active));
+    crossTabChannel?.postMessage({ type: 'settings', data: active });
     pushSettingsToCloud(active);
   } catch (err) {
     console.error('Failed to save active selection', err);
@@ -244,76 +289,150 @@ export function applyAutoScaleToAllWeeks(): WeekPlan[] {
 }
 
 // -------------------------------------------------------------
-// CLOUD BACKGROUND SYNC INITIALIZER
+// ALWAYS-ON CONTINUOUS BACKGROUND MULTI-DEVICE SYNC ENGINE
 // -------------------------------------------------------------
 let isSyncInitialized = false;
+let lastSyncedServerTimestamp: string | null = null;
+let isAutoSyncRunning = false;
+
+export async function performContinuousCloudSync(force = false) {
+  if (typeof window === 'undefined' || isAutoSyncRunning) return;
+  isAutoSyncRunning = true;
+
+  try {
+    const res = await fetch('/api/sync', { cache: 'no-store' });
+    if (!res.ok) {
+      isAutoSyncRunning = false;
+      return;
+    }
+
+    const body = await res.json();
+    if (!body || !body.success) {
+      isAutoSyncRunning = false;
+      return;
+    }
+
+    const serverTime = body.updatedAt;
+    const localRawWeeks = localStorage.getItem(STORAGE_KEYS.WEEKS);
+    const localWeeks = localRawWeeks ? JSON.parse(localRawWeeks) : null;
+    const localHasExercises =
+      localWeeks &&
+      Array.isArray(localWeeks) &&
+      localWeeks.some((w: any) => w.days.some((d: any) => d.exercises?.length > 0));
+
+    // Case 1: First-time seed - Server database is empty, but local has user workouts
+    if (!body.plan && localHasExercises) {
+      const active = getActiveSelection();
+      const hist = getSavedHistory();
+      await fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save_all',
+          data: { plan: localWeeks, history: hist, settings: active },
+        }),
+      });
+      lastSyncedServerTimestamp = new Date().toISOString();
+      notifyCloudStatus('synced', 'Database Synced');
+      isAutoSyncRunning = false;
+      return;
+    }
+
+    // Case 2: Server has plan data -> sync smoothly to local device
+    if (body.plan && Array.isArray(body.plan) && body.plan.length >= 4) {
+      if (force || serverTime !== lastSyncedServerTimestamp) {
+        lastSyncedServerTimestamp = serverTime;
+
+        // Upgrade 4-week server plans to 6-week if needed
+        const validServerWeeks =
+          body.plan.length < 6
+            ? [...body.plan, ...createBlankWeeks().slice(body.plan.length)]
+            : body.plan;
+
+        const serverWeeksStr = JSON.stringify(validServerWeeks);
+        if (localRawWeeks !== serverWeeksStr) {
+          localStorage.setItem(STORAGE_KEYS.WEEKS, serverWeeksStr);
+          planListeners.forEach((l) => l(validServerWeeks));
+        }
+
+        // Sync history
+        if (Array.isArray(body.history)) {
+          const localHistRaw = localStorage.getItem(STORAGE_KEYS.HISTORY);
+          const serverHistStr = JSON.stringify(body.history);
+          if (localHistRaw !== serverHistStr) {
+            localStorage.setItem(STORAGE_KEYS.HISTORY, serverHistStr);
+            historyListeners.forEach((l) => l(body.history));
+          }
+        }
+
+        // Sync settings
+        if (body.settings && typeof body.settings === 'object') {
+          const localActiveRaw = localStorage.getItem(STORAGE_KEYS.ACTIVE);
+          const serverSettingsStr = JSON.stringify(body.settings);
+          if (localActiveRaw !== serverSettingsStr) {
+            localStorage.setItem(STORAGE_KEYS.ACTIVE, serverSettingsStr);
+            settingsListeners.forEach((l) => l(body.settings));
+          }
+        }
+
+        notifyCloudStatus('synced', 'Database Synced');
+      }
+    }
+  } catch (err) {
+    // Offline or network hiccup - silent retry
+  } finally {
+    isAutoSyncRunning = false;
+  }
+}
 
 export function initBackgroundCloudSync() {
   if (typeof window === 'undefined' || isSyncInitialized) return;
   isSyncInitialized = true;
 
-  // Pull plan from cloud
-  pullPlanFromCloud().then((cloudWeeks) => {
-    if (cloudWeeks && Array.isArray(cloudWeeks) && cloudWeeks.length >= 4) {
-      const validCloudWeeks =
-        cloudWeeks.length < 6
-          ? [...cloudWeeks, ...createBlankWeeks().slice(cloudWeeks.length)]
-          : cloudWeeks;
-      const localRaw = localStorage.getItem(STORAGE_KEYS.WEEKS);
-      const localWeeks = localRaw ? JSON.parse(localRaw) : null;
+  // 1. Initial immediate sync on mount
+  performContinuousCloudSync(true);
 
-      const localHasExercises =
-        localWeeks &&
-        localWeeks.some((w: any) => w.days.some((d: any) => d.exercises?.length > 0));
-      const cloudHasExercises = validCloudWeeks.some((w: any) =>
-        w.days.some((d: any) => d.exercises?.length > 0)
-      );
-
-      if (!localHasExercises && cloudHasExercises) {
-        // Fresh device or empty local cache -> use cloud data!
-        localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(validCloudWeeks));
-        planListeners.forEach((l) => l(validCloudWeeks));
-      } else if (localHasExercises && !cloudHasExercises) {
-        // Initial cloud upload!
-        pushPlanToCloud(localWeeks);
-      } else {
-        // Sync cloud plan
-        localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(validCloudWeeks));
-        planListeners.forEach((l) => l(validCloudWeeks));
-      }
-    } else {
-      // Cloud is blank or table newly initialized -> push local data to cloud
-      const localRaw = localStorage.getItem(STORAGE_KEYS.WEEKS);
-      if (localRaw) {
-        try {
-          const localWeeks = JSON.parse(localRaw);
-          pushPlanToCloud(localWeeks);
-        } catch {}
-      }
+  // 2. Instant sync when user unlocks phone, returns to app, or focuses window
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      performContinuousCloudSync(false);
     }
   });
 
-  // Pull history from cloud
-  pullHistoryFromCloud().then((cloudHistory) => {
-    if (cloudHistory && cloudHistory.length > 0) {
-      const localRaw = localStorage.getItem(STORAGE_KEYS.HISTORY);
-      const localHistory = localRaw ? JSON.parse(localRaw) : [];
-      if (cloudHistory.length >= localHistory.length) {
-        localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(cloudHistory));
-      }
-    }
+  window.addEventListener('focus', () => {
+    performContinuousCloudSync(false);
   });
 
-  // Pull settings from cloud
-  pullSettingsFromCloud().then((cloudSettings) => {
-    if (cloudSettings) {
-      localStorage.setItem(STORAGE_KEYS.ACTIVE, JSON.stringify(cloudSettings));
-    }
+  window.addEventListener('online', () => {
+    performContinuousCloudSync(true);
   });
+
+  // 3. Continuous automatic heartbeat check every 4 seconds
+  setInterval(() => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      performContinuousCloudSync(false);
+    }
+  }, 4000);
+
+  // 4. Supabase Realtime channel subscription (instant multi-device push)
+  if (isSupabaseConfigured && supabase) {
+    try {
+      supabase
+        .channel('public:workout_sync')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'workout_plan' },
+          () => {
+            performContinuousCloudSync(true);
+          }
+        )
+        .subscribe();
+    } catch {}
+  }
 }
 
 // -------------------------------------------------------------
-// MANUAL CLOUD SYNC ACTIONS (FOR SETTINGS PAGE)
+// BACKGROUND CLOUD SYNC ACTIONS (PROGRAMMATIC ONLY - ZERO BUTTONS)
 // -------------------------------------------------------------
 export async function forcePushAllToCloud(): Promise<boolean> {
   const weeks = getSavedWeeks();
@@ -327,29 +446,8 @@ export async function forcePushAllToCloud(): Promise<boolean> {
 }
 
 export async function forcePullAllFromCloud(): Promise<boolean> {
-  const cloudWeeks = await pullPlanFromCloud();
-  const cloudHistory = await pullHistoryFromCloud();
-  const cloudSettings = await pullSettingsFromCloud();
-
-  let updated = false;
-  if (cloudWeeks && cloudWeeks.length >= 4) {
-    const validCloudWeeks =
-      cloudWeeks.length < 6
-        ? [...cloudWeeks, ...createBlankWeeks().slice(cloudWeeks.length)]
-        : cloudWeeks;
-    localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(validCloudWeeks));
-    planListeners.forEach((l) => l(validCloudWeeks));
-    updated = true;
-  }
-  if (cloudHistory) {
-    localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(cloudHistory));
-    updated = true;
-  }
-  if (cloudSettings) {
-    localStorage.setItem(STORAGE_KEYS.ACTIVE, JSON.stringify(cloudSettings));
-    updated = true;
-  }
-  return updated;
+  await performContinuousCloudSync(true);
+  return true;
 }
 
 // JSON EXPORT & IMPORT

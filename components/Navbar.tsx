@@ -88,14 +88,7 @@ export default function Navbar() {
               <span>Saving...</span>
             </span>
           ) : (
-            <Link
-              href="/settings"
-              className="cloud-status-pill synced"
-              title="Workouts saved and synchronized"
-            >
-              <span>🟢</span>
-              <span>Synced</span>
-            </Link>
+            renderCloudBadge()
           )}
 
           <Link

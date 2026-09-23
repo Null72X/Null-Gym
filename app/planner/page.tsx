@@ -24,6 +24,9 @@ import {
   saveActiveSelection,
   applyAutoScaleToAllWeeks,
   getProgressionConfig,
+  onCloudPlanUpdated,
+  onCloudHistoryUpdated,
+  onCloudSettingsUpdated,
 } from '../../lib/storage';
 import { getLastPerformance } from '../../lib/history';
 import {
@@ -72,6 +75,26 @@ export default function PlannerPage() {
     setCurrentDayIndex(active.dayIndex || 0);
     setUnit(active.unit || 'kg');
     setIsLoaded(true);
+
+    const unsubPlan = onCloudPlanUpdated((newWeeks) => {
+      setWeeks(newWeeks);
+    });
+
+    const unsubHistory = onCloudHistoryUpdated((newHistory) => {
+      setHistory(newHistory);
+    });
+
+    const unsubSettings = onCloudSettingsUpdated((newSettings) => {
+      if (newSettings.weekNumber) setCurrentWeek(newSettings.weekNumber);
+      if (newSettings.dayIndex !== undefined) setCurrentDayIndex(newSettings.dayIndex);
+      if (newSettings.unit) setUnit(newSettings.unit);
+    });
+
+    return () => {
+      unsubPlan();
+      unsubHistory();
+      unsubSettings();
+    };
   }, []);
 
   const triggerToast = (msg: string) => {

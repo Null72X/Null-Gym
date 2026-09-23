@@ -7,7 +7,7 @@ import {
   PersonalRecord,
   WeekPlan,
 } from '../../types/workout';
-import { getSavedHistory, getSavedWeeks } from '../../lib/storage';
+import { getSavedHistory, getSavedWeeks, onCloudHistoryUpdated, onCloudPlanUpdated } from '../../lib/storage';
 import {
   getPersonalRecords,
   getExerciseProgression,
@@ -57,6 +57,21 @@ export default function ProgressPage() {
     } else if (loadedWeeks[0]?.days[0]?.exercises[0]) {
       setSelectedExercise(loadedWeeks[0].days[0].exercises[0].name);
     }
+
+    const unsubHistory = onCloudHistoryUpdated((newHistory) => {
+      setHistory(newHistory);
+      const updatedPrs = getPersonalRecords(newHistory);
+      setPersonalRecords(updatedPrs);
+    });
+
+    const unsubPlan = onCloudPlanUpdated((newWeeks) => {
+      setWeeks(newWeeks);
+    });
+
+    return () => {
+      unsubHistory();
+      unsubPlan();
+    };
   }, []);
 
   // Compute 6-Week Completion Rates

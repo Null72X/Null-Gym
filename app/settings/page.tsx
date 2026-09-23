@@ -15,13 +15,11 @@ import {
   saveLibrary,
   restoreDefaultLibrary,
   factoryResetAll,
-  forcePushAllToCloud,
-  forcePullAllFromCloud,
   getProgressionConfig,
   saveProgressionConfig,
   applyAutoScaleToAllWeeks,
 } from '../../lib/storage';
-import { onCloudStatus, checkSupabaseConnection, CloudSyncInfo } from '../../lib/supabaseSync';
+import { onCloudStatus, CloudSyncInfo } from '../../lib/supabaseSync';
 import { WeightUnit, ProgressionConfig } from '../../types/workout';
 import { ALL_CATALOG_EXERCISES } from '../../lib/exerciseCatalog';
 import {
@@ -51,7 +49,6 @@ export default function SettingsPage() {
     status: 'synced',
     message: 'Database Ready & Synced',
   });
-  const [isCheckingCloud, setIsCheckingCloud] = useState(false);
   const [progressionConfig, setProgressionConfig] = useState<ProgressionConfig>({
     autoProgressionEnabled: true,
     weeklyIncrementKg: 2.5,
@@ -144,38 +141,6 @@ export default function SettingsPage() {
   const handleTriggerAutoScale = () => {
     const scaled = applyAutoScaleToAllWeeks();
     triggerToast('⚡ Weeks 2, 3, and 4 auto-programmed with progressive overload!');
-  };
-
-  // Pull latest updates
-  const handleForcePullCloud = async () => {
-    triggerToast('Checking database for updates...');
-    const success = await forcePullAllFromCloud();
-    if (success) {
-      triggerToast('Synced latest data from database! ☁️');
-      setTimeout(() => window.location.reload(), 700);
-    } else {
-      triggerToast('Database checked. Up to date.');
-    }
-  };
-
-  // Push local plan and history
-  const handleForcePushCloud = async () => {
-    triggerToast('Saving workouts to database...');
-    const success = await forcePushAllToCloud();
-    if (success) {
-      triggerToast('All 4 weeks & history saved to database! ☁️');
-    } else {
-      triggerToast('Saved locally.');
-    }
-  };
-
-  // Test Connection
-  const handleTestCloudConnection = async () => {
-    setIsCheckingCloud(true);
-    triggerToast('Testing database connection...');
-    const result = await checkSupabaseConnection();
-    setIsCheckingCloud(false);
-    triggerToast(`✅ ${result.message}`);
   };
 
   // Export JSON file
@@ -531,10 +496,10 @@ export default function SettingsPage() {
             <span>Multi-Device Cloud Sync</span>
           </h3>
           <span
-            className="cloud-status-pill synced"
+            className={`cloud-status-pill ${cloudInfo.status === 'offline' ? 'offline' : 'synced'}`}
             style={{ fontSize: '0.68rem', padding: '3px 8px' }}
           >
-            🟢 Active &amp; Synced
+            {cloudInfo.status === 'offline' ? '📶 Offline' : '🟢 100% Automatic'}
           </span>
         </div>
 
@@ -542,37 +507,35 @@ export default function SettingsPage() {
           Your workouts, 6-week program, history, and PRs automatically persist and sync across your phone, tablet, and PC in real time.
         </p>
 
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            className="btn-clean btn-sm"
-            onClick={handleForcePullCloud}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <RefreshCw size={13} />
-            <span>Sync Across Devices</span>
-          </button>
-
-          <button
-            type="button"
-            className="btn-clean btn-sm"
-            onClick={handleForcePushCloud}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Upload size={13} />
-            <span>Backup Current Plan</span>
-          </button>
-
-          <button
-            type="button"
-            className="btn-clean btn-sm"
-            onClick={handleTestCloudConnection}
-            disabled={isCheckingCloud}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Check size={13} />
-            <span>{isCheckingCloud ? 'Testing...' : 'Test Connection'}</span>
-          </button>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            background: 'rgba(34, 197, 94, 0.08)',
+            border: '1px solid rgba(34, 197, 94, 0.25)',
+            borderRadius: '8px',
+            padding: '10px 14px',
+          }}
+        >
+          <div
+            style={{
+              width: '9px',
+              height: '9px',
+              borderRadius: '50%',
+              backgroundColor: '#22c55e',
+              boxShadow: '0 0 8px #22c55e',
+              flexShrink: 0,
+            }}
+          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#4ade80' }}>
+              Always-On Continuous Cloud Sync Active
+            </span>
+            <span style={{ fontSize: '0.70rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+              Zero buttons needed. Every set check, weight modification, and program edit syncs across all your devices automatically.
+            </span>
+          </div>
         </div>
       </div>
 
@@ -645,7 +608,7 @@ export default function SettingsPage() {
           <span>Personal Workout Backup &amp; Transfer</span>
         </h3>
         <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-          Download a complete backup file of your 4-week program, completed workouts, and PRs to transfer to another device.
+          Download a complete backup file of your 6-week program, completed workouts, and PRs to transfer to another device.
         </p>
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -699,7 +662,7 @@ export default function SettingsPage() {
           <span>Reset &amp; Cleanup</span>
         </h3>
         <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-          Manage your program canvas or start over with a fresh blank 4-week plan.
+          Manage your program canvas or start over with a fresh blank 6-week plan.
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -710,7 +673,7 @@ export default function SettingsPage() {
             onClick={handleResetBlank}
           >
             <RefreshCw size={13} />
-            <span>Create Empty 4-Week Plan (Weeks 1–4)</span>
+            <span>Create Empty 6-Week Plan (Weeks 1–6)</span>
           </button>
 
           <button
@@ -740,7 +703,7 @@ export default function SettingsPage() {
             onClick={handleFactoryReset}
           >
             <Zap size={13} />
-            <span>Restore Default App (Blank Plan + 570 Catalog)</span>
+            <span>Restore Default App (Blank 6-Week Plan + 570 Catalog)</span>
           </button>
         </div>
       </div>

@@ -30,7 +30,7 @@ export function onCloudStatus(listener: CloudSyncListener): () => void {
   };
 }
 
-function notifyStatus(status: CloudSyncStatus, message?: string) {
+export function notifyCloudStatus(status: CloudSyncStatus, message?: string) {
   currentInfo = {
     status,
     message: message || '',
@@ -39,15 +39,17 @@ function notifyStatus(status: CloudSyncStatus, message?: string) {
   listeners.forEach((l) => l(currentInfo));
 }
 
+const notifyStatus = notifyCloudStatus;
+
 // Online/Offline detection
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => {
-    notifyStatus('syncing', 'Reconnected. Synchronizing...');
+    notifyCloudStatus('syncing', 'Reconnected. Synchronizing...');
     pullPlanFromCloud();
   });
 
   window.addEventListener('offline', () => {
-    notifyStatus('offline', 'Offline (Saved locally)');
+    notifyCloudStatus('offline', 'Offline (Saved locally)');
   });
 }
 
@@ -56,7 +58,7 @@ if (typeof window !== 'undefined') {
 // -------------------------------------------------------------
 let pushPlanTimer: any = null;
 
-export function debouncedPushPlanToCloud(weeks: WeekPlan[], delayMs = 600) {
+export function debouncedPushPlanToCloud(weeks: WeekPlan[], delayMs = 300) {
   if (typeof window === 'undefined') return;
   clearTimeout(pushPlanTimer);
   pushPlanTimer = setTimeout(() => {

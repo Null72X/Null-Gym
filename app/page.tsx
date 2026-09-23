@@ -19,6 +19,9 @@ import {
   saveHistory,
   getActiveSelection,
   saveActiveSelection,
+  onCloudPlanUpdated,
+  onCloudHistoryUpdated,
+  onCloudSettingsUpdated,
 } from '../lib/storage';
 import { getLastPerformance } from '../lib/history';
 import {
@@ -47,7 +50,7 @@ export default function DashboardPage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
 
-  // Load from storage on mount
+  // Load from storage on mount & listen to real-time multi-device cloud updates
   useEffect(() => {
     const loadedWeeks = getSavedWeeks();
     const loadedHistory = getSavedHistory();
@@ -59,6 +62,26 @@ export default function DashboardPage() {
     setCurrentDayIndex(active.dayIndex || 0);
     setUnit(active.unit || 'kg');
     setIsLoaded(true);
+
+    const unsubPlan = onCloudPlanUpdated((newWeeks) => {
+      setWeeks(newWeeks);
+    });
+
+    const unsubHistory = onCloudHistoryUpdated((newHistory) => {
+      setHistory(newHistory);
+    });
+
+    const unsubSettings = onCloudSettingsUpdated((newSettings) => {
+      if (newSettings.weekNumber) setCurrentWeek(newSettings.weekNumber);
+      if (newSettings.dayIndex !== undefined) setCurrentDayIndex(newSettings.dayIndex);
+      if (newSettings.unit) setUnit(newSettings.unit);
+    });
+
+    return () => {
+      unsubPlan();
+      unsubHistory();
+      unsubSettings();
+    };
   }, []);
 
   const triggerToast = (msg: string) => {
