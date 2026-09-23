@@ -137,10 +137,10 @@ export default function SettingsPage() {
     triggerToast('Progression preferences saved');
   };
 
-  // 1-Click Auto-Setup Weeks 2, 3, 4 from Week 1
+  // 1-Click Auto-Setup Weeks 2 through 6 from Week 1
   const handleTriggerAutoScale = () => {
     const scaled = applyAutoScaleToAllWeeks();
-    triggerToast('⚡ Weeks 2, 3, and 4 auto-programmed with progressive overload!');
+    triggerToast('⚡ Weeks 2 to 6 auto-programmed with progressive overload!');
   };
 
   // Export JSON file
@@ -156,7 +156,7 @@ export default function SettingsPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      triggerToast('Full 4-week data exported successfully! 📁');
+      triggerToast('Full 6-week data exported successfully! 📁');
     } catch (err) {
       console.error(err);
       triggerToast('Export failed');
@@ -187,12 +187,12 @@ export default function SettingsPage() {
     e.target.value = '';
   };
 
-  // Reset to blank 4 weeks
+  // Reset to blank 6 weeks
   const handleResetBlank = () => {
-    if (!confirm('Reset plan to a clean 4-week blank slate (Weeks 1 to 4)?')) return;
+    if (!confirm('Reset plan to a clean 6-week blank slate (Weeks 1 to 6)?')) return;
     const blank = createBlankWeeks();
     saveWeeks(blank);
-    triggerToast('Created blank 4-week plan! Opening planner...');
+    triggerToast('Created blank 6-week plan! Opening planner...');
     setTimeout(() => {
       window.location.href = '/planner';
     }, 800);
@@ -200,9 +200,9 @@ export default function SettingsPage() {
 
   // Clear all exercises from all weeks
   const handleCleanAllExercises = () => {
-    if (!confirm('Wipe all planned exercises from all 4 weeks? Your workout history and PRs will stay intact.')) return;
+    if (!confirm('Wipe all planned exercises from all 6 weeks? Your workout history and PRs will stay intact.')) return;
     clearAllExercisesFromPlan();
-    triggerToast('All exercises removed from plan. Empty 4-week canvas ready.');
+    triggerToast('All exercises removed from plan. Empty 6-week canvas ready.');
     setTimeout(() => {
       window.location.href = '/planner';
     }, 700);
@@ -233,7 +233,7 @@ export default function SettingsPage() {
 
   // Factory Reset Website
   const handleFactoryReset = () => {
-    if (!confirm('FACTORY RESET: This will reset all 4 weeks to blank, restore the full 570-exercise library, and delete all history. Continue?')) return;
+    if (!confirm('FACTORY RESET: This will reset all 6 weeks to blank, restore the full 615-exercise library, and delete all history. Continue?')) return;
     factoryResetAll();
     triggerToast('Reset complete! Reloading Null Gym...');
     setTimeout(() => {

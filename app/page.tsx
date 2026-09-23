@@ -302,7 +302,7 @@ export default function DashboardPage() {
 
   return (
     <div>
-      {/* 4-Week Segmented Control */}
+      {/* 6-Week Segmented Control */}
       <WeekSelector selectedWeek={currentWeek} onSelectWeek={handleSelectWeek} />
 
       {/* 7-Day Switching Grid */}

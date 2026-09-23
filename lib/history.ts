@@ -41,7 +41,7 @@ export function getLastPerformance(
 
   // 2. Fallback: Search in earlier weeks / days of the plan itself
   if (weeksPlan) {
-    for (let w = (currentWeekNumber || 4) - 1; w >= 0; w--) {
+    for (let w = (currentWeekNumber || 6) - 1; w >= 0; w--) {
       const week = weeksPlan[w];
       if (!week) continue;
 

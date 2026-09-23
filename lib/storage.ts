@@ -33,30 +33,8 @@ const STORAGE_KEYS = {
 // 570 Master exercise library with YouTube search links and intelligent tracking types
 export const DEFAULT_LIBRARY: ExerciseLibraryItem[] = ALL_CATALOG_EXERCISES;
 
-// Helper to create blank 6 weeks with zero exercises
-export function createBlankWeeks(): WeekPlan[] {
-  const dayNames: DayWorkout['dayOfWeek'][] = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-    'Sunday',
-  ];
-
-  return Array.from({ length: 6 }, (_, wIdx) => ({
-    weekNumber: wIdx + 1,
-    days: dayNames.map((d, dIdx) => ({
-      id: `w${wIdx + 1}_d${dIdx}`,
-      dayOfWeek: d,
-      title: d === 'Sunday' ? 'Rest Day' : d,
-      focus: d === 'Sunday' ? 'Rest & Recovery' : '',
-      isRestDay: d === 'Sunday',
-      exercises: [],
-    })),
-  }));
-}
+import { createBlankWeeks, ensureSixWeeks } from './planDefaults';
+export { createBlankWeeks, ensureSixWeeks };
 
 // Event bus for autosave status
 type SaveStatus = 'saved' | 'saving';
@@ -137,22 +115,11 @@ export function getSavedWeeks(): WeekPlan[] {
       return initial;
     }
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      const initial = createBlankWeeks();
-      localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(initial));
-      return initial;
+    const valid = ensureSixWeeks(parsed);
+    if (!Array.isArray(parsed) || parsed.length < 6) {
+      localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(valid));
     }
-    if (parsed.length < 6) {
-      // Seamlessly upgrade 4-week plans to 6 weeks without losing any user data!
-      const blank = createBlankWeeks();
-      const expanded = [
-        ...parsed,
-        ...blank.slice(parsed.length),
-      ];
-      localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(expanded));
-      return expanded;
-    }
-    return parsed;
+    return valid;
   } catch (err) {
     console.error('Failed to load weeks from storage', err);
     return createBlankWeeks();
@@ -169,11 +136,12 @@ export function clearAllExercisesFromPlan(): WeekPlan[] {
 
 export function saveWeeks(weeks: WeekPlan[]) {
   if (typeof window === 'undefined') return;
+  const verifiedWeeks = ensureSixWeeks(weeks);
   emitSave('saving');
   try {
-    localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(weeks));
-    crossTabChannel?.postMessage({ type: 'plan', data: weeks });
-    debouncedPushPlanToCloud(weeks);
+    localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(verifiedWeeks));
+    crossTabChannel?.postMessage({ type: 'plan', data: verifiedWeeks });
+    debouncedPushPlanToCloud(verifiedWeeks);
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       emitSave('saved');
@@ -350,15 +318,12 @@ export async function performContinuousCloudSync(force = false) {
     }
 
     // Case 2: Server has plan data -> sync smoothly to local device
-    if (body.plan && Array.isArray(body.plan) && body.plan.length >= 4) {
+    if (body.plan && Array.isArray(body.plan) && body.plan.length > 0) {
       if (force || serverTime !== lastSyncedServerTimestamp) {
         lastSyncedServerTimestamp = serverTime;
 
-        // Upgrade 4-week server plans to 6-week if needed
-        const validServerWeeks =
-          body.plan.length < 6
-            ? [...body.plan, ...createBlankWeeks().slice(body.plan.length)]
-            : body.plan;
+        // Upgrade server plans to 6-week if needed
+        const validServerWeeks = ensureSixWeeks(body.plan);
 
         const serverWeeksStr = JSON.stringify(validServerWeeks);
         if (localRawWeeks !== serverWeeksStr) {

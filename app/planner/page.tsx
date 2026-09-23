@@ -297,11 +297,11 @@ export default function PlannerPage() {
     triggerToast(`Copied entire Week ${currentWeek} to Week ${targetWeekNum}!`);
   };
 
-  // 1-Click Auto-Scale Weeks 2, 3, and 4 from Week 1
+  // 1-Click Auto-Scale Weeks 2 through 6 from Week 1
   const handleAutoScaleWeeks = () => {
     const scaled = applyAutoScaleToAllWeeks();
     setWeeks(scaled);
-    triggerToast('⚡ Weeks 2, 3 & 4 auto-scaled with progressive overload!');
+    triggerToast('⚡ Weeks 2 to 6 auto-scaled with progressive overload!');
   };
 
   if (!isLoaded || weeks.length === 0) {
@@ -310,7 +310,7 @@ export default function PlannerPage() {
 
   return (
     <div>
-      {/* 4-Week Selector */}
+      {/* 6-Week Selector */}
       <WeekSelector selectedWeek={currentWeek} onSelectWeek={handleSelectWeek} />
 
       {/* Week 1 Auto-Progression Banner */}
@@ -343,7 +343,7 @@ export default function PlannerPage() {
               <span>Week 1 Baseline Routine</span>
             </div>
             <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Design Week 1, then 1-click auto-program Weeks 2, 3 &amp; 4 with progressive overload.
+              Design Week 1, then 1-click auto-program Weeks 2, 3, 4, 5 &amp; 6 with progressive overload.
             </div>
           </div>
           <button
@@ -353,7 +353,7 @@ export default function PlannerPage() {
             style={{ fontSize: '0.72rem', padding: '6px 10px', whiteSpace: 'nowrap' }}
           >
             <Sparkles size={12} />
-            <span>Auto-Setup Weeks 2–4 ⚡</span>
+            <span>Auto-Setup Weeks 2–6 ⚡</span>
           </button>
         </div>
       )}

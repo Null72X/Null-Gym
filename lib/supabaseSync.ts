@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { WeekPlan, WorkoutHistoryEntry, WeightUnit } from '../types/workout';
+import { ensureSixWeeks } from './planDefaults';
 
 export type CloudSyncStatus = 'synced' | 'syncing' | 'offline';
 
@@ -73,6 +74,7 @@ export async function pushPlanToCloud(weeks: WeekPlan[]): Promise<boolean> {
   }
 
   notifyStatus('syncing', 'Saving to database...');
+  const fullWeeks = ensureSixWeeks(weeks);
 
   try {
     // 1. Save to built-in Server Database
@@ -80,7 +82,7 @@ export async function pushPlanToCloud(weeks: WeekPlan[]): Promise<boolean> {
       await fetch('/api/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'save_plan', data: weeks }),
+        body: JSON.stringify({ action: 'save_plan', data: fullWeeks }),
       });
     } catch (e) {
       // Local network fallback
@@ -94,7 +96,7 @@ export async function pushPlanToCloud(weeks: WeekPlan[]): Promise<boolean> {
           .upsert(
             {
               id: 'default_plan',
-              weeks: weeks,
+              weeks: fullWeeks,
               updated_at: new Date().toISOString(),
             },
             { onConflict: 'id' }
@@ -124,9 +126,9 @@ export async function pullPlanFromCloud(): Promise<WeekPlan[] | null> {
       const res = await fetch('/api/sync');
       if (res.ok) {
         const body = await res.json();
-        if (body.success && Array.isArray(body.plan) && body.plan.length >= 4) {
+        if (body.success && Array.isArray(body.plan) && body.plan.length > 0) {
           notifyStatus('synced', 'Database Synced');
-          return body.plan as WeekPlan[];
+          return ensureSixWeeks(body.plan);
         }
       }
     } catch (e) {}
@@ -139,9 +141,9 @@ export async function pullPlanFromCloud(): Promise<WeekPlan[] | null> {
         .eq('id', 'default_plan')
         .maybeSingle();
 
-      if (data && Array.isArray(data.weeks) && data.weeks.length >= 4) {
+      if (data && Array.isArray(data.weeks) && data.weeks.length > 0) {
         notifyStatus('synced', 'Database Synced');
-        return data.weeks as WeekPlan[];
+        return ensureSixWeeks(data.weeks);
       }
     }
 

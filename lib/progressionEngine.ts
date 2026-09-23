@@ -14,7 +14,7 @@ export const DEFAULT_PROGRESSION_CONFIG: ProgressionConfig = {
  */
 export function scaleExerciseForWeek(
   exercise: Exercise,
-  weekOffset: number, // 1 for W2, 2 for W3, 3 for W4
+  weekOffset: number, // 1 for W2, 2 for W3, 3 for W4, 4 for W5, 5 for W6
   config: ProgressionConfig,
   unit: WeightUnit,
   isDeload = false
@@ -74,7 +74,7 @@ export function scaleExerciseForWeek(
 }
 
 /**
- * Propagates Week 1 to Weeks 2, 3, and 4 with progressive overload
+ * Propagates Week 1 to Weeks 2, 3, 4, 5, and 6 with progressive overload
  */
 export function autoScaleWeek1ToAllWeeks(
   weeks: WeekPlan[],
@@ -87,7 +87,7 @@ export function autoScaleWeek1ToAllWeeks(
   return weeks.map((w, wIdx) => {
     if (wIdx === 0) return w; // Week 1 remains unchanged
 
-    const weekOffset = wIdx; // 1 for W2, 2 for W3, 3 for W4
+    const weekOffset = wIdx; // 1 for W2, 2 for W3, 3 for W4, 4 for W5, 5 for W6
     const isDeload = wIdx === 3 && config.deloadWeek4;
 
     const scaledDays = week1.days.map((d1, dIdx) => {

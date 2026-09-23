@@ -95,9 +95,9 @@ export default function CopyModal({
               setConfirmed(false);
             }}
           >
-            {weeks.map((w) => (
-              <option key={w.weekNumber} value={w.weekNumber}>
-                Week {w.weekNumber}
+            {[1, 2, 3, 4, 5, 6].map((wNum) => (
+              <option key={wNum} value={wNum}>
+                Week {wNum}
               </option>
             ))}
           </select>

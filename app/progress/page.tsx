@@ -330,7 +330,7 @@ export default function ProgressPage() {
         </div>
       </div>
 
-      {/* 4-Week Completion Rates Bar Chart */}
+      {/* 6-Week Completion Rates Bar Chart */}
       <WeeklyBarChart weeklyRates={weeklyRates} />
 
       {/* Exercise Progression Analytics & Chart */}
