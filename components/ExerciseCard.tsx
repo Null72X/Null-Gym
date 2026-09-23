@@ -162,11 +162,11 @@ export default function ExerciseCard({
     <div className={`clean-card ${allSetsCompleted ? 'exercise-done' : ''}`}>
       {/* Header */}
       <div className="clean-card-header">
-        <div className="clean-ex-title">
-          <span style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
+        <div className="clean-ex-title" style={{ flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
+          <span style={{ color: 'var(--text-dim)', fontSize: '0.85rem', flexShrink: 0 }}>
             #{index + 1}
           </span>
-          <span>
+          <span style={{ minWidth: 0, wordBreak: 'break-word' }}>
             <HighlightedText text={exercise.name} query={highlightQuery} />
           </span>
           {/* Prominent Master Muscle Pillar Badge */}
@@ -182,6 +182,7 @@ export default function ExerciseCard({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
+              flexShrink: 0,
             }}
           >
             <span>{muscleInfo.pillarMeta.icon}</span>

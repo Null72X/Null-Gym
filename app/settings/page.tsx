@@ -669,40 +669,40 @@ export default function SettingsPage() {
           <button
             type="button"
             className="btn-clean btn-sm"
-            style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', wordBreak: 'break-word', lineHeight: 1.4 }}
             onClick={handleResetBlank}
           >
-            <RefreshCw size={13} />
+            <RefreshCw size={13} style={{ flexShrink: 0 }} />
             <span>Create Empty 6-Week Plan (Weeks 1–6)</span>
           </button>
 
           <button
             type="button"
             className="btn-clean btn-danger btn-sm"
-            style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', wordBreak: 'break-word', lineHeight: 1.4 }}
             onClick={handleCleanAllExercises}
           >
-            <Trash2 size={13} />
+            <Trash2 size={13} style={{ flexShrink: 0 }} />
             <span>Clean All Exercises from Plan</span>
           </button>
 
           <button
             type="button"
             className="btn-clean btn-danger btn-sm"
-            style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', wordBreak: 'break-word', lineHeight: 1.4 }}
             onClick={handleClearHistory}
           >
-            <Trash2 size={13} />
+            <Trash2 size={13} style={{ flexShrink: 0 }} />
             <span>Clear Logged Workout History &amp; PRs</span>
           </button>
 
           <button
             type="button"
             className="btn-clean btn-danger btn-sm"
-            style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', wordBreak: 'break-word', lineHeight: 1.4 }}
             onClick={handleFactoryReset}
           >
-            <Zap size={13} />
+            <Zap size={13} style={{ flexShrink: 0 }} />
             <span>Restore Default App (Blank 6-Week Plan + {ALL_CATALOG_EXERCISES.length} Catalog)</span>
           </button>
         </div>

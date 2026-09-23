@@ -199,15 +199,7 @@ export default function ProgressPage() {
 
       {/* Summary Stat Cards */}
       <div className="responsive-grid-4" style={{ marginBottom: '16px' }}>
-        <div
-          style={{
-            background: 'var(--card)',
-            border: '1px solid var(--border)',
-            borderRadius: '12px',
-            padding: '12px 10px',
-            textAlign: 'center',
-          }}
-        >
+        <div className="stat-summary-card">
           <div style={{ color: 'var(--accent-red)', marginBottom: '4px' }}>
             <Flame size={16} style={{ margin: '0 auto' }} />
           </div>
@@ -233,15 +225,7 @@ export default function ProgressPage() {
           </div>
         </div>
 
-        <div
-          style={{
-            background: 'var(--card)',
-            border: '1px solid var(--border)',
-            borderRadius: '12px',
-            padding: '12px 10px',
-            textAlign: 'center',
-          }}
-        >
+        <div className="stat-summary-card">
           <div style={{ color: 'var(--accent-amber)', marginBottom: '4px' }}>
             <Dumbbell size={16} style={{ margin: '0 auto' }} />
           </div>
@@ -267,15 +251,7 @@ export default function ProgressPage() {
           </div>
         </div>
 
-        <div
-          style={{
-            background: 'var(--card)',
-            border: '1px solid var(--border)',
-            borderRadius: '12px',
-            padding: '12px 10px',
-            textAlign: 'center',
-          }}
-        >
+        <div className="stat-summary-card">
           <div style={{ color: '#38bdf8', marginBottom: '4px' }}>
             <Activity size={16} style={{ margin: '0 auto' }} />
           </div>
@@ -301,15 +277,7 @@ export default function ProgressPage() {
           </div>
         </div>
 
-        <div
-          style={{
-            background: 'var(--card)',
-            border: '1px solid var(--border)',
-            borderRadius: '12px',
-            padding: '12px 10px',
-            textAlign: 'center',
-          }}
-        >
+        <div className="stat-summary-card">
           <div style={{ color: 'var(--accent-green)', marginBottom: '4px' }}>
             <Trophy size={16} style={{ margin: '0 auto' }} />
           </div>

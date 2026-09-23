@@ -392,7 +392,7 @@ export default function PlannerPage() {
       <section className="day-summary-card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
         {isEditingHeader ? (
           <div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+            <div className="planner-header-grid">
               <div>
                 <label className="clean-label">Workout Name</label>
                 <input

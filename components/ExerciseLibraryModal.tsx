@@ -266,22 +266,24 @@ export default function ExerciseLibraryModal({
             flexShrink: 0,
           }}
         >
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '6px', flex: 1, minWidth: 0, marginRight: '8px' }}>
             <button
               type="button"
               className={`btn-clean ${tab === 'browse' ? 'btn-primary' : ''}`}
-              style={{ fontSize: '0.75rem', padding: '6px 14px' }}
+              style={{ fontSize: '0.74rem', padding: '6px 10px', flex: '1 1 auto', textAlign: 'center', whiteSpace: 'nowrap' }}
               onClick={() => setTab('browse')}
             >
-              Browse Library ({library.length})
+              <span className="tab-full">Browse Library ({library.length})</span>
+              <span className="tab-short">Library ({library.length})</span>
             </button>
             <button
               type="button"
               className={`btn-clean ${tab === 'create' ? 'btn-primary' : ''}`}
-              style={{ fontSize: '0.75rem', padding: '6px 14px' }}
+              style={{ fontSize: '0.74rem', padding: '6px 10px', flex: '1 1 auto', textAlign: 'center', whiteSpace: 'nowrap' }}
               onClick={() => setTab('create')}
             >
-              + Create Custom
+              <span className="tab-full">+ Create Custom</span>
+              <span className="tab-short">+ Custom</span>
             </button>
           </div>
           <button type="button" className="icon-action-btn" onClick={onClose}>

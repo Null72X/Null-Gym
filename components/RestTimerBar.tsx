@@ -306,8 +306,7 @@ export default function RestTimerBar({
         bottom: 'calc(64px + var(--safe-bottom) + 8px)',
         left: '50%',
         transform: 'translateX(-50%)',
-        width: 'calc(100% - 20px)',
-        maxWidth: '480px',
+        width: 'min(480px, calc(100% - 16px))',
         background: 'rgba(14, 14, 20, 0.96)',
         backdropFilter: 'blur(16px)',
         border: `1px solid ${
@@ -323,7 +322,6 @@ export default function RestTimerBar({
           ? '0 8px 30px rgba(239, 68, 68, 0.3)'
           : '0 8px 30px rgba(0, 0, 0, 0.7)',
         borderRadius: '14px',
-        padding: isExpanded ? '10px 14px' : '8px 12px',
         zIndex: 900,
         transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
       }}
@@ -491,7 +489,7 @@ export default function RestTimerBar({
 
           <button
             type="button"
-            className="timer-action-btn"
+            className="timer-action-btn timer-secondary-actions"
             onClick={() => adjustSeconds(-15)}
             title="Subtract 15 seconds"
           >
@@ -500,7 +498,7 @@ export default function RestTimerBar({
 
           <button
             type="button"
-            className="timer-action-btn"
+            className="timer-action-btn timer-secondary-actions"
             onClick={() => adjustSeconds(15)}
             title="Add 15 seconds"
           >

@@ -111,22 +111,10 @@ export default function SetRow({
             type="text"
             inputMode="numeric"
             pattern="[0-9]*"
-            className="set-reps-target"
+            className="set-reps-input"
             value={set.reps}
             placeholder="Reps"
             title="Target / Achieved Reps"
-            style={{
-              background: 'transparent',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '6px',
-              padding: '2px 4px',
-              color: '#cbd5e1',
-              outline: 'none',
-              width: '54px',
-              height: '32px',
-              textAlign: 'center',
-              fontSize: '0.8rem',
-            }}
             onChange={(e) => onUpdate({ ...set, reps: e.target.value })}
           />
 
@@ -298,21 +286,10 @@ export default function SetRow({
       <input
         type="text"
         inputMode="decimal"
+        className="set-rpe-input"
         title="RPE (Rate of Perceived Exertion: 1-10)"
         placeholder="@"
         value={set.rpe}
-        style={{
-          width: '38px',
-          height: '32px',
-          background: 'transparent',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: '6px',
-          textAlign: 'center',
-          fontSize: '0.75rem',
-          fontFamily: 'var(--font-mono)',
-          color: '#fde68a',
-          outline: 'none',
-        }}
         onChange={(e) => onUpdate({ ...set, rpe: e.target.value })}
       />
 
@@ -321,15 +298,7 @@ export default function SetRow({
         <button
           type="button"
           title="Delete set"
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--text-dim)',
-            cursor: 'pointer',
-            padding: '2px 4px',
-            display: 'flex',
-            alignItems: 'center',
-          }}
+          className="set-delete-btn"
           onClick={onDelete}
         >
           <Trash2 size={13} />

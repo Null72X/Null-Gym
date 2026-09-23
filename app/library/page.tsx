@@ -810,15 +810,7 @@ export default function LibraryPage() {
       </div>
 
       {/* 1. Primary 7 Master Muscle Pillars Navigation */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '6px',
-          overflowX: 'auto',
-          paddingBottom: '6px',
-          marginBottom: '6px',
-        }}
-      >
+      <div className="horizontal-pill-scroll">
         <button
           type="button"
           onClick={() => {
@@ -886,11 +878,10 @@ export default function LibraryPage() {
         if (!activePillar || !activePillar.subCategories?.length) return null;
         return (
           <div
+            className="horizontal-pill-scroll"
             style={{
-              display: 'flex',
               alignItems: 'center',
               gap: '5px',
-              overflowX: 'auto',
               paddingBottom: '8px',
               marginBottom: '10px',
               background: 'rgba(255, 255, 255, 0.015)',

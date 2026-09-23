@@ -480,7 +480,7 @@ export default function DashboardPage() {
             title="Start 90s Rest Timer"
           >
             <Clock size={13} color="var(--accent-red)" />
-            <span>Rest</span>
+            <span className="quick-rest-label">Rest</span>
           </button>
           <button
             type="button"
