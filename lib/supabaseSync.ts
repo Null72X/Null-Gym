@@ -59,7 +59,7 @@ if (typeof window !== 'undefined') {
 // -------------------------------------------------------------
 let pushPlanTimer: any = null;
 
-export function debouncedPushPlanToCloud(weeks: WeekPlan[], delayMs = 300) {
+export function debouncedPushPlanToCloud(weeks: WeekPlan[], delayMs = 400) {
   if (typeof window === 'undefined') return;
   clearTimeout(pushPlanTimer);
   pushPlanTimer = setTimeout(() => {
@@ -73,11 +73,10 @@ export async function pushPlanToCloud(weeks: WeekPlan[]): Promise<boolean> {
     return true;
   }
 
-  notifyStatus('syncing', 'Saving to database...');
   const fullWeeks = ensureSixWeeks(weeks);
 
   try {
-    // 1. Save to built-in Server Database
+    // 1. Save to built-in Server Database in background
     try {
       await fetch('/api/sync', {
         method: 'POST',
@@ -104,10 +103,10 @@ export async function pushPlanToCloud(weeks: WeekPlan[]): Promise<boolean> {
       ).catch(() => {});
     }
 
-    notifyStatus('synced', 'All changes saved to database');
+    notifyStatus('synced', 'Database Synced');
     return true;
   } catch (err: any) {
-    notifyStatus('synced', 'Changes saved');
+    notifyStatus('synced', 'Changes saved locally');
     return true;
   }
 }
@@ -213,6 +212,19 @@ export async function pullHistoryFromCloud(): Promise<WorkoutHistoryEntry[] | nu
 // -------------------------------------------------------------
 // SETTINGS SYNC (Server DB + Silent Supabase Mirror)
 // -------------------------------------------------------------
+let pushSettingsTimer: any = null;
+
+export function debouncedPushSettingsToCloud(
+  settings: { weekNumber: number; dayIndex: number; unit: WeightUnit },
+  delayMs = 400
+) {
+  if (typeof window === 'undefined') return;
+  clearTimeout(pushSettingsTimer);
+  pushSettingsTimer = setTimeout(() => {
+    pushSettingsToCloud(settings);
+  }, delayMs);
+}
+
 export async function pushSettingsToCloud(settings: {
   weekNumber: number;
   dayIndex: number;

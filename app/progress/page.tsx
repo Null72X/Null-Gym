@@ -30,10 +30,27 @@ import {
 } from 'lucide-react';
 
 export default function ProgressPage() {
-  const [history, setHistory] = useState<WorkoutHistoryEntry[]>([]);
-  const [weeks, setWeeks] = useState<WeekPlan[]>([]);
-  const [personalRecords, setPersonalRecords] = useState<PersonalRecord[]>([]);
-  const [selectedExercise, setSelectedExercise] = useState<string>('');
+  const [history, setHistory] = useState<WorkoutHistoryEntry[]>(() => {
+    if (typeof window !== 'undefined') return getSavedHistory();
+    return [];
+  });
+  const [weeks, setWeeks] = useState<WeekPlan[]>(() => {
+    if (typeof window !== 'undefined') return getSavedWeeks();
+    return [];
+  });
+  const [personalRecords, setPersonalRecords] = useState<PersonalRecord[]>(() => {
+    if (typeof window !== 'undefined') return getPersonalRecords(getSavedHistory());
+    return [];
+  });
+  const [selectedExercise, setSelectedExercise] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const prs = getPersonalRecords(getSavedHistory());
+      if (prs.length > 0) return prs[0].exerciseName;
+      const loadedWeeks = getSavedWeeks();
+      if (loadedWeeks[0]?.days[0]?.exercises[0]) return loadedWeeks[0].days[0].exercises[0].name;
+    }
+    return '';
+  });
   const [expandedHistId, setExpandedHistId] = useState<string | null>(null);
 
   // Filters
@@ -42,22 +59,7 @@ export default function ProgressPage() {
   const [historySearch, setHistorySearch] = useState<string>('');
 
   useEffect(() => {
-    const loadedHistory = getSavedHistory();
-    const loadedWeeks = getSavedWeeks();
-
-    setHistory(loadedHistory);
-    setWeeks(loadedWeeks);
-
-    const prs = getPersonalRecords(loadedHistory);
-    setPersonalRecords(prs);
-
-    // Default selected exercise for chart
-    if (prs.length > 0) {
-      setSelectedExercise(prs[0].exerciseName);
-    } else if (loadedWeeks[0]?.days[0]?.exercises[0]) {
-      setSelectedExercise(loadedWeeks[0].days[0].exercises[0].name);
-    }
-
+    // Cloud listeners for background sync
     const unsubHistory = onCloudHistoryUpdated((newHistory) => {
       setHistory(newHistory);
       const updatedPrs = getPersonalRecords(newHistory);

@@ -20,8 +20,11 @@ let inMemoryDatabase: {
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DATA_FILE = path.join(DATA_DIR, 'gym_database.json');
 
-// Ensure data folder and file exist
-function getDatabase() {
+// Ensure data folder and file exist once on startup
+let isLoadedFromDisk = false;
+
+function ensureLoaded() {
+  if (isLoadedFromDisk) return inMemoryDatabase;
   try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -31,41 +34,45 @@ function getDatabase() {
       const content = fs.readFileSync(DATA_FILE, 'utf-8');
       const parsed = JSON.parse(content);
       inMemoryDatabase = { ...inMemoryDatabase, ...parsed };
-      return inMemoryDatabase;
     } else {
-      fs.writeFileSync(DATA_FILE, JSON.stringify(inMemoryDatabase, null, 2), 'utf-8');
-      return inMemoryDatabase;
+      fs.writeFileSync(DATA_FILE, JSON.stringify(inMemoryDatabase), 'utf-8');
     }
   } catch (err) {
     // If running in a read-only container/serverless, fallback to inMemory
-    return inMemoryDatabase;
   }
+  isLoadedFromDisk = true;
+  return inMemoryDatabase;
 }
 
-function saveDatabase(data: typeof inMemoryDatabase) {
+let savePromise: Promise<any> | null = null;
+let pendingSaveTimeout: any = null;
+
+function saveDatabaseAsync(data: Partial<typeof inMemoryDatabase>) {
   inMemoryDatabase = {
     ...inMemoryDatabase,
     ...data,
     updatedAt: new Date().toISOString(),
   };
 
-  try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    fs.writeFileSync(DATA_FILE, JSON.stringify(inMemoryDatabase, null, 2), 'utf-8');
-    return true;
-  } catch (err) {
-    // Read-only filesystem fallback
-    return true;
-  }
+  // Debounced non-blocking async file write
+  if (pendingSaveTimeout) clearTimeout(pendingSaveTimeout);
+  pendingSaveTimeout = setTimeout(() => {
+    try {
+      const payload = JSON.stringify(inMemoryDatabase);
+      fs.promises.mkdir(DATA_DIR, { recursive: true })
+        .then(() => fs.promises.writeFile(DATA_FILE, payload, 'utf-8'))
+        .catch(() => {});
+    } catch {}
+  }, 100);
+
+  return inMemoryDatabase;
 }
 
 import { ensureSixWeeks } from '@/lib/planDefaults';
 
 // GET /api/sync -> Returns current database snapshot
 export async function GET() {
-  const db = getDatabase();
+  const db = ensureLoaded();
   const validPlan = db.plan ? ensureSixWeeks(db.plan) : null;
   return NextResponse.json({
     success: true,
@@ -81,7 +88,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { action, data } = body;
-    const db = getDatabase();
+    const db = ensureLoaded();
 
     if (action === 'save_plan' && Array.isArray(data)) {
       db.plan = ensureSixWeeks(data);
@@ -95,7 +102,7 @@ export async function POST(request: Request) {
       if (data.settings) db.settings = data.settings;
     }
 
-    saveDatabase(db);
+    saveDatabaseAsync(db);
 
     return NextResponse.json({
       success: true,

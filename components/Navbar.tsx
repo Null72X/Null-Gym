@@ -4,31 +4,22 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Dumbbell, Calendar, BookOpen, TrendingUp, Settings, Cloud, Check, AlertCircle, RefreshCw } from 'lucide-react';
-import { onSaveStatus, initBackgroundCloudSync } from '../lib/storage';
-import { onCloudStatus, CloudSyncInfo } from '../lib/supabaseSync';
+import { initBackgroundCloudSync } from '../lib/storage';
+import { onCloudStatus, getCloudSyncInfo, CloudSyncInfo } from '../lib/supabaseSync';
 
 export default function Navbar() {
   const pathname = usePathname();
-  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving'>('saved');
-  const [cloudInfo, setCloudInfo] = useState<CloudSyncInfo>({
-    status: 'syncing',
-    message: 'Initializing...',
-  });
+  const [cloudInfo, setCloudInfo] = useState<CloudSyncInfo>(() => getCloudSyncInfo());
 
   useEffect(() => {
     // Start background sync on first load
     initBackgroundCloudSync();
-
-    const unsubSave = onSaveStatus((status) => {
-      setSaveStatus(status);
-    });
 
     const unsubCloud = onCloudStatus((info) => {
       setCloudInfo(info);
     });
 
     return () => {
-      unsubSave();
       unsubCloud();
     };
   }, []);
@@ -121,14 +112,7 @@ export default function Navbar() {
         </nav>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {saveStatus === 'saving' ? (
-            <span className="cloud-status-pill syncing">
-              <span>🟡</span>
-              <span>Saving...</span>
-            </span>
-          ) : (
-            renderCloudBadge()
-          )}
+          {renderCloudBadge()}
 
           <Link
             href="/settings"

@@ -45,12 +45,30 @@ import {
 } from 'lucide-react';
 
 export default function PlannerPage() {
-  const [weeks, setWeeks] = useState<WeekPlan[]>([]);
-  const [history, setHistory] = useState<WorkoutHistoryEntry[]>([]);
-  const [library, setLibrary] = useState<ExerciseLibraryItem[]>([]);
-  const [currentWeek, setCurrentWeek] = useState<number>(1);
-  const [currentDayIndex, setCurrentDayIndex] = useState<number>(0);
-  const [unit, setUnit] = useState<WeightUnit>('kg');
+  const [weeks, setWeeks] = useState<WeekPlan[]>(() => {
+    if (typeof window !== 'undefined') return getSavedWeeks();
+    return [];
+  });
+  const [history, setHistory] = useState<WorkoutHistoryEntry[]>(() => {
+    if (typeof window !== 'undefined') return getSavedHistory();
+    return [];
+  });
+  const [library, setLibrary] = useState<ExerciseLibraryItem[]>(() => {
+    if (typeof window !== 'undefined') return getSavedLibrary();
+    return [];
+  });
+  const [currentWeek, setCurrentWeek] = useState<number>(() => {
+    if (typeof window !== 'undefined') return getActiveSelection().weekNumber;
+    return 1;
+  });
+  const [currentDayIndex, setCurrentDayIndex] = useState<number>(() => {
+    if (typeof window !== 'undefined') return getActiveSelection().dayIndex;
+    return 0;
+  });
+  const [unit, setUnit] = useState<WeightUnit>(() => {
+    if (typeof window !== 'undefined') return getActiveSelection().unit;
+    return 'kg';
+  });
   const [isLibraryOpen, setIsLibraryOpen] = useState<boolean>(false);
   const [copyModalState, setCopyModalState] = useState<{ isOpen: boolean; mode: 'day' | 'week' }>({
     isOpen: false,
@@ -61,7 +79,9 @@ export default function PlannerPage() {
   const [isEditingHeader, setIsEditingHeader] = useState<boolean>(false);
   const [titleDraft, setTitleDraft] = useState<string>('');
   const [focusDraft, setFocusDraft] = useState<string>('');
-  const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  const [isLoaded, setIsLoaded] = useState<boolean>(() => {
+    return typeof window !== 'undefined' && weeks.length > 0;
+  });
 
   useEffect(() => {
     const loadedWeeks = getSavedWeeks();

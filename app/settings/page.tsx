@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   exportAllData,
   importAllData,
@@ -42,20 +43,30 @@ import {
 } from 'lucide-react';
 
 export default function SettingsPage() {
-  const [unit, setUnit] = useState<WeightUnit>('kg');
-  const [libraryCount, setLibraryCount] = useState<number>(ALL_CATALOG_EXERCISES.length);
+  const router = useRouter();
+  const [unit, setUnit] = useState<WeightUnit>(() => {
+    if (typeof window !== 'undefined') return getActiveSelection().unit || 'kg';
+    return 'kg';
+  });
+  const [libraryCount, setLibraryCount] = useState<number>(() => {
+    if (typeof window !== 'undefined') return getSavedLibrary().length;
+    return ALL_CATALOG_EXERCISES.length;
+  });
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [cloudInfo, setCloudInfo] = useState<CloudSyncInfo>({
     status: 'synced',
     message: 'Database Ready & Synced',
   });
-  const [progressionConfig, setProgressionConfig] = useState<ProgressionConfig>({
-    autoProgressionEnabled: true,
-    weeklyIncrementKg: 2.5,
-    weeklyIncrementLbs: 5.0,
-    bodyweightRepIncrement: 1,
-    timedHoldIncrementSecs: 5,
-    deloadWeek4: false,
+  const [progressionConfig, setProgressionConfig] = useState<ProgressionConfig>(() => {
+    if (typeof window !== 'undefined') return getProgressionConfig();
+    return {
+      autoProgressionEnabled: true,
+      weeklyIncrementKg: 2.5,
+      weeklyIncrementLbs: 5.0,
+      bodyweightRepIncrement: 1,
+      timedHoldIncrementSecs: 5,
+      deloadWeek4: false,
+    };
   });
 
   // PWA install prompt state
@@ -66,12 +77,6 @@ export default function SettingsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const active = getActiveSelection();
-    if (active.unit) setUnit(active.unit);
-    const lib = getSavedLibrary();
-    setLibraryCount(lib.length);
-    setProgressionConfig(getProgressionConfig());
-
     const unsubCloud = onCloudStatus((info) => {
       setCloudInfo(info);
     });
@@ -174,10 +179,8 @@ export default function SettingsPage() {
       if (content) {
         const success = importAllData(content);
         if (success) {
-          triggerToast('Backup restored successfully! Reloading...');
-          setTimeout(() => {
-            window.location.reload();
-          }, 1000);
+          triggerToast('Backup restored successfully!');
+          router.push('/');
         } else {
           alert('Failed to import JSON: Invalid workout file structure.');
         }
@@ -192,20 +195,16 @@ export default function SettingsPage() {
     if (!confirm('Reset plan to a clean 6-week blank slate (Weeks 1 to 6)?')) return;
     const blank = createBlankWeeks();
     saveWeeks(blank);
-    triggerToast('Created blank 6-week plan! Opening planner...');
-    setTimeout(() => {
-      window.location.href = '/planner';
-    }, 800);
+    triggerToast('Created blank 6-week plan!');
+    router.push('/planner');
   };
 
   // Clear all exercises from all weeks
   const handleCleanAllExercises = () => {
     if (!confirm('Wipe all planned exercises from all 6 weeks? Your workout history and PRs will stay intact.')) return;
     clearAllExercisesFromPlan();
-    triggerToast('All exercises removed from plan. Empty 6-week canvas ready.');
-    setTimeout(() => {
-      window.location.href = '/planner';
-    }, 700);
+    triggerToast('All exercises removed from plan.');
+    router.push('/planner');
   };
 
   // Restore Master Exercise Catalog (710+ items)
@@ -235,10 +234,8 @@ export default function SettingsPage() {
   const handleFactoryReset = () => {
     if (!confirm(`FACTORY RESET: This will reset all 6 weeks to blank, restore the full ${ALL_CATALOG_EXERCISES.length}-exercise library, and delete all history. Continue?`)) return;
     factoryResetAll();
-    triggerToast('Reset complete! Reloading Null Gym...');
-    setTimeout(() => {
-      window.location.href = '/';
-    }, 1000);
+    triggerToast('Reset complete!');
+    router.push('/');
   };
 
   // Change default unit

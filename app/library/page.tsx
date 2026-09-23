@@ -49,9 +49,18 @@ const DAYS_OF_WEEK = [
 ] as const;
 
 export default function LibraryPage() {
-  const [library, setLibrary] = useState<ExerciseLibraryItem[]>([]);
-  const [weeks, setWeeks] = useState<WeekPlan[]>([]);
-  const [defaultUnit, setDefaultUnit] = useState<WeightUnit>('kg');
+  const [library, setLibrary] = useState<ExerciseLibraryItem[]>(() => {
+    if (typeof window !== 'undefined') return getSavedLibrary();
+    return [];
+  });
+  const [weeks, setWeeks] = useState<WeekPlan[]>(() => {
+    if (typeof window !== 'undefined') return getSavedWeeks();
+    return [];
+  });
+  const [defaultUnit, setDefaultUnit] = useState<WeightUnit>(() => {
+    if (typeof window !== 'undefined') return getActiveSelection().unit;
+    return 'kg';
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedSubCategory, setSelectedSubCategory] = useState('all');
@@ -59,6 +68,7 @@ export default function LibraryPage() {
   const [selectedLoadType, setSelectedLoadType] = useState('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState('All');
   const [sortBy, setSortBy] = useState<'name_asc' | 'name_desc' | 'muscle' | 'equipment'>('name_asc');
+  const [displayCount, setDisplayCount] = useState<number>(36);
   const [isCreating, setIsCreating] = useState(false);
 
   // Target picker for direct Add to Plan
@@ -103,6 +113,7 @@ export default function LibraryPage() {
     setSelectedLoadType('All');
     setSelectedDifficulty('All');
     setSortBy('name_asc');
+    setDisplayCount(36);
   };
 
   const hasActiveFilters =
@@ -308,6 +319,10 @@ export default function LibraryPage() {
     selectedDifficulty,
     sortBy,
   ]);
+
+  useEffect(() => {
+    setDisplayCount(36);
+  }, [searchTerm, selectedCategory, selectedSubCategory, selectedEquipment, selectedLoadType, selectedDifficulty, sortBy]);
 
   return (
     <div>
@@ -929,7 +944,7 @@ export default function LibraryPage() {
             </button>
           </div>
         ) : (
-          filtered.map((item, idx) => {
+          filtered.slice(0, displayCount).map((item, idx) => {
             const isAddingThis = addingExerciseId === item.id;
             const noLoad = item.requiresLoad === false;
             const muscleInfo = getExerciseMuscleInfo(item);
@@ -1158,6 +1173,20 @@ export default function LibraryPage() {
           })
         )}
       </div>
+
+      {/* Show More / Pagination */}
+      {displayCount < filtered.length && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', marginBottom: '28px' }}>
+          <button
+            type="button"
+            className="clean-btn primary"
+            style={{ padding: '10px 24px', fontSize: '0.85rem', fontWeight: 600 }}
+            onClick={() => setDisplayCount((prev) => prev + 48)}
+          >
+            Show More Exercises ({filtered.length - displayCount} remaining)
+          </button>
+        </div>
+      )}
 
       {/* Toast */}
       <div className={`clean-toast ${toastMessage ? 'show' : ''}`}>

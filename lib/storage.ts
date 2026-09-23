@@ -16,6 +16,7 @@ import {
   pullPlanFromCloud,
   pushHistoryToCloud,
   pullHistoryFromCloud,
+  debouncedPushSettingsToCloud,
   pushSettingsToCloud,
   pullSettingsFromCloud,
   notifyCloudStatus,
@@ -35,6 +36,18 @@ export const DEFAULT_LIBRARY: ExerciseLibraryItem[] = ALL_CATALOG_EXERCISES;
 
 import { createBlankWeeks, ensureSixWeeks } from './planDefaults';
 export { createBlankWeeks, ensureSixWeeks };
+
+// In-Memory Fast Cache Layer (0ms access on route switching & updates)
+let cachedWeeks: WeekPlan[] | null = null;
+let cachedHistory: WorkoutHistoryEntry[] | null = null;
+let cachedLibrary: ExerciseLibraryItem[] | null = null;
+let cachedActive: { weekNumber: number; dayIndex: number; unit: WeightUnit } | null = null;
+let cachedProgression: ProgressionConfig | null = null;
+let lastLocalEditTimestamp = 0;
+
+export function getLastLocalEditTimestamp() {
+  return lastLocalEditTimestamp;
+}
 
 // Event bus for autosave status
 type SaveStatus = 'saved' | 'saving';
@@ -94,36 +107,40 @@ if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
     crossTabChannel.onmessage = (event: any) => {
       const { type, data } = event.data || {};
       if (type === 'plan' && Array.isArray(data)) {
+        cachedWeeks = data;
         planListeners.forEach((l) => l(data));
       } else if (type === 'history' && Array.isArray(data)) {
+        cachedHistory = data;
         historyListeners.forEach((l) => l(data));
       } else if (type === 'settings' && data) {
+        cachedActive = data;
         settingsListeners.forEach((l) => l(data));
       }
     };
   } catch {}
 }
 
-// STORAGE ACCESSORS
+// STORAGE ACCESSORS WITH IN-MEMORY INSTANT CACHE
 export function getSavedWeeks(): WeekPlan[] {
+  if (cachedWeeks !== null) return cachedWeeks;
   if (typeof window === 'undefined') return createBlankWeeks();
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.WEEKS);
     if (!raw) {
       const initial = createBlankWeeks();
+      cachedWeeks = initial;
       localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(initial));
       return initial;
     }
     const parsed = JSON.parse(raw);
     const valid = ensureSixWeeks(parsed);
-    const validStr = JSON.stringify(valid);
-    if (raw !== validStr) {
-      localStorage.setItem(STORAGE_KEYS.WEEKS, validStr);
-    }
+    cachedWeeks = valid;
     return valid;
   } catch (err) {
     console.error('Failed to load weeks from storage', err);
-    return createBlankWeeks();
+    const blank = createBlankWeeks();
+    cachedWeeks = blank;
+    return blank;
   }
 }
 
@@ -136,48 +153,47 @@ export function clearAllExercisesFromPlan(): WeekPlan[] {
 }
 
 export function saveWeeks(weeks: WeekPlan[]) {
-  if (typeof window === 'undefined') return;
   const verifiedWeeks = ensureSixWeeks(weeks);
+  cachedWeeks = verifiedWeeks;
+  lastLocalEditTimestamp = Date.now();
+  if (typeof window === 'undefined') return;
+
   emitSave('saving');
   try {
     localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(verifiedWeeks));
     crossTabChannel?.postMessage({ type: 'plan', data: verifiedWeeks });
     debouncedPushPlanToCloud(verifiedWeeks);
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-      emitSave('saved');
-    }, 400);
+    emitSave('saved');
   } catch (err) {
     console.error('Failed to save weeks', err);
   }
 }
 
 export function getSavedLibrary(): ExerciseLibraryItem[] {
+  if (cachedLibrary !== null) return cachedLibrary;
   if (typeof window === 'undefined') return DEFAULT_LIBRARY;
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.LIBRARY);
     if (!raw) {
+      cachedLibrary = DEFAULT_LIBRARY;
       localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(DEFAULT_LIBRARY));
       return DEFAULT_LIBRARY;
     }
     const saved = JSON.parse(raw);
-    if (Array.isArray(saved)) {
-      const savedIds = new Set(saved.map((x: any) => x.id));
-      const newItems = DEFAULT_LIBRARY.filter((item) => !savedIds.has(item.id));
-      if (newItems.length > 0) {
-        const merged = [...saved, ...newItems];
-        localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(merged));
-        return merged;
-      }
+    if (Array.isArray(saved) && saved.length > 0) {
+      cachedLibrary = saved;
       return saved;
     }
+    cachedLibrary = DEFAULT_LIBRARY;
     return DEFAULT_LIBRARY;
   } catch (err) {
+    cachedLibrary = DEFAULT_LIBRARY;
     return DEFAULT_LIBRARY;
   }
 }
 
 export function saveLibrary(library: ExerciseLibraryItem[]) {
+  cachedLibrary = library;
   if (typeof window === 'undefined') return;
   emitSave('saving');
   try {
@@ -189,17 +205,26 @@ export function saveLibrary(library: ExerciseLibraryItem[]) {
 }
 
 export function getSavedHistory(): WorkoutHistoryEntry[] {
+  if (cachedHistory !== null) return cachedHistory;
   if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.HISTORY);
-    if (!raw) return [];
-    return JSON.parse(raw);
+    if (!raw) {
+      cachedHistory = [];
+      return [];
+    }
+    const parsed = JSON.parse(raw);
+    cachedHistory = parsed;
+    return parsed;
   } catch (err) {
+    cachedHistory = [];
     return [];
   }
 }
 
 export function saveHistory(history: WorkoutHistoryEntry[]) {
+  cachedHistory = history;
+  lastLocalEditTimestamp = Date.now();
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
@@ -211,16 +236,25 @@ export function saveHistory(history: WorkoutHistoryEntry[]) {
 }
 
 export function getActiveSelection(): { weekNumber: number; dayIndex: number; unit: WeightUnit } {
+  if (cachedActive !== null) return cachedActive;
   if (typeof window === 'undefined') return { weekNumber: 1, dayIndex: 0, unit: 'kg' };
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.ACTIVE);
-    if (!raw) return { weekNumber: 1, dayIndex: 0, unit: 'kg' };
+    if (!raw) {
+      const def = { weekNumber: 1, dayIndex: 0, unit: 'kg' as WeightUnit };
+      cachedActive = def;
+      return def;
+    }
     const parsed = JSON.parse(raw);
     const weekNumber = Math.min(6, Math.max(1, parsed.weekNumber || 1));
     const dayIndex = Math.min(6, Math.max(0, parsed.dayIndex || 0));
-    return { weekNumber, dayIndex, unit: parsed.unit || 'kg' };
+    const active = { weekNumber, dayIndex, unit: parsed.unit || 'kg' };
+    cachedActive = active;
+    return active;
   } catch (err) {
-    return { weekNumber: 1, dayIndex: 0, unit: 'kg' };
+    const def = { weekNumber: 1, dayIndex: 0, unit: 'kg' as WeightUnit };
+    cachedActive = def;
+    return def;
   }
 }
 
@@ -229,28 +263,38 @@ export function saveActiveSelection(active: {
   dayIndex: number;
   unit: WeightUnit;
 }) {
+  cachedActive = active;
+  lastLocalEditTimestamp = Date.now();
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(STORAGE_KEYS.ACTIVE, JSON.stringify(active));
     crossTabChannel?.postMessage({ type: 'settings', data: active });
-    pushSettingsToCloud(active);
+    debouncedPushSettingsToCloud(active);
   } catch (err) {
     console.error('Failed to save active selection', err);
   }
 }
 
 export function getProgressionConfig(): ProgressionConfig {
+  if (cachedProgression !== null) return cachedProgression;
   if (typeof window === 'undefined') return DEFAULT_PROGRESSION_CONFIG;
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.PROGRESSION);
-    if (!raw) return DEFAULT_PROGRESSION_CONFIG;
-    return { ...DEFAULT_PROGRESSION_CONFIG, ...JSON.parse(raw) };
+    if (!raw) {
+      cachedProgression = DEFAULT_PROGRESSION_CONFIG;
+      return DEFAULT_PROGRESSION_CONFIG;
+    }
+    const parsed = { ...DEFAULT_PROGRESSION_CONFIG, ...JSON.parse(raw) };
+    cachedProgression = parsed;
+    return parsed;
   } catch {
+    cachedProgression = DEFAULT_PROGRESSION_CONFIG;
     return DEFAULT_PROGRESSION_CONFIG;
   }
 }
 
 export function saveProgressionConfig(config: ProgressionConfig) {
+  cachedProgression = config;
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(STORAGE_KEYS.PROGRESSION, JSON.stringify(config));
@@ -277,6 +321,12 @@ let isAutoSyncRunning = false;
 
 export async function performContinuousCloudSync(force = false) {
   if (typeof window === 'undefined' || isAutoSyncRunning) return;
+
+  // Protect local changes: if the user recently edited anything locally (< 8s ago), do not pull and overwrite!
+  if (!force && Date.now() - lastLocalEditTimestamp < 8000) {
+    return;
+  }
+
   isAutoSyncRunning = true;
 
   try {
@@ -328,6 +378,7 @@ export async function performContinuousCloudSync(force = false) {
 
         const serverWeeksStr = JSON.stringify(validServerWeeks);
         if (localRawWeeks !== serverWeeksStr) {
+          cachedWeeks = validServerWeeks;
           localStorage.setItem(STORAGE_KEYS.WEEKS, serverWeeksStr);
           planListeners.forEach((l) => l(validServerWeeks));
         }
@@ -337,6 +388,7 @@ export async function performContinuousCloudSync(force = false) {
           const localHistRaw = localStorage.getItem(STORAGE_KEYS.HISTORY);
           const serverHistStr = JSON.stringify(body.history);
           if (localHistRaw !== serverHistStr) {
+            cachedHistory = body.history;
             localStorage.setItem(STORAGE_KEYS.HISTORY, serverHistStr);
             historyListeners.forEach((l) => l(body.history));
           }
@@ -347,6 +399,7 @@ export async function performContinuousCloudSync(force = false) {
           const localActiveRaw = localStorage.getItem(STORAGE_KEYS.ACTIVE);
           const serverSettingsStr = JSON.stringify(body.settings);
           if (localActiveRaw !== serverSettingsStr) {
+            cachedActive = body.settings;
             localStorage.setItem(STORAGE_KEYS.ACTIVE, serverSettingsStr);
             settingsListeners.forEach((l) => l(body.settings));
           }
@@ -384,12 +437,12 @@ export function initBackgroundCloudSync() {
     performContinuousCloudSync(true);
   });
 
-  // 3. Continuous automatic heartbeat check every 4 seconds
+  // 3. Continuous automatic heartbeat check every 15 seconds
   setInterval(() => {
     if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
       performContinuousCloudSync(false);
     }
-  }, 4000);
+  }, 15000);
 
   // 4. Supabase Realtime channel subscription (instant multi-device push)
   if (isSupabaseConfigured && supabase) {
@@ -447,14 +500,18 @@ export function importAllData(jsonStr: string): boolean {
       throw new Error('Invalid workout data format.');
     }
     if (typeof window !== 'undefined') {
+      cachedWeeks = parsed.weeks;
       localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(parsed.weeks));
       if (Array.isArray(parsed.library)) {
+        cachedLibrary = parsed.library;
         localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(parsed.library));
       }
       if (Array.isArray(parsed.history)) {
+        cachedHistory = parsed.history;
         localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(parsed.history));
       }
       if (parsed.activeSelection) {
+        cachedActive = parsed.activeSelection;
         localStorage.setItem(STORAGE_KEYS.ACTIVE, JSON.stringify(parsed.activeSelection));
       }
       emitSave('saved');

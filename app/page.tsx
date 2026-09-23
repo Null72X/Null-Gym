@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import WeekSelector from '../components/WeekSelector';
 import DayGrid from '../components/DayGrid';
@@ -35,11 +35,26 @@ import {
 } from 'lucide-react';
 
 export default function DashboardPage() {
-  const [weeks, setWeeks] = useState<WeekPlan[]>([]);
-  const [history, setHistory] = useState<WorkoutHistoryEntry[]>([]);
-  const [currentWeek, setCurrentWeek] = useState<number>(1);
-  const [currentDayIndex, setCurrentDayIndex] = useState<number>(0);
-  const [unit, setUnit] = useState<WeightUnit>('kg');
+  const [weeks, setWeeks] = useState<WeekPlan[]>(() => {
+    if (typeof window !== 'undefined') return getSavedWeeks();
+    return [];
+  });
+  const [history, setHistory] = useState<WorkoutHistoryEntry[]>(() => {
+    if (typeof window !== 'undefined') return getSavedHistory();
+    return [];
+  });
+  const [currentWeek, setCurrentWeek] = useState<number>(() => {
+    if (typeof window !== 'undefined') return getActiveSelection().weekNumber;
+    return 1;
+  });
+  const [currentDayIndex, setCurrentDayIndex] = useState<number>(() => {
+    if (typeof window !== 'undefined') return getActiveSelection().dayIndex;
+    return 0;
+  });
+  const [unit, setUnit] = useState<WeightUnit>(() => {
+    if (typeof window !== 'undefined') return getActiveSelection().unit;
+    return 'kg';
+  });
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeTimer, setActiveTimer] = useState<{
     seconds: number;
@@ -49,7 +64,9 @@ export default function DashboardPage() {
     setIndex?: number;
   } | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  const [isLoaded, setIsLoaded] = useState<boolean>(() => {
+    return typeof window !== 'undefined' && weeks.length > 0;
+  });
 
   // Load from storage on mount & listen to real-time multi-device cloud updates
   useEffect(() => {
@@ -291,6 +308,16 @@ export default function DashboardPage() {
   const workoutPercent = totalSets > 0 ? Math.round((doneSets / totalSets) * 100) : 0;
   const muscleBreakdown = getDayMuscleBreakdown(currentDayData?.exercises || []);
 
+  // Pre-calculate last performance map for the active day's exercises in a single memoized pass
+  const lastPerformanceMap = useMemo(() => {
+    const map = new Map<string, any>();
+    if (!currentDayData || !currentDayData.exercises) return map;
+    currentDayData.exercises.forEach((ex) => {
+      map.set(ex.name.toLowerCase(), getLastPerformance(ex.name, history, weeks, currentWeek));
+    });
+    return map;
+  }, [currentDayData?.exercises, history, weeks, currentWeek]);
+
   // Filter exercises by search
   const filteredExercises = (currentDayData?.exercises || []).filter((ex) => {
     if (!searchQuery.trim()) return true;
@@ -458,7 +485,7 @@ export default function DashboardPage() {
       ) : (
         <div className="ex-card-list">
           {filteredExercises.map((ex, exIdx) => {
-            const lastPerf = getLastPerformance(ex.name, history, weeks, currentWeek);
+            const lastPerf = lastPerformanceMap.get(ex.name.toLowerCase()) || null;
             return (
               <ExerciseCard
                 key={ex.id || exIdx}
