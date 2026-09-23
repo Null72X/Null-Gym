@@ -8,6 +8,15 @@ import {
   WeightUnit,
 } from '../types/workout';
 import { ALL_CATALOG_EXERCISES } from './exerciseCatalog';
+import {
+  debouncedPushPlanToCloud,
+  pushPlanToCloud,
+  pullPlanFromCloud,
+  pushHistoryToCloud,
+  pullHistoryFromCloud,
+  pushSettingsToCloud,
+  pullSettingsFromCloud,
+} from './supabaseSync';
 
 const STORAGE_KEYS = {
   WEEKS: 'gym_weeks_v6',
@@ -28,7 +37,7 @@ export function createBlankWeeks(): WeekPlan[] {
     'Thursday',
     'Friday',
     'Saturday',
-    'Sunday'
+    'Sunday',
   ];
 
   return Array.from({ length: 4 }, (_, wIdx) => ({
@@ -39,8 +48,8 @@ export function createBlankWeeks(): WeekPlan[] {
       title: d === 'Sunday' ? 'Rest Day' : d,
       focus: d === 'Sunday' ? 'Rest & Recovery' : '',
       isRestDay: d === 'Sunday',
-      exercises: []
-    }))
+      exercises: [],
+    })),
   }));
 }
 
@@ -58,7 +67,18 @@ export function onSaveStatus(listener: SaveListener) {
 
 let saveTimer: any = null;
 function emitSave(status: SaveStatus) {
-  saveListeners.forEach(l => l(status));
+  saveListeners.forEach((l) => l(status));
+}
+
+// Event bus for cloud plan updates
+type CloudPlanListener = (weeks: WeekPlan[]) => void;
+const planListeners: Set<CloudPlanListener> = new Set();
+
+export function onCloudPlanUpdated(listener: CloudPlanListener) {
+  planListeners.add(listener);
+  return () => {
+    planListeners.delete(listener);
+  };
 }
 
 // STORAGE ACCESSORS
@@ -97,6 +117,7 @@ export function saveWeeks(weeks: WeekPlan[]) {
   emitSave('saving');
   try {
     localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(weeks));
+    debouncedPushPlanToCloud(weeks);
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       emitSave('saved');
@@ -146,6 +167,7 @@ export function saveHistory(history: WorkoutHistoryEntry[]) {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+    pushHistoryToCloud(history);
   } catch (err) {
     console.error('Failed to save history', err);
   }
@@ -165,13 +187,119 @@ export function getActiveSelection(): { weekNumber: number; dayIndex: number; un
   }
 }
 
-export function saveActiveSelection(active: { weekNumber: number; dayIndex: number; unit: WeightUnit }) {
+export function saveActiveSelection(active: {
+  weekNumber: number;
+  dayIndex: number;
+  unit: WeightUnit;
+}) {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(STORAGE_KEYS.ACTIVE, JSON.stringify(active));
+    pushSettingsToCloud(active);
   } catch (err) {
     console.error('Failed to save active selection', err);
   }
+}
+
+// -------------------------------------------------------------
+// CLOUD BACKGROUND SYNC INITIALIZER
+// -------------------------------------------------------------
+let isSyncInitialized = false;
+
+export function initBackgroundCloudSync() {
+  if (typeof window === 'undefined' || isSyncInitialized) return;
+  isSyncInitialized = true;
+
+  // Pull plan from cloud
+  pullPlanFromCloud().then((cloudWeeks) => {
+    if (cloudWeeks && Array.isArray(cloudWeeks) && cloudWeeks.length === 4) {
+      const localRaw = localStorage.getItem(STORAGE_KEYS.WEEKS);
+      const localWeeks = localRaw ? JSON.parse(localRaw) : null;
+
+      const localHasExercises =
+        localWeeks &&
+        localWeeks.some((w: any) => w.days.some((d: any) => d.exercises?.length > 0));
+      const cloudHasExercises = cloudWeeks.some((w: any) =>
+        w.days.some((d: any) => d.exercises?.length > 0)
+      );
+
+      if (!localHasExercises && cloudHasExercises) {
+        // Fresh device or empty local cache -> use cloud data!
+        localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(cloudWeeks));
+        planListeners.forEach((l) => l(cloudWeeks));
+      } else if (localHasExercises && !cloudHasExercises) {
+        // Initial cloud upload!
+        pushPlanToCloud(localWeeks);
+      } else {
+        // Sync cloud plan
+        localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(cloudWeeks));
+        planListeners.forEach((l) => l(cloudWeeks));
+      }
+    } else {
+      // Cloud is blank or table newly initialized -> push local data to cloud
+      const localRaw = localStorage.getItem(STORAGE_KEYS.WEEKS);
+      if (localRaw) {
+        try {
+          const localWeeks = JSON.parse(localRaw);
+          pushPlanToCloud(localWeeks);
+        } catch {}
+      }
+    }
+  });
+
+  // Pull history from cloud
+  pullHistoryFromCloud().then((cloudHistory) => {
+    if (cloudHistory && cloudHistory.length > 0) {
+      const localRaw = localStorage.getItem(STORAGE_KEYS.HISTORY);
+      const localHistory = localRaw ? JSON.parse(localRaw) : [];
+      if (cloudHistory.length >= localHistory.length) {
+        localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(cloudHistory));
+      }
+    }
+  });
+
+  // Pull settings from cloud
+  pullSettingsFromCloud().then((cloudSettings) => {
+    if (cloudSettings) {
+      localStorage.setItem(STORAGE_KEYS.ACTIVE, JSON.stringify(cloudSettings));
+    }
+  });
+}
+
+// -------------------------------------------------------------
+// MANUAL CLOUD SYNC ACTIONS (FOR SETTINGS PAGE)
+// -------------------------------------------------------------
+export async function forcePushAllToCloud(): Promise<boolean> {
+  const weeks = getSavedWeeks();
+  const history = getSavedHistory();
+  const active = getActiveSelection();
+
+  const planOk = await pushPlanToCloud(weeks);
+  await pushHistoryToCloud(history);
+  await pushSettingsToCloud(active);
+  return planOk;
+}
+
+export async function forcePullAllFromCloud(): Promise<boolean> {
+  const cloudWeeks = await pullPlanFromCloud();
+  const cloudHistory = await pullHistoryFromCloud();
+  const cloudSettings = await pullSettingsFromCloud();
+
+  let updated = false;
+  if (cloudWeeks && cloudWeeks.length === 4) {
+    localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(cloudWeeks));
+    planListeners.forEach((l) => l(cloudWeeks));
+    updated = true;
+  }
+  if (cloudHistory) {
+    localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(cloudHistory));
+    updated = true;
+  }
+  if (cloudSettings) {
+    localStorage.setItem(STORAGE_KEYS.ACTIVE, JSON.stringify(cloudSettings));
+    updated = true;
+  }
+  return updated;
 }
 
 // JSON EXPORT & IMPORT
@@ -182,7 +310,7 @@ export function exportAllData(): string {
     weeks: getSavedWeeks(),
     library: getSavedLibrary(),
     history: getSavedHistory(),
-    activeSelection: getActiveSelection()
+    activeSelection: getActiveSelection(),
   };
   return JSON.stringify(data, null, 2);
 }
@@ -205,6 +333,7 @@ export function importAllData(jsonStr: string): boolean {
         localStorage.setItem(STORAGE_KEYS.ACTIVE, JSON.stringify(parsed.activeSelection));
       }
       emitSave('saved');
+      debouncedPushPlanToCloud(parsed.weeks);
     }
     return true;
   } catch (err) {

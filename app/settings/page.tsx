@@ -15,8 +15,15 @@ import {
   saveLibrary,
   restoreDefaultLibrary,
   factoryResetAll,
+  forcePushAllToCloud,
+  forcePullAllFromCloud,
 } from '../../lib/storage';
-import { WeightUnit, ExerciseLibraryItem } from '../../types/workout';
+import {
+  onCloudStatus,
+  checkSupabaseConnection,
+  CloudSyncInfo,
+} from '../../lib/supabaseSync';
+import { WeightUnit } from '../../types/workout';
 import { ALL_CATALOG_EXERCISES } from '../../lib/exerciseCatalog';
 import {
   Settings,
@@ -26,19 +33,66 @@ import {
   Trash2,
   Check,
   AlertTriangle,
-  Sparkles,
-  Layers,
-  Dumbbell,
   ShieldCheck,
   BookOpen,
   Calendar,
   Zap,
+  Cloud,
+  ExternalLink,
+  Copy,
+  Dumbbell,
 } from 'lucide-react';
+
+const SUPABASE_SETUP_SQL = `-- 1. Workout Plan table (stores 4-week routines, exercises, sets)
+CREATE TABLE IF NOT EXISTS workout_plan (
+  id TEXT PRIMARY KEY DEFAULT 'default_plan',
+  weeks JSONB NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. Workout History table (stores finished workouts, timestamps, sets, PRs)
+CREATE TABLE IF NOT EXISTS workout_history (
+  id TEXT PRIMARY KEY,
+  session_date TIMESTAMPTZ,
+  day_title TEXT,
+  week_number INT,
+  sets JSONB,
+  duration_minutes INT,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 3. App Settings table (active week, active day, kg/lbs preference)
+CREATE TABLE IF NOT EXISTS app_settings (
+  id TEXT PRIMARY KEY DEFAULT 'settings',
+  settings JSONB NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 4. Custom Exercise Library table (custom user-added exercises)
+CREATE TABLE IF NOT EXISTS custom_library (
+  id TEXT PRIMARY KEY DEFAULT 'library',
+  exercises JSONB NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Disable Row Level Security (RLS) so your personal app can sync without login friction
+ALTER TABLE workout_plan DISABLE ROW LEVEL SECURITY;
+ALTER TABLE workout_history DISABLE ROW LEVEL SECURITY;
+ALTER TABLE app_settings DISABLE ROW LEVEL SECURITY;
+ALTER TABLE custom_library DISABLE ROW LEVEL SECURITY;
+`;
 
 export default function SettingsPage() {
   const [unit, setUnit] = useState<WeightUnit>('kg');
   const [libraryCount, setLibraryCount] = useState<number>(570);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [cloudInfo, setCloudInfo] = useState<CloudSyncInfo>({
+    status: 'syncing',
+    message: 'Connecting to Supabase...',
+  });
+  const [isCheckingCloud, setIsCheckingCloud] = useState(false);
+  const [copiedSql, setCopiedSql] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -46,11 +100,67 @@ export default function SettingsPage() {
     if (active.unit) setUnit(active.unit);
     const lib = getSavedLibrary();
     setLibraryCount(lib.length);
+
+    const unsubCloud = onCloudStatus((info) => {
+      setCloudInfo(info);
+    });
+
+    return () => {
+      unsubCloud();
+    };
   }, []);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 2500);
+    setTimeout(() => setToastMessage(null), 2800);
+  };
+
+  // Copy Supabase SQL script to clipboard
+  const handleCopySql = () => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(SUPABASE_SETUP_SQL);
+      setCopiedSql(true);
+      triggerToast('SQL setup script copied to clipboard! 📋');
+      setTimeout(() => setCopiedSql(false), 3000);
+    }
+  };
+
+  // Pull latest updates from Supabase
+  const handleForcePullCloud = async () => {
+    triggerToast('Checking Supabase for updates...');
+    const success = await forcePullAllFromCloud();
+    if (success) {
+      triggerToast('Synced latest data from Supabase cloud! ☁️');
+      setTimeout(() => window.location.reload(), 700);
+    } else {
+      triggerToast('Cloud checked. Up to date or tables need setup.');
+    }
+  };
+
+  // Push local plan and history to Supabase
+  const handleForcePushCloud = async () => {
+    triggerToast('Uploading local 4-week data to Supabase...');
+    const success = await forcePushAllToCloud();
+    if (success) {
+      triggerToast('All 4 weeks & history uploaded to Supabase! ☁️');
+    } else {
+      triggerToast('Upload failed: Please make sure SQL tables are created.');
+    }
+  };
+
+  // Test Cloud Connection
+  const handleTestCloudConnection = async () => {
+    setIsCheckingCloud(true);
+    triggerToast('Testing Supabase connection...');
+    const result = await checkSupabaseConnection();
+    setIsCheckingCloud(false);
+    if (result.connected && result.tableFound) {
+      triggerToast('✅ Supabase connected & tables verified!');
+    } else if (result.connected && !result.tableFound) {
+      triggerToast('⚠️ Connected, but tables not found. Run SQL script.');
+    } else {
+      triggerToast(`❌ Error: ${result.message}`);
+    }
   };
 
   // Export JSON file
@@ -168,9 +278,127 @@ export default function SettingsPage() {
             <Settings size={18} color="var(--accent-red)" />
             <span>Settings &amp; System Configuration</span>
           </h2>
-          <p>Configure units, manage 4-week program templates, restore catalogs, and export backups.</p>
+          <p>Manage cloud sync, configure units, program templates, and master catalogs.</p>
         </div>
       </section>
+
+      {/* Supabase Cloud Database & Multi-Device Sync */}
+      <div className="clean-card" style={{ marginBottom: '14px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <h3
+            style={{
+              fontSize: '0.88rem',
+              fontWeight: 800,
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <Cloud size={16} color="#38bdf8" />
+            <span>Supabase Cloud Database &amp; Multi-Device Sync</span>
+          </h3>
+          <span
+            className={`cloud-status-pill ${cloudInfo.status}`}
+            style={{ fontSize: '0.68rem', padding: '3px 8px' }}
+          >
+            {cloudInfo.status === 'synced' && '🟢 Connected & Synced'}
+            {cloudInfo.status === 'syncing' && '🟡 Syncing...'}
+            {cloudInfo.status === 'pending_setup' && '🔴 SQL Setup Needed'}
+            {cloudInfo.status === 'offline' && '⚪ Offline Mode'}
+            {cloudInfo.status === 'error' && '⚠️ Sync Issue'}
+            {cloudInfo.status === 'disabled' && '⚪ Not Configured'}
+          </span>
+        </div>
+
+        <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
+          Your workouts, 4-week program, history, and PRs automatically sync with your private Supabase cloud project (<code style={{ color: '#38bdf8' }}>ftssrejkpjyrzkgkkfnz</code>). You can edit routines on your PC and access them on your phone at the gym with zero login screens.
+        </p>
+
+        {cloudInfo.status === 'pending_setup' && (
+          <div
+            style={{
+              background: 'rgba(239, 68, 68, 0.08)',
+              border: '1px solid rgba(239, 68, 68, 0.25)',
+              borderRadius: '8px',
+              padding: '12px',
+              marginBottom: '12px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fca5a5', fontWeight: 700, fontSize: '0.8rem', marginBottom: '6px' }}>
+              <AlertTriangle size={15} />
+              <span>Database Tables Need 1-Click Setup in Supabase</span>
+            </div>
+            <p style={{ fontSize: '0.72rem', color: '#fca5a5', marginBottom: '10px', lineHeight: 1.4 }}>
+              Supabase connected successfully, but the database tables have not been created yet. Open your Supabase SQL editor, paste the 4-table script, and click "Run".
+            </p>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <a
+                href="https://supabase.com/dashboard/project/ftssrejkpjyrzkgkkfnz/sql/new"
+                target="_blank"
+                rel="noreferrer"
+                className="btn-clean btn-primary btn-sm"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}
+              >
+                <ExternalLink size={13} />
+                <span>Open Supabase SQL Editor ↗</span>
+              </a>
+              <button
+                type="button"
+                className="btn-clean btn-sm"
+                onClick={handleCopySql}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                {copiedSql ? <Check size={13} color="var(--accent-green)" /> : <Copy size={13} />}
+                <span>{copiedSql ? 'SQL Copied!' : 'Copy SQL Script'}</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn-clean btn-sm"
+            onClick={handleForcePullCloud}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <RefreshCw size={13} />
+            <span>Sync Now (Pull from Cloud)</span>
+          </button>
+
+          <button
+            type="button"
+            className="btn-clean btn-sm"
+            onClick={handleForcePushCloud}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Upload size={13} />
+            <span>Push Local Plan to Cloud</span>
+          </button>
+
+          <button
+            type="button"
+            className="btn-clean btn-sm"
+            onClick={handleTestCloudConnection}
+            disabled={isCheckingCloud}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Check size={13} />
+            <span>{isCheckingCloud ? 'Testing...' : 'Test Cloud Connection'}</span>
+          </button>
+
+          <button
+            type="button"
+            className="btn-clean btn-sm"
+            onClick={handleCopySql}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Copy size={13} />
+            <span>{copiedSql ? 'SQL Copied!' : 'Copy Supabase SQL'}</span>
+          </button>
+        </div>
+      </div>
 
       {/* System Architecture & Status Overview */}
       <div className="clean-card" style={{ marginBottom: '14px' }}>

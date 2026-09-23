@@ -131,6 +131,39 @@ body {
   color: #fde047;
 }
 
+.cloud-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  padding: 2px 8px;
+  border-radius: 999px;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+.cloud-status-pill.synced {
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #86efac;
+}
+.cloud-status-pill.syncing {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fde047;
+}
+.cloud-status-pill.pending_setup {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+.cloud-status-pill.offline {
+  background: rgba(148, 163, 184, 0.1);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+}
+
 /* ---------- BOTTOM NAVIGATION ---------- */
 .bottom-nav {
   position: fixed;
