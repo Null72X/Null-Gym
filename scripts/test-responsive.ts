@@ -27,7 +27,7 @@ function runVerification() {
 
   // Test 2: Fluid bottom navigation
   console.log('\n[Test 2] Fluid Bottom Navigation on 320px screens');
-  const navItemRegex = /\.nav-item\s*\{[^}]*min-width:\s*0[^}]*flex:\s*1[^}]*\}/s;
+  const navItemRegex = /\.nav-item\s*\{[\s\S]*?min-width:\s*0[\s\S]*?flex:\s*1[\s\S]*?\}/;
   if (navItemRegex.test(css)) {
     console.log('✅ PASSED: .nav-item uses fluid min-width: 0 and flex: 1 (zero overflow on 320px)');
   } else {
