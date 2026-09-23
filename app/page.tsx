@@ -32,7 +32,10 @@ import {
   Edit2,
   Dumbbell,
   Clock,
+  Search,
+  X,
 } from 'lucide-react';
+import { searchItems } from '../lib/searchEngine';
 
 export default function DashboardPage() {
   const [weeks, setWeeks] = useState<WeekPlan[]>(() => {
@@ -318,16 +321,21 @@ export default function DashboardPage() {
     return map;
   }, [currentDayData?.exercises, history, weeks, currentWeek]);
 
-  // Filter exercises by search
-  const filteredExercises = (currentDayData?.exercises || []).filter((ex) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      ex.name.toLowerCase().includes(q) ||
-      (ex.muscleGroup && ex.muscleGroup.toLowerCase().includes(q)) ||
-      (ex.notes && ex.notes.toLowerCase().includes(q))
-    );
-  });
+  // High-precision weighted exercise search
+  const filteredExercises = useMemo(() => {
+    const list = currentDayData?.exercises || [];
+    if (!searchQuery.trim()) return list;
+
+    const fields = [
+      { name: 'name', weight: 10, isPrimary: true, getter: (ex: Exercise) => ex.name },
+      { name: 'muscleGroup', weight: 6, getter: (ex: Exercise) => ex.muscleGroup },
+      { name: 'movementPattern', weight: 4, getter: (ex: Exercise) => ex.movementPattern },
+      { name: 'notes', weight: 3, getter: (ex: Exercise) => ex.notes },
+    ];
+
+    const results = searchItems(list, searchQuery, fields);
+    return results.map((r) => r.item);
+  }, [currentDayData?.exercises, searchQuery]);
 
   return (
     <div>
@@ -419,13 +427,42 @@ export default function DashboardPage() {
 
       {/* Quick Search & Unit Bar */}
       <div className="quick-bar">
-        <input
-          type="text"
-          className="search-input"
-          placeholder="Search exercises, muscles, form cues..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
+        <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
+          <Search
+            size={14}
+            color="var(--accent-red)"
+            style={{ position: 'absolute', left: '10px', pointerEvents: 'none' }}
+          />
+          <input
+            type="text"
+            className="search-input"
+            style={{ paddingLeft: '32px', paddingRight: searchQuery ? '30px' : '12px' }}
+            placeholder="Search exercises, muscles, form cues..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              style={{
+                position: 'absolute',
+                right: '8px',
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-dim)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '2px',
+              }}
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
           <button
             type="button"
@@ -471,6 +508,14 @@ export default function DashboardPage() {
             <>
               <div className="empty-state-title">No exercises match &ldquo;{searchQuery}&rdquo;</div>
               <p style={{ fontSize: '0.8rem' }}>Try searching by muscle group or clear search query.</p>
+              <button
+                type="button"
+                className="clean-btn primary"
+                style={{ marginTop: '10px', padding: '6px 14px', fontSize: '0.75rem' }}
+                onClick={() => setSearchQuery('')}
+              >
+                Clear Search
+              </button>
             </>
           ) : (
             <>
@@ -496,6 +541,7 @@ export default function DashboardPage() {
                 lastPerformance={lastPerf}
                 mode="tracker"
                 weekNumber={currentWeek}
+                highlightQuery={searchQuery}
                 onUpdate={(updated) => handleUpdateExercise(exIdx, updated)}
                 onStartRest={handleStartRest}
                 onStartExerciseTimer={(name, duration, setIdx) =>

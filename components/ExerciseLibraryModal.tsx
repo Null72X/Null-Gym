@@ -18,6 +18,8 @@ import {
 } from '../lib/exerciseCatalog';
 import { getExerciseMuscleInfo } from '../lib/muscleMetadata';
 import { X, Search, Plus, Play, ExternalLink } from 'lucide-react';
+import { searchExercises } from '../lib/searchEngine';
+import { HighlightedText } from './HighlightedText';
 
 interface ExerciseLibraryModalProps {
   isOpen: boolean;
@@ -77,25 +79,10 @@ export default function ExerciseLibraryModal({
     selectedDifficulty !== 'All' ||
     sortBy !== 'name_asc';
 
-  // Advanced multi-token search, multi-faceted filtering & smart sorting
+  // Advanced multi-token, typo-tolerant search, multi-faceted filtering & smart sorting
   const filtered = useMemo(() => {
-    const rawTokens = searchTerm.toLowerCase().trim().split(/\s+/).filter(Boolean);
-
-    const matches = library.filter((item) => {
-      const matchesSearch =
-        rawTokens.length === 0 ||
-        rawTokens.every(
-          (t) =>
-            item.name.toLowerCase().includes(t) ||
-            item.muscleGroup.toLowerCase().includes(t) ||
-            (item.category && item.category.toLowerCase().includes(t)) ||
-            (item.subMuscle && item.subMuscle.toLowerCase().includes(t)) ||
-            (item.equipment && item.equipment.toLowerCase().includes(t)) ||
-            (item.movementPattern && item.movementPattern.toLowerCase().includes(t)) ||
-            (item.notes && item.notes.toLowerCase().includes(t)) ||
-            (item.difficulty && item.difficulty.toLowerCase().includes(t))
-        );
-
+    // 1. Base filter by category, equipment, load type, and difficulty
+    const baseMatches = library.filter((item) => {
       const matchesCat = matchCatalogCategory(item, selectedCategory, selectedSubCategory);
 
       const matchesEq =
@@ -119,18 +106,49 @@ export default function ExerciseLibraryModal({
         (item.difficulty &&
           item.difficulty.toLowerCase() === selectedDifficulty.toLowerCase());
 
-      return matchesSearch && matchesCat && matchesEq && matchesLoad && matchesDiff;
+      return matchesCat && matchesEq && matchesLoad && matchesDiff;
     });
 
-    return matches.sort((a, b) => {
-      if (sortBy === 'name_asc') return a.name.localeCompare(b.name);
-      if (sortBy === 'name_desc') return b.name.localeCompare(a.name);
-      if (sortBy === 'muscle')
-        return a.muscleGroup.localeCompare(b.muscleGroup) || a.name.localeCompare(b.name);
-      if (sortBy === 'equipment')
-        return (a.equipment || '').localeCompare(b.equipment || '') || a.name.localeCompare(b.name);
-      return 0;
-    });
+    // 2. If no search term, sort according to selected sort option
+    if (!searchTerm.trim()) {
+      return [...baseMatches].sort((a, b) => {
+        if (sortBy === 'name_asc') return a.name.localeCompare(b.name);
+        if (sortBy === 'name_desc') return b.name.localeCompare(a.name);
+        if (sortBy === 'muscle')
+          return a.muscleGroup.localeCompare(b.muscleGroup) || a.name.localeCompare(b.name);
+        if (sortBy === 'equipment')
+          return (a.equipment || '').localeCompare(b.equipment || '') || a.name.localeCompare(b.name);
+        return 0;
+      });
+    }
+
+    // 3. Search with high-precision weighted engine (fuzzy, typos, synonyms, multi-field)
+    const searchResults = searchExercises(baseMatches, searchTerm);
+
+    // If default sort (name_asc), preserve the intelligent relevance ranking order
+    if (sortBy === 'name_asc') {
+      return searchResults.map((r) => r.item);
+    }
+
+    // Otherwise apply user's explicit sort choice with relevance score as tiebreaker
+    return [...searchResults]
+      .sort((a, b) => {
+        if (sortBy === 'name_desc') return b.item.name.localeCompare(a.item.name);
+        if (sortBy === 'muscle')
+          return (
+            a.item.muscleGroup.localeCompare(b.item.muscleGroup) ||
+            b.score - a.score ||
+            a.item.name.localeCompare(b.item.name)
+          );
+        if (sortBy === 'equipment')
+          return (
+            (a.item.equipment || '').localeCompare(b.item.equipment || '') ||
+            b.score - a.score ||
+            a.item.name.localeCompare(b.item.name)
+          );
+        return b.score - a.score;
+      })
+      .map((r) => r.item);
   }, [
     library,
     searchTerm,
@@ -635,12 +653,27 @@ export default function ExerciseLibraryModal({
                 <div
                   style={{
                     textAlign: 'center',
-                    padding: '36px 0',
+                    padding: '36px 12px',
                     color: 'var(--text-dim)',
                     fontSize: '0.8rem',
                   }}
                 >
-                  No exercises match your search filters.
+                  <div style={{ color: '#fff', fontWeight: 700, marginBottom: '4px' }}>
+                    No exercises match {searchTerm ? `"${searchTerm}"` : 'your filters'}
+                  </div>
+                  <p style={{ fontSize: '0.74rem', maxWidth: '280px', margin: '0 auto 10px' }}>
+                    {searchTerm ? 'Try checking for typos or searching by muscle group.' : 'Try changing category or equipment.'}
+                  </p>
+                  {searchTerm && (
+                    <button
+                      type="button"
+                      className="clean-btn primary"
+                      style={{ padding: '4px 12px', fontSize: '0.72rem' }}
+                      onClick={() => setSearchTerm('')}
+                    >
+                      Clear Search
+                    </button>
+                  )}
                 </div>
               ) : (
                 filtered.map((item) => {
@@ -679,7 +712,9 @@ export default function ExerciseLibraryModal({
                             flexWrap: 'wrap',
                           }}
                         >
-                          <span>{item.name}</span>
+                          <span>
+                            <HighlightedText text={item.name} query={searchTerm} />
+                          </span>
                           {noLoad && (
                             <span
                               style={{

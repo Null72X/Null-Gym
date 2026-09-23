@@ -22,6 +22,7 @@ import {
   Clock,
   History,
 } from 'lucide-react';
+import HighlightedText from './HighlightedText';
 
 interface ExerciseCardProps {
   exercise: Exercise;
@@ -31,6 +32,7 @@ interface ExerciseCardProps {
   lastPerformance: SavedExercisePerformance | null;
   mode?: 'planner' | 'tracker';
   weekNumber?: number;
+  highlightQuery?: string;
   onUpdate: (updated: Exercise) => void;
   onDelete?: () => void;
   onDuplicate?: () => void;
@@ -48,6 +50,7 @@ export default function ExerciseCard({
   lastPerformance,
   mode = 'planner',
   weekNumber,
+  highlightQuery,
   onUpdate,
   onDelete,
   onDuplicate,
@@ -163,7 +166,9 @@ export default function ExerciseCard({
           <span style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
             #{index + 1}
           </span>
-          <span>{exercise.name}</span>
+          <span>
+            <HighlightedText text={exercise.name} query={highlightQuery} />
+          </span>
           {/* Prominent Master Muscle Pillar Badge */}
           <span
             className="clean-badge"

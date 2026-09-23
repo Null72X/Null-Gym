@@ -541,6 +541,15 @@ body {
   color: var(--text-dim);
 }
 
+.search-highlight {
+  background: rgba(239, 68, 68, 0.22);
+  color: #ff8080;
+  border-radius: 3px;
+  padding: 0 3px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
 .unit-toggle-btn {
   background: var(--card);
   border: 1px solid var(--border);

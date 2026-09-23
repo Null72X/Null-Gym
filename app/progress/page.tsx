@@ -27,7 +27,10 @@ import {
   Layers,
   Clock,
   ArrowRight,
+  X,
 } from 'lucide-react';
+import { searchItems } from '../../lib/searchEngine';
+import { HighlightedText } from '../../components/HighlightedText';
 
 export default function ProgressPage() {
   const [history, setHistory] = useState<WorkoutHistoryEntry[]>(() => {
@@ -142,28 +145,36 @@ export default function ProgressPage() {
     return Math.round(selectedExPR.maxWeight * (1 + 0.0333 * repsNum));
   }, [selectedExPR]);
 
-  // Filtered PR list
+  // Filtered PR list with intelligent search & typo tolerance
   const filteredPRs = useMemo(() => {
     if (!prSearch.trim()) return personalRecords;
-    const q = prSearch.toLowerCase().trim();
-    return personalRecords.filter((pr) => pr.exerciseName.toLowerCase().includes(q));
+    const fields = [
+      { name: 'exerciseName', weight: 10, isPrimary: true, getter: (pr: PersonalRecord) => pr.exerciseName },
+    ];
+    return searchItems(personalRecords, prSearch, fields).map((r) => r.item);
   }, [personalRecords, prSearch]);
 
-  // Filtered History list
+  // Filtered History list with multi-field search (title, day, exercises)
   const filteredHistory = useMemo(() => {
-    return history.filter((entry) => {
-      const matchesWeek =
-        historyFilterWeek === 'all' || entry.weekNumber === historyFilterWeek;
-      const matchesSearch =
-        !historySearch.trim() ||
-        entry.workoutTitle.toLowerCase().includes(historySearch.toLowerCase().trim()) ||
-        entry.dayOfWeek.toLowerCase().includes(historySearch.toLowerCase().trim()) ||
-        entry.exercises.some((e) =>
-          e.exerciseName.toLowerCase().includes(historySearch.toLowerCase().trim())
-        );
+    const weekFiltered =
+      historyFilterWeek === 'all'
+        ? history
+        : history.filter((entry) => entry.weekNumber === historyFilterWeek);
 
-      return matchesWeek && matchesSearch;
-    });
+    if (!historySearch.trim()) return weekFiltered;
+
+    const fields = [
+      { name: 'workoutTitle', weight: 9, isPrimary: true, getter: (entry: WorkoutHistoryEntry) => entry.workoutTitle },
+      { name: 'dayOfWeek', weight: 5, getter: (entry: WorkoutHistoryEntry) => entry.dayOfWeek },
+      {
+        name: 'exercises',
+        weight: 10,
+        getter: (entry: WorkoutHistoryEntry) =>
+          entry.exercises.map((e) => e.exerciseName).join(' '),
+      },
+    ];
+
+    return searchItems(weekFiltered, historySearch, fields).map((r) => r.item);
   }, [history, historyFilterWeek, historySearch]);
 
   return (
@@ -495,13 +506,32 @@ export default function ProgressPage() {
                 placeholder="Search PRs..."
                 value={prSearch}
                 onChange={(e) => setPrSearch(e.target.value)}
-                style={{ fontSize: '0.72rem', padding: '4px 8px 4px 26px' }}
+                style={{ fontSize: '0.72rem', padding: '4px 24px 4px 26px' }}
               />
               <Search
                 size={12}
                 color="var(--text-dim)"
                 style={{ position: 'absolute', left: '8px', top: '8px' }}
               />
+              {prSearch && (
+                <button
+                  type="button"
+                  onClick={() => setPrSearch('')}
+                  style={{
+                    position: 'absolute',
+                    right: '6px',
+                    top: '5px',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-dim)',
+                    cursor: 'pointer',
+                    padding: '2px',
+                  }}
+                  title="Clear search"
+                >
+                  <X size={12} />
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -535,7 +565,7 @@ export default function ProgressPage() {
               >
                 <div>
                   <div style={{ fontWeight: 800, fontSize: '0.84rem', color: '#fff' }}>
-                    {pr.exerciseName}
+                    <HighlightedText text={pr.exerciseName} query={prSearch} />
                   </div>
                   <div
                     style={{
@@ -602,19 +632,58 @@ export default function ProgressPage() {
             <span>Workout History Log ({history.length})</span>
           </h3>
 
-          {/* Week Filter Tabs */}
-          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-            {(['all', 1, 2, 3, 4, 5, 6] as const).map((w) => (
-              <button
-                key={w}
-                type="button"
-                className={`btn-clean btn-sm ${historyFilterWeek === w ? 'btn-primary' : ''}`}
-                style={{ padding: '2px 8px', fontSize: '0.68rem' }}
-                onClick={() => setHistoryFilterWeek(w)}
-              >
-                {w === 'all' ? 'All Weeks' : `Wk ${w}`}
-              </button>
-            ))}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            {history.length > 2 && (
+              <div style={{ position: 'relative', width: '180px' }}>
+                <input
+                  type="text"
+                  className="clean-input"
+                  placeholder="Search logs & exercises..."
+                  value={historySearch}
+                  onChange={(e) => setHistorySearch(e.target.value)}
+                  style={{ fontSize: '0.72rem', padding: '4px 24px 4px 26px' }}
+                />
+                <Search
+                  size={12}
+                  color="var(--text-dim)"
+                  style={{ position: 'absolute', left: '8px', top: '8px' }}
+                />
+                {historySearch && (
+                  <button
+                    type="button"
+                    onClick={() => setHistorySearch('')}
+                    style={{
+                      position: 'absolute',
+                      right: '6px',
+                      top: '5px',
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-dim)',
+                      cursor: 'pointer',
+                      padding: '2px',
+                    }}
+                    title="Clear search"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Week Filter Tabs */}
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+              {(['all', 1, 2, 3, 4, 5, 6] as const).map((w) => (
+                <button
+                  key={w}
+                  type="button"
+                  className={`btn-clean btn-sm ${historyFilterWeek === w ? 'btn-primary' : ''}`}
+                  style={{ padding: '2px 8px', fontSize: '0.68rem' }}
+                  onClick={() => setHistoryFilterWeek(w)}
+                >
+                  {w === 'all' ? 'All Weeks' : `Wk ${w}`}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -629,6 +698,23 @@ export default function ProgressPage() {
               <span>Go to Workout</span>
               <ArrowRight size={13} />
             </Link>
+          </div>
+        ) : filteredHistory.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '28px 0', color: 'var(--text-dim)', fontSize: '0.8rem' }}>
+            <div style={{ fontWeight: 700, color: '#fff', marginBottom: '4px' }}>
+              No workout logs match {historySearch ? `"${historySearch}"` : 'selected week'}
+            </div>
+            <p style={{ fontSize: '0.74rem' }}>Try clearing your search or selecting &ldquo;All Weeks&rdquo;.</p>
+            {historySearch && (
+              <button
+                type="button"
+                className="clean-btn primary"
+                style={{ marginTop: '10px', padding: '4px 12px', fontSize: '0.72rem' }}
+                onClick={() => setHistorySearch('')}
+              >
+                Clear Search
+              </button>
+            )}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -661,7 +747,9 @@ export default function ProgressPage() {
                       >
                         <CheckCircle size={13} color="var(--accent-green)" />
                         <span>
-                          Week {entry.weekNumber} · {entry.dayOfWeek} ({entry.workoutTitle})
+                          Week {entry.weekNumber} · {entry.dayOfWeek} (
+                          <HighlightedText text={entry.workoutTitle} query={historySearch} />
+                          )
                         </span>
                       </div>
                       <div
@@ -706,7 +794,7 @@ export default function ProgressPage() {
                               marginBottom: '3px',
                             }}
                           >
-                            {ex.exerciseName}
+                            <HighlightedText text={ex.exerciseName} query={historySearch} />
                           </div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                             {ex.sets.map((s, sIdx) => {

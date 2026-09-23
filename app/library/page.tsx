@@ -37,6 +37,8 @@ import {
   Sparkles,
   Layers,
 } from 'lucide-react';
+import { searchExercises } from '../../lib/searchEngine';
+import { HighlightedText } from '../../components/HighlightedText';
 
 const DAYS_OF_WEEK = [
   'Monday',
@@ -255,25 +257,10 @@ export default function LibraryPage() {
     triggerToast(`Added "${item.name}" to Week ${targetWeek} · ${targetDay}!`);
   };
 
-  // Advanced multi-token search, multi-faceted filtering & smart sorting
+  // Advanced multi-token, typo-tolerant search, multi-faceted filtering & smart sorting
   const filtered = useMemo(() => {
-    const rawTokens = searchTerm.toLowerCase().trim().split(/\s+/).filter(Boolean);
-
-    const matches = library.filter((item) => {
-      const matchesSearch =
-        rawTokens.length === 0 ||
-        rawTokens.every(
-          (t) =>
-            item.name.toLowerCase().includes(t) ||
-            item.muscleGroup.toLowerCase().includes(t) ||
-            (item.category && item.category.toLowerCase().includes(t)) ||
-            (item.subMuscle && item.subMuscle.toLowerCase().includes(t)) ||
-            (item.equipment && item.equipment.toLowerCase().includes(t)) ||
-            (item.movementPattern && item.movementPattern.toLowerCase().includes(t)) ||
-            (item.notes && item.notes.toLowerCase().includes(t)) ||
-            (item.difficulty && item.difficulty.toLowerCase().includes(t))
-        );
-
+    // 1. Base filter by category, equipment, load type, and difficulty
+    const baseMatches = library.filter((item) => {
       const matchesCat = matchCatalogCategory(item, selectedCategory, selectedSubCategory);
 
       const matchesEq =
@@ -297,18 +284,49 @@ export default function LibraryPage() {
         (item.difficulty &&
           item.difficulty.toLowerCase() === selectedDifficulty.toLowerCase());
 
-      return matchesSearch && matchesCat && matchesEq && matchesLoad && matchesDiff;
+      return matchesCat && matchesEq && matchesLoad && matchesDiff;
     });
 
-    return matches.sort((a, b) => {
-      if (sortBy === 'name_asc') return a.name.localeCompare(b.name);
-      if (sortBy === 'name_desc') return b.name.localeCompare(a.name);
-      if (sortBy === 'muscle')
-        return a.muscleGroup.localeCompare(b.muscleGroup) || a.name.localeCompare(b.name);
-      if (sortBy === 'equipment')
-        return (a.equipment || '').localeCompare(b.equipment || '') || a.name.localeCompare(b.name);
-      return 0;
-    });
+    // 2. If no search term, sort according to selected sort option
+    if (!searchTerm.trim()) {
+      return [...baseMatches].sort((a, b) => {
+        if (sortBy === 'name_asc') return a.name.localeCompare(b.name);
+        if (sortBy === 'name_desc') return b.name.localeCompare(a.name);
+        if (sortBy === 'muscle')
+          return a.muscleGroup.localeCompare(b.muscleGroup) || a.name.localeCompare(b.name);
+        if (sortBy === 'equipment')
+          return (a.equipment || '').localeCompare(b.equipment || '') || a.name.localeCompare(b.name);
+        return 0;
+      });
+    }
+
+    // 3. Search with high-precision weighted engine (fuzzy, typos, synonyms, multi-field)
+    const searchResults = searchExercises(baseMatches, searchTerm);
+
+    // If default sort (name_asc), preserve the intelligent relevance ranking order
+    if (sortBy === 'name_asc') {
+      return searchResults.map((r) => r.item);
+    }
+
+    // Otherwise apply user's explicit sort choice with relevance score as tiebreaker
+    return [...searchResults]
+      .sort((a, b) => {
+        if (sortBy === 'name_desc') return b.item.name.localeCompare(a.item.name);
+        if (sortBy === 'muscle')
+          return (
+            a.item.muscleGroup.localeCompare(b.item.muscleGroup) ||
+            b.score - a.score ||
+            a.item.name.localeCompare(b.item.name)
+          );
+        if (sortBy === 'equipment')
+          return (
+            (a.item.equipment || '').localeCompare(b.item.equipment || '') ||
+            b.score - a.score ||
+            a.item.name.localeCompare(b.item.name)
+          );
+        return b.score - a.score;
+      })
+      .map((r) => r.item);
   }, [
     library,
     searchTerm,
@@ -925,23 +943,40 @@ export default function LibraryPage() {
       {/* Exercise Cards List (Responsive 1-col on mobile, 2-col on desktop) */}
       <div className="responsive-grid-2">
         {filtered.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-state-title">No exercises found</div>
-            <p style={{ fontSize: '0.8rem' }}>
-              No catalog exercises match &ldquo;{searchTerm || selectedCategory}&rdquo;.
+          <div className="empty-state" style={{ gridColumn: '1 / -1', padding: '40px 16px' }}>
+            <div className="empty-state-title" style={{ fontSize: '1.05rem', color: '#fff' }}>
+              No exercises match {searchTerm ? `"${searchTerm}"` : 'selected filters'}
+            </div>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', maxWidth: '360px', margin: '6px auto 14px' }}>
+              {searchTerm
+                ? 'Try checking for typos, searching by target muscle (e.g. chest, lats, quads), or clearing equipment filters.'
+                : 'No exercises match the selected category or equipment filters.'}
             </p>
-            <button
-              type="button"
-              className="btn-clean btn-sm"
-              style={{ marginTop: '10px' }}
-              onClick={() => {
-                setSelectedCategory('All');
-                setSelectedEquipment('All');
-                setSearchTerm('');
-              }}
-            >
-              Reset Filters
-            </button>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {searchTerm && (
+                <button
+                  type="button"
+                  className="clean-btn primary"
+                  style={{ padding: '6px 14px', fontSize: '0.75rem' }}
+                  onClick={() => setSearchTerm('')}
+                >
+                  Clear Search
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn-clean btn-sm"
+                onClick={() => {
+                  setSelectedCategory('All');
+                  setSelectedEquipment('All');
+                  setSelectedLoadType('All');
+                  setSelectedDifficulty('All');
+                  setSearchTerm('');
+                }}
+              >
+                Reset All Filters
+              </button>
+            </div>
           </div>
         ) : (
           filtered.slice(0, displayCount).map((item, idx) => {
@@ -962,7 +997,7 @@ export default function LibraryPage() {
                     }}
                   >
                     <span>
-                      #{idx + 1} {item.name}
+                      #{idx + 1} <HighlightedText text={item.name} query={searchTerm} />
                     </span>
                     {noLoad && (
                       <span
@@ -1165,7 +1200,9 @@ export default function LibraryPage() {
                 {item.notes && (
                   <div className="clean-notes-box">
                     <span className="notes-tag">CUE</span>
-                    <span>{item.notes}</span>
+                    <span>
+                      <HighlightedText text={item.notes} query={searchTerm} />
+                    </span>
                   </div>
                 )}
               </div>
