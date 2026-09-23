@@ -276,7 +276,7 @@ export default function ExerciseLibraryModal({
               <input
                 type="text"
                 className="clean-input"
-                placeholder="Search 570 exercises by name, muscle, equipment, pattern..."
+                placeholder={`Search ${library.length || 710} exercises by name, muscle, equipment, pattern...`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{ paddingLeft: '32px', fontSize: '0.8rem' }}

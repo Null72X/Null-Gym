@@ -30,7 +30,7 @@ const STORAGE_KEYS = {
   PROGRESSION: 'gym_progression_v6',
 };
 
-// 570 Master exercise library with YouTube search links and intelligent tracking types
+// 710+ Master exercise library with YouTube search links and intelligent tracking types
 export const DEFAULT_LIBRARY: ExerciseLibraryItem[] = ALL_CATALOG_EXERCISES;
 
 import { createBlankWeeks, ensureSixWeeks } from './planDefaults';

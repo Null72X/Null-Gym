@@ -43,7 +43,7 @@ import {
 
 export default function SettingsPage() {
   const [unit, setUnit] = useState<WeightUnit>('kg');
-  const [libraryCount, setLibraryCount] = useState<number>(615);
+  const [libraryCount, setLibraryCount] = useState<number>(ALL_CATALOG_EXERCISES.length);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [cloudInfo, setCloudInfo] = useState<CloudSyncInfo>({
     status: 'synced',
@@ -208,7 +208,7 @@ export default function SettingsPage() {
     }, 700);
   };
 
-  // Restore Master Exercise Catalog (570 items)
+  // Restore Master Exercise Catalog (710+ items)
   const handleRestoreCatalog = () => {
     if (!confirm(`Restore the Master Exercise Library to all ${ALL_CATALOG_EXERCISES.length} default exercises with YouTube tutorials?`)) return;
     const restored = restoreDefaultLibrary();
@@ -233,7 +233,7 @@ export default function SettingsPage() {
 
   // Factory Reset Website
   const handleFactoryReset = () => {
-    if (!confirm('FACTORY RESET: This will reset all 6 weeks to blank, restore the full 615-exercise library, and delete all history. Continue?')) return;
+    if (!confirm(`FACTORY RESET: This will reset all 6 weeks to blank, restore the full ${ALL_CATALOG_EXERCISES.length}-exercise library, and delete all history. Continue?`)) return;
     factoryResetAll();
     triggerToast('Reset complete! Reloading Null Gym...');
     setTimeout(() => {
@@ -576,7 +576,7 @@ export default function SettingsPage() {
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <RefreshCw size={13} />
-            <span>Restore 615 Master Catalog</span>
+            <span>Restore {ALL_CATALOG_EXERCISES.length} Master Catalog</span>
           </button>
 
           <button
@@ -703,7 +703,7 @@ export default function SettingsPage() {
             onClick={handleFactoryReset}
           >
             <Zap size={13} />
-            <span>Restore Default App (Blank 6-Week Plan + 615 Catalog)</span>
+            <span>Restore Default App (Blank 6-Week Plan + {ALL_CATALOG_EXERCISES.length} Catalog)</span>
           </button>
         </div>
       </div>

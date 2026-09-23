@@ -319,7 +319,7 @@ export default function LibraryPage() {
             <span>Master Exercise Library</span>
           </h2>
           <p>
-            Browse 615+ curated exercises across 7 Master Muscle Pillars with YouTube tutorials. Add directly to any week and day.
+            Browse 710+ curated exercises across 7 Master Muscle Pillars with YouTube tutorials. Add directly to any week and day.
           </p>
         </div>
 
@@ -534,7 +534,7 @@ export default function LibraryPage() {
           <Search size={15} color="var(--accent-red)" />
           <input
             type="text"
-            placeholder="Search 570 exercises by name, muscle, cues, equipment..."
+            placeholder={`Search ${library.length || 710} exercises by name, muscle, cues, equipment...`}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{

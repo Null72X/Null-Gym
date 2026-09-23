@@ -4,7 +4,7 @@ import Navbar from '../components/Navbar';
 
 export const metadata: Metadata = {
   title: 'Null Gym · 6-Week Workout Planner & Tracker',
-  description: 'Private 6-week workout planner, progressive overload tracker, and 615+ exercise library across 7 master muscle pillars.',
+  description: 'Private 6-week workout planner, progressive overload tracker, and 710+ exercise library across 7 master muscle pillars.',
   manifest: '/manifest.json',
   icons: {
     icon: '/icons/icon-192.svg',
