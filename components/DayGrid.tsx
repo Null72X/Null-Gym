@@ -23,21 +23,26 @@ export default function DayGrid({ days, selectedDayIndex, onSelectDay }: DayGrid
         );
         const isDone = (totalSets > 0 && doneSets === totalSets) || day.completed;
 
-        return (
-          <button
-            key={day.id || idx}
-            type="button"
-            className={`day-btn ${idx === selectedDayIndex ? 'active' : ''} ${
-              isDone ? 'done-all' : ''
-            }`}
-            onClick={() => onSelectDay(idx)}
-          >
-            <span className="day-btn-name">{SHORT_NAMES[idx] || day.dayOfWeek.substring(0, 3)}</span>
-            <span className="day-btn-title">
-              {day.isRestDay ? 'Rest' : day.title.replace(' #', ' ')}
-            </span>
-          </button>
-        );
+          const fallbackTitles = ['Push 1', 'Pull 1', 'Leg 1', 'Push 2', 'Pull 2', 'Leg 2', 'Rest'];
+          const displayTitle = day.isRestDay
+            ? 'Rest'
+            : !day.title || day.title.toLowerCase() === day.dayOfWeek.toLowerCase()
+            ? (fallbackTitles[idx] || day.title)
+            : day.title.replace(' #', ' ');
+
+          return (
+            <button
+              key={day.id || idx}
+              type="button"
+              className={`day-btn ${idx === selectedDayIndex ? 'active' : ''} ${
+                isDone ? 'done-all' : ''
+              }`}
+              onClick={() => onSelectDay(idx)}
+            >
+              <span className="day-btn-name">{SHORT_NAMES[idx] || day.dayOfWeek.substring(0, 3)}</span>
+              <span className="day-btn-title">{displayTitle}</span>
+            </button>
+          );
       })}
     </nav>
   );

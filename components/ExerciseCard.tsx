@@ -8,6 +8,7 @@ import {
   SetType,
   WeightUnit,
 } from '../types/workout';
+import { getExerciseMuscleInfo } from '../lib/muscleMetadata';
 import SetRow from './SetRow';
 import {
   ChevronUp,
@@ -57,6 +58,8 @@ export default function ExerciseCard({
 }: ExerciseCardProps) {
   const [showNotesEdit, setShowNotesEdit] = useState(false);
   const [notesDraft, setNotesDraft] = useState(exercise.notes || '');
+
+  const muscleInfo = getExerciseMuscleInfo(exercise);
 
   // Sets count
   const wuCount = exercise.sets.filter((s) => s.type === 'warmup').length;
@@ -161,14 +164,24 @@ export default function ExerciseCard({
             #{index + 1}
           </span>
           <span>{exercise.name}</span>
-          {exercise.muscleGroup && (
-            <span
-              className="clean-badge"
-              style={{ fontSize: '0.62rem', padding: '1px 5px', color: 'var(--text-muted)' }}
-            >
-              {exercise.muscleGroup}
-            </span>
-          )}
+          {/* Prominent Master Muscle Pillar Badge */}
+          <span
+            className="clean-badge"
+            style={{
+              fontSize: '0.64rem',
+              padding: '2px 7px',
+              background: muscleInfo.pillarMeta.bg,
+              color: muscleInfo.pillarMeta.color,
+              borderColor: muscleInfo.pillarMeta.border,
+              fontWeight: 800,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            <span>{muscleInfo.pillarMeta.icon}</span>
+            <span>{muscleInfo.displayPillar}</span>
+          </span>
         </div>
 
         <div className="card-actions-group">
@@ -283,9 +296,29 @@ export default function ExerciseCard({
             {exercise.equipment}
           </span>
         )}
-        {exercise.subMuscle && (
-          <span className="clean-badge" style={{ color: '#c4b5fd', borderColor: 'rgba(196, 181, 253, 0.2)' }}>
-            {exercise.subMuscle}
+        {muscleInfo.subMuscle && (
+          <span
+            className="clean-badge"
+            style={{
+              color: '#fed7aa',
+              borderColor: 'rgba(254, 215, 170, 0.25)',
+              fontWeight: 700,
+              fontSize: '0.66rem',
+            }}
+          >
+            {muscleInfo.subMuscle}
+          </span>
+        )}
+        {exercise.movementPattern && (
+          <span
+            className="clean-badge"
+            style={{
+              color: '#cbd5e1',
+              borderColor: 'rgba(203, 213, 225, 0.2)',
+              fontSize: '0.64rem',
+            }}
+          >
+            {exercise.movementPattern}
           </span>
         )}
         {exercise.requiresLoad === false && (

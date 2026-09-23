@@ -24,6 +24,7 @@ import {
   onCloudSettingsUpdated,
 } from '../lib/storage';
 import { getLastPerformance } from '../lib/history';
+import { getDayMuscleBreakdown } from '../lib/muscleMetadata';
 import {
   CheckCircle2,
   RotateCcw,
@@ -288,6 +289,7 @@ export default function DashboardPage() {
     currentDayData?.exercises.filter((ex) => ex.sets.length > 0 && ex.sets.every((s) => s.completed))
       .length || 0;
   const workoutPercent = totalSets > 0 ? Math.round((doneSets / totalSets) * 100) : 0;
+  const muscleBreakdown = getDayMuscleBreakdown(currentDayData?.exercises || []);
 
   // Filter exercises by search
   const filteredExercises = (currentDayData?.exercises || []).filter((ex) => {
@@ -319,6 +321,51 @@ export default function DashboardPage() {
             {currentDayData.dayOfWeek} · {currentDayData.title}
           </h2>
           <p>{currentDayData.isRestDay ? 'Scheduled Rest Day' : currentDayData.focus || 'Training Session'}</p>
+
+          {/* Dynamic Muscle Pillar Tags */}
+          {!currentDayData.isRestDay && (
+            <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '8px' }}>
+              {muscleBreakdown.length > 0 ? (
+                muscleBreakdown.map((item) => (
+                  <span
+                    key={item.pillar}
+                    className="clean-badge"
+                    style={{
+                      background: item.meta.bg,
+                      color: item.meta.color,
+                      borderColor: item.meta.border,
+                      fontSize: '0.66rem',
+                      fontWeight: 700,
+                      padding: '2px 7px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <span>{item.meta.icon}</span>
+                    <span>{item.pillar}</span>
+                    <span style={{ opacity: 0.8, fontSize: '0.6rem' }}>
+                      ({item.exerciseCount})
+                    </span>
+                  </span>
+                ))
+              ) : (
+                <span
+                  className="clean-badge"
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.12)',
+                    color: '#fca5a5',
+                    borderColor: 'rgba(239, 68, 68, 0.25)',
+                    fontSize: '0.66rem',
+                    fontWeight: 700,
+                    padding: '2px 7px',
+                  }}
+                >
+                  Target: {currentDayData.focus || 'Push / Pull / Legs'}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="progress-pill">

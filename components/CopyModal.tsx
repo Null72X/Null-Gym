@@ -17,13 +17,13 @@ interface CopyModalProps {
 }
 
 const DAY_OPTIONS = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday',
+  { day: 'Monday', title: 'Push 1' },
+  { day: 'Tuesday', title: 'Pull 1' },
+  { day: 'Wednesday', title: 'Leg 1' },
+  { day: 'Thursday', title: 'Push 2' },
+  { day: 'Friday', title: 'Pull 2' },
+  { day: 'Saturday', title: 'Leg 2' },
+  { day: 'Sunday', title: 'Rest Day' },
 ];
 
 export default function CopyModal({
@@ -115,11 +115,15 @@ export default function CopyModal({
                 setConfirmed(false);
               }}
             >
-              {DAY_OPTIONS.map((dName, idx) => (
-                <option key={idx} value={idx}>
-                  {dName}
-                </option>
-              ))}
+              {DAY_OPTIONS.map((opt, idx) => {
+                const dayObj = weeks[targetWeek - 1]?.days[idx];
+                const title = dayObj?.title || opt.title;
+                return (
+                  <option key={idx} value={idx}>
+                    {opt.day} · {title}
+                  </option>
+                );
+              })}
             </select>
           </div>
         )}
@@ -143,7 +147,7 @@ export default function CopyModal({
           <div>
             {mode === 'day' ? (
               <span>
-                This will overwrite Week {targetWeek} · {DAY_OPTIONS[targetDayIndex]} (currently &ldquo;{targetDayTitle}&rdquo;).
+                This will overwrite Week {targetWeek} · {DAY_OPTIONS[targetDayIndex]?.day} (currently &ldquo;{targetDayTitle}&rdquo;).
               </span>
             ) : (
               <span>

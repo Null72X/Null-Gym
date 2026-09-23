@@ -29,6 +29,7 @@ import {
   onCloudSettingsUpdated,
 } from '../../lib/storage';
 import { getLastPerformance } from '../../lib/history';
+import { getDayMuscleBreakdown } from '../../lib/muscleMetadata';
 import {
   Plus,
   Copy,
@@ -118,6 +119,7 @@ export default function PlannerPage() {
 
   const currentWeekData = weeks[currentWeek - 1] || weeks[0];
   const currentDayData = currentWeekData?.days[currentDayIndex] || currentWeekData?.days[0];
+  const muscleBreakdown = getDayMuscleBreakdown(currentDayData?.exercises || []);
 
   // Open edit workout header
   const handleOpenEditHeader = () => {
@@ -428,6 +430,51 @@ export default function PlannerPage() {
                 </button>
               </div>
               <p>{currentDayData.isRestDay ? 'Scheduled Rest Day' : currentDayData.focus}</p>
+
+              {/* Dynamic Muscle Pillar Tags */}
+              {!currentDayData.isRestDay && (
+                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '6px' }}>
+                  {muscleBreakdown.length > 0 ? (
+                    muscleBreakdown.map((item) => (
+                      <span
+                        key={item.pillar}
+                        className="clean-badge"
+                        style={{
+                          background: item.meta.bg,
+                          color: item.meta.color,
+                          borderColor: item.meta.border,
+                          fontSize: '0.64rem',
+                          fontWeight: 700,
+                          padding: '2px 7px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <span>{item.meta.icon}</span>
+                        <span>{item.pillar}</span>
+                        <span style={{ opacity: 0.8, fontSize: '0.58rem' }}>
+                          ({item.exerciseCount})
+                        </span>
+                      </span>
+                    ))
+                  ) : (
+                    <span
+                      className="clean-badge"
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.12)',
+                        color: '#fca5a5',
+                        borderColor: 'rgba(239, 68, 68, 0.25)',
+                        fontSize: '0.64rem',
+                        fontWeight: 700,
+                        padding: '2px 7px',
+                      }}
+                    >
+                      Target: {currentDayData.focus || 'Push / Pull / Legs'}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>

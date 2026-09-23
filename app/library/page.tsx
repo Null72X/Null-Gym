@@ -24,6 +24,7 @@ import {
   SEVEN_MASTER_PILLARS,
   MusclePillar,
 } from '../../lib/exerciseCatalog';
+import { getExerciseMuscleInfo, DEFAULT_DAY_SCHEDULE } from '../../lib/muscleMetadata';
 import {
   Search,
   Plus,
@@ -931,6 +932,7 @@ export default function LibraryPage() {
           filtered.map((item, idx) => {
             const isAddingThis = addingExerciseId === item.id;
             const noLoad = item.requiresLoad === false;
+            const muscleInfo = getExerciseMuscleInfo(item);
 
             return (
               <div key={item.id} className="clean-card">
@@ -1052,9 +1054,9 @@ export default function LibraryPage() {
                         value={targetDay}
                         onChange={(e) => setTargetDay(e.target.value)}
                       >
-                        {DAYS_OF_WEEK.map((d) => (
-                          <option key={d} value={d}>
-                            {d}
+                        {DEFAULT_DAY_SCHEDULE.map((s) => (
+                          <option key={s.dayOfWeek} value={s.dayOfWeek}>
+                            {s.dayOfWeek} · {s.title}
                           </option>
                         ))}
                       </select>
@@ -1081,10 +1083,46 @@ export default function LibraryPage() {
 
                 {/* Metadata Row */}
                 <div className="clean-meta-row">
-                  <span className="clean-badge red">{item.muscleGroup}</span>
-                  {item.subMuscle && (
-                    <span className="clean-badge" style={{ color: '#fed7aa' }}>
-                      {item.subMuscle}
+                  <span
+                    className="clean-badge"
+                    style={{
+                      background: muscleInfo.pillarMeta.bg,
+                      color: muscleInfo.pillarMeta.color,
+                      borderColor: muscleInfo.pillarMeta.border,
+                      fontSize: '0.64rem',
+                      fontWeight: 800,
+                      padding: '2px 7px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <span>{muscleInfo.pillarMeta.icon}</span>
+                    <span>{muscleInfo.displayPillar}</span>
+                  </span>
+                  {muscleInfo.subMuscle && (
+                    <span
+                      className="clean-badge"
+                      style={{
+                        color: '#fed7aa',
+                        borderColor: 'rgba(254, 215, 170, 0.25)',
+                        fontWeight: 700,
+                        fontSize: '0.66rem',
+                      }}
+                    >
+                      {muscleInfo.subMuscle}
+                    </span>
+                  )}
+                  {item.movementPattern && (
+                    <span
+                      className="clean-badge"
+                      style={{
+                        color: '#cbd5e1',
+                        borderColor: 'rgba(203, 213, 225, 0.2)',
+                        fontSize: '0.64rem',
+                      }}
+                    >
+                      {item.movementPattern}
                     </span>
                   )}
                   {item.equipment && <span className="clean-badge">{item.equipment}</span>}

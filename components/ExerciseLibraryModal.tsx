@@ -16,6 +16,7 @@ import {
   SEVEN_MASTER_PILLARS,
   MusclePillar,
 } from '../lib/exerciseCatalog';
+import { getExerciseMuscleInfo } from '../lib/muscleMetadata';
 import { X, Search, Plus, Play, ExternalLink } from 'lucide-react';
 
 interface ExerciseLibraryModalProps {
@@ -642,6 +643,7 @@ export default function ExerciseLibraryModal({
               ) : (
                 filtered.map((item) => {
                   const noLoad = item.requiresLoad === false;
+                  const muscleInfo = getExerciseMuscleInfo(item);
                   return (
                     <div
                       key={item.id}
@@ -701,17 +703,47 @@ export default function ExerciseLibraryModal({
                           }}
                         >
                           <span
-                            className="clean-badge red"
-                            style={{ fontSize: '0.6rem', padding: '1px 5px' }}
+                            className="clean-badge"
+                            style={{
+                              fontSize: '0.6rem',
+                              padding: '1px 5px',
+                              background: muscleInfo.pillarMeta.bg,
+                              color: muscleInfo.pillarMeta.color,
+                              borderColor: muscleInfo.pillarMeta.border,
+                              fontWeight: 800,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                            }}
                           >
-                            {item.muscleGroup}
+                            <span>{muscleInfo.pillarMeta.icon}</span>
+                            <span>{muscleInfo.displayPillar}</span>
                           </span>
-                          {item.subMuscle && (
+                          {muscleInfo.subMuscle && (
                             <span
                               className="clean-badge"
-                              style={{ fontSize: '0.6rem', padding: '1px 5px' }}
+                              style={{
+                                fontSize: '0.6rem',
+                                padding: '1px 5px',
+                                color: '#fed7aa',
+                                borderColor: 'rgba(254, 215, 170, 0.2)',
+                                fontWeight: 700,
+                              }}
                             >
-                              {item.subMuscle}
+                              {muscleInfo.subMuscle}
+                            </span>
+                          )}
+                          {item.movementPattern && (
+                            <span
+                              className="clean-badge"
+                              style={{
+                                fontSize: '0.6rem',
+                                padding: '1px 5px',
+                                color: '#cbd5e1',
+                                borderColor: 'rgba(203, 213, 225, 0.2)',
+                              }}
+                            >
+                              {item.movementPattern}
                             </span>
                           )}
                           {item.equipment && (

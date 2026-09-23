@@ -61,50 +61,7 @@ function saveDatabase(data: typeof inMemoryDatabase) {
   }
 }
 
-const DAY_NAMES = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday',
-] as const;
-
-function ensureSixWeeks(plan: WeekPlan[] | null): WeekPlan[] {
-  if (!plan || !Array.isArray(plan)) {
-    return Array.from({ length: 6 }, (_, wIdx) => ({
-      weekNumber: wIdx + 1,
-      days: DAY_NAMES.map((d, dIdx) => ({
-        id: `w${wIdx + 1}_d${dIdx}`,
-        dayOfWeek: d,
-        title: d === 'Sunday' ? 'Rest Day' : d,
-        focus: d === 'Sunday' ? 'Rest & Recovery' : '',
-        isRestDay: d === 'Sunday',
-        exercises: [],
-      })),
-    }));
-  }
-
-  if (plan.length >= 6) return plan;
-
-  const extraWeeks: WeekPlan[] = Array.from({ length: 6 - plan.length }, (_, idx) => {
-    const wNum = plan.length + idx + 1;
-    return {
-      weekNumber: wNum,
-      days: DAY_NAMES.map((d, dIdx) => ({
-        id: `w${wNum}_d${dIdx}`,
-        dayOfWeek: d,
-        title: d === 'Sunday' ? 'Rest Day' : d,
-        focus: d === 'Sunday' ? 'Rest & Recovery' : '',
-        isRestDay: d === 'Sunday',
-        exercises: [],
-      })),
-    };
-  });
-
-  return [...plan, ...extraWeeks];
-}
+import { ensureSixWeeks } from '@/lib/planDefaults';
 
 // GET /api/sync -> Returns current database snapshot
 export async function GET() {

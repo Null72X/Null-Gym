@@ -116,8 +116,9 @@ export function getSavedWeeks(): WeekPlan[] {
     }
     const parsed = JSON.parse(raw);
     const valid = ensureSixWeeks(parsed);
-    if (!Array.isArray(parsed) || parsed.length < 6) {
-      localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(valid));
+    const validStr = JSON.stringify(valid);
+    if (raw !== validStr) {
+      localStorage.setItem(STORAGE_KEYS.WEEKS, validStr);
     }
     return valid;
   } catch (err) {
