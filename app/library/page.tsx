@@ -21,6 +21,8 @@ import {
   CATALOG_CATEGORIES,
   CATALOG_EQUIPMENTS,
   matchCatalogCategory,
+  SEVEN_MASTER_PILLARS,
+  MusclePillar,
 } from '../../lib/exerciseCatalog';
 import {
   Search,
@@ -31,31 +33,9 @@ import {
   X,
   Calendar,
   RotateCcw,
+  Sparkles,
+  Layers,
 } from 'lucide-react';
-
-const POPULAR_CATEGORIES = [
-  { name: 'All', label: 'All (570)' },
-  { name: 'Chest', label: 'Chest' },
-  { name: 'Back (Lats)', label: 'Back (Lats)' },
-  { name: 'Back (Upper / Mid)', label: 'Back (Upper / Mid)' },
-  { name: 'Shoulders', label: 'Shoulders' },
-  { name: 'Shoulders (Front)', label: 'Front Delts' },
-  { name: 'Shoulders (Side)', label: 'Side Delts' },
-  { name: 'Shoulders (Rear)', label: 'Rear Delts' },
-  { name: 'Biceps', label: 'Biceps' },
-  { name: 'Triceps', label: 'Triceps' },
-  { name: 'Quads', label: 'Quads' },
-  { name: 'Hamstrings', label: 'Hamstrings' },
-  { name: 'Glutes', label: 'Glutes' },
-  { name: 'Calves', label: 'Calves' },
-  { name: 'Abs', label: 'Abs & Core' },
-  { name: 'Forearms & Grip', label: 'Forearms' },
-  { name: 'Cardio', label: 'Cardio' },
-  { name: 'Calisthenics', label: 'Calisthenics' },
-  { name: 'Kettlebell', label: 'Kettlebell' },
-  { name: 'Mobility', label: 'Mobility' },
-  { name: 'Stretching', label: 'Stretching' },
-];
 
 const DAYS_OF_WEEK = [
   'Monday',
@@ -73,6 +53,7 @@ export default function LibraryPage() {
   const [defaultUnit, setDefaultUnit] = useState<WeightUnit>('kg');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedSubCategory, setSelectedSubCategory] = useState('all');
   const [selectedEquipment, setSelectedEquipment] = useState('All');
   const [selectedLoadType, setSelectedLoadType] = useState('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState('All');
@@ -116,6 +97,7 @@ export default function LibraryPage() {
   const resetAllFilters = () => {
     setSearchTerm('');
     setSelectedCategory('All');
+    setSelectedSubCategory('all');
     setSelectedEquipment('All');
     setSelectedLoadType('All');
     setSelectedDifficulty('All');
@@ -125,6 +107,7 @@ export default function LibraryPage() {
   const hasActiveFilters =
     searchTerm.trim() !== '' ||
     selectedCategory !== 'All' ||
+    selectedSubCategory !== 'all' ||
     selectedEquipment !== 'All' ||
     selectedLoadType !== 'All' ||
     selectedDifficulty !== 'All' ||
@@ -279,7 +262,7 @@ export default function LibraryPage() {
             (item.difficulty && item.difficulty.toLowerCase().includes(t))
         );
 
-      const matchesCat = matchCatalogCategory(item, selectedCategory);
+      const matchesCat = matchCatalogCategory(item, selectedCategory, selectedSubCategory);
 
       const matchesEq =
         selectedEquipment === 'All' ||
@@ -318,6 +301,7 @@ export default function LibraryPage() {
     library,
     searchTerm,
     selectedCategory,
+    selectedSubCategory,
     selectedEquipment,
     selectedLoadType,
     selectedDifficulty,
@@ -334,7 +318,7 @@ export default function LibraryPage() {
             <span>Master Exercise Library</span>
           </h2>
           <p>
-            Browse 570 curated exercises with YouTube tutorials. Add directly to any week and day.
+            Browse 615+ curated exercises across 7 Master Muscle Pillars with YouTube tutorials. Add directly to any week and day.
           </p>
         </div>
 
@@ -699,7 +683,26 @@ export default function LibraryPage() {
                 }}
               >
                 {selectedCategory}
-                <X size={10} style={{ cursor: 'pointer' }} onClick={() => setSelectedCategory('All')} />
+                <X size={10} style={{ cursor: 'pointer' }} onClick={() => { setSelectedCategory('All'); setSelectedSubCategory('all'); }} />
+              </span>
+            )}
+
+            {selectedSubCategory !== 'all' && (
+              <span
+                className="clean-badge"
+                style={{
+                  fontSize: '0.65rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: 'rgba(239, 68, 68, 0.25)',
+                  color: '#fca5a5',
+                  borderColor: 'rgba(239, 68, 68, 0.5)',
+                  padding: '2px 7px',
+                }}
+              >
+                Focus: {selectedSubCategory}
+                <X size={10} style={{ cursor: 'pointer' }} onClick={() => setSelectedSubCategory('all')} />
               </span>
             )}
 
@@ -772,23 +775,53 @@ export default function LibraryPage() {
         )}
       </div>
 
-      {/* Sleek Category Filter Pills (Matches dayGrid aesthetic) */}
+      {/* 1. Primary 7 Master Muscle Pillars Navigation */}
       <div
         style={{
           display: 'flex',
           gap: '6px',
           overflowX: 'auto',
-          paddingBottom: '8px',
-          marginBottom: '12px',
+          paddingBottom: '6px',
+          marginBottom: '6px',
         }}
       >
-        {POPULAR_CATEGORIES.map((cat) => {
-          const isActive = selectedCategory === cat.name;
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedCategory('All');
+            setSelectedSubCategory('all');
+          }}
+          style={{
+            background: selectedCategory === 'All' ? 'rgba(239, 68, 68, 0.2)' : 'var(--card)',
+            border: `1px solid ${selectedCategory === 'All' ? 'var(--accent-red)' : 'var(--border)'}`,
+            color: selectedCategory === 'All' ? '#fff' : 'var(--text-dim)',
+            borderRadius: '8px',
+            padding: '5px 12px',
+            fontSize: '0.7rem',
+            fontWeight: 700,
+            fontFamily: 'var(--font-mono)',
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            transition: 'all 0.15s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}
+        >
+          <span>All</span>
+          <span style={{ opacity: 0.65, fontSize: '0.66rem' }}>({library.length})</span>
+        </button>
+
+        {SEVEN_MASTER_PILLARS.map((pillar) => {
+          const isActive = selectedCategory === pillar.name;
           return (
             <button
-              key={cat.name}
+              key={pillar.id}
               type="button"
-              onClick={() => setSelectedCategory(cat.name)}
+              onClick={() => {
+                setSelectedCategory(pillar.name);
+                setSelectedSubCategory('all');
+              }}
               style={{
                 background: isActive ? 'rgba(239, 68, 68, 0.2)' : 'var(--card)',
                 border: `1px solid ${isActive ? 'var(--accent-red)' : 'var(--border)'}`,
@@ -801,13 +834,77 @@ export default function LibraryPage() {
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
                 transition: 'all 0.15s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
               }}
             >
-              {cat.label}
+              <span>{pillar.icon}</span>
+              <span>{pillar.label}</span>
             </button>
           );
         })}
       </div>
+
+      {/* 2. Contextual Sub-Muscle Chips (Appears dynamically when a pillar is selected) */}
+      {selectedCategory !== 'All' && (() => {
+        const activePillar = SEVEN_MASTER_PILLARS.find((p) => p.name === selectedCategory);
+        if (!activePillar || !activePillar.subCategories?.length) return null;
+        return (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              overflowX: 'auto',
+              paddingBottom: '8px',
+              marginBottom: '10px',
+              background: 'rgba(255, 255, 255, 0.015)',
+              border: '1px solid rgba(255, 255, 255, 0.05)',
+              borderRadius: '8px',
+              padding: '6px 8px',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '0.65rem',
+                fontWeight: 800,
+                color: 'var(--text-dim)',
+                textTransform: 'uppercase',
+                fontFamily: 'var(--font-mono)',
+                marginRight: '4px',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Target:
+            </span>
+            {activePillar.subCategories.map((sub) => {
+              const isSubActive = selectedSubCategory === sub.id;
+              return (
+                <button
+                  key={sub.id}
+                  type="button"
+                  onClick={() => setSelectedSubCategory(sub.id)}
+                  style={{
+                    background: isSubActive ? 'var(--accent-red)' : 'rgba(255, 255, 255, 0.04)',
+                    border: `1px solid ${isSubActive ? 'var(--accent-red)' : 'rgba(255, 255, 255, 0.1)'}`,
+                    color: isSubActive ? '#fff' : 'var(--text-muted)',
+                    borderRadius: '6px',
+                    padding: '3px 8px',
+                    fontSize: '0.67rem',
+                    fontWeight: isSubActive ? 700 : 500,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {sub.label}
+                </button>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* Exercise Cards List (Identical to New folder and Tracker card styles) */}
       <div className="ex-card-list">

@@ -43,7 +43,7 @@ import {
 
 export default function SettingsPage() {
   const [unit, setUnit] = useState<WeightUnit>('kg');
-  const [libraryCount, setLibraryCount] = useState<number>(570);
+  const [libraryCount, setLibraryCount] = useState<number>(615);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [cloudInfo, setCloudInfo] = useState<CloudSyncInfo>({
     status: 'synced',
@@ -565,7 +565,7 @@ export default function SettingsPage() {
         </div>
 
         <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-          Curated library across 34 muscle groups and functional categories, with instant YouTube tutorials for each exercise.
+          Curated library across the 7 Master Muscle Pillars and functional categories, with instant YouTube tutorials for each exercise.
         </p>
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -576,7 +576,7 @@ export default function SettingsPage() {
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <RefreshCw size={13} />
-            <span>Restore 570 Master Catalog</span>
+            <span>Restore 615 Master Catalog</span>
           </button>
 
           <button
@@ -703,7 +703,7 @@ export default function SettingsPage() {
             onClick={handleFactoryReset}
           >
             <Zap size={13} />
-            <span>Restore Default App (Blank 6-Week Plan + 570 Catalog)</span>
+            <span>Restore Default App (Blank 6-Week Plan + 615 Catalog)</span>
           </button>
         </div>
       </div>

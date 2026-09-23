@@ -13,6 +13,8 @@ import {
   CATALOG_CATEGORIES,
   CATALOG_EQUIPMENTS,
   matchCatalogCategory,
+  SEVEN_MASTER_PILLARS,
+  MusclePillar,
 } from '../lib/exerciseCatalog';
 import { X, Search, Plus, Play, ExternalLink } from 'lucide-react';
 
@@ -25,30 +27,6 @@ interface ExerciseLibraryModalProps {
   onSaveToLibrary: (item: ExerciseLibraryItem) => void;
 }
 
-const POPULAR_CATEGORIES = [
-  { name: 'All', label: 'All' },
-  { name: 'Chest', label: 'Chest' },
-  { name: 'Back (Lats)', label: 'Back (Lats)' },
-  { name: 'Back (Upper / Mid)', label: 'Upper Back' },
-  { name: 'Shoulders', label: 'Shoulders' },
-  { name: 'Shoulders (Front)', label: 'Front Delts' },
-  { name: 'Shoulders (Side)', label: 'Side Delts' },
-  { name: 'Shoulders (Rear)', label: 'Rear Delts' },
-  { name: 'Biceps', label: 'Biceps' },
-  { name: 'Triceps', label: 'Triceps' },
-  { name: 'Quads', label: 'Quads' },
-  { name: 'Hamstrings', label: 'Hamstrings' },
-  { name: 'Glutes', label: 'Glutes' },
-  { name: 'Calves', label: 'Calves' },
-  { name: 'Abs', label: 'Abs & Core' },
-  { name: 'Forearms & Grip', label: 'Forearms' },
-  { name: 'Cardio', label: 'Cardio' },
-  { name: 'Calisthenics', label: 'Calisthenics' },
-  { name: 'Kettlebell', label: 'Kettlebell' },
-  { name: 'Mobility', label: 'Mobility' },
-  { name: 'Stretching', label: 'Stretching' },
-];
-
 export default function ExerciseLibraryModal({
   isOpen,
   library,
@@ -60,6 +38,7 @@ export default function ExerciseLibraryModal({
   const [tab, setTab] = useState<'browse' | 'create'>('browse');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedSubCategory, setSelectedSubCategory] = useState('all');
   const [selectedEquipment, setSelectedEquipment] = useState('All');
   const [selectedLoadType, setSelectedLoadType] = useState('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState('All');
@@ -81,6 +60,7 @@ export default function ExerciseLibraryModal({
   const resetAllFilters = () => {
     setSearchTerm('');
     setSelectedCategory('All');
+    setSelectedSubCategory('all');
     setSelectedEquipment('All');
     setSelectedLoadType('All');
     setSelectedDifficulty('All');
@@ -90,6 +70,7 @@ export default function ExerciseLibraryModal({
   const hasActiveFilters =
     searchTerm.trim() !== '' ||
     selectedCategory !== 'All' ||
+    selectedSubCategory !== 'all' ||
     selectedEquipment !== 'All' ||
     selectedLoadType !== 'All' ||
     selectedDifficulty !== 'All' ||
@@ -114,7 +95,7 @@ export default function ExerciseLibraryModal({
             (item.difficulty && item.difficulty.toLowerCase().includes(t))
         );
 
-      const matchesCat = matchCatalogCategory(item, selectedCategory);
+      const matchesCat = matchCatalogCategory(item, selectedCategory, selectedSubCategory);
 
       const matchesEq =
         selectedEquipment === 'All' ||
@@ -153,6 +134,7 @@ export default function ExerciseLibraryModal({
     library,
     searchTerm,
     selectedCategory,
+    selectedSubCategory,
     selectedEquipment,
     selectedLoadType,
     selectedDifficulty,
@@ -429,7 +411,16 @@ export default function ExerciseLibraryModal({
                     style={{ fontSize: '0.62rem', padding: '1px 6px', background: 'rgba(239, 68, 68, 0.15)', color: '#fca5a5' }}
                   >
                     {selectedCategory}
-                    <X size={9} style={{ cursor: 'pointer', marginLeft: '3px' }} onClick={() => setSelectedCategory('All')} />
+                    <X size={9} style={{ cursor: 'pointer', marginLeft: '3px' }} onClick={() => { setSelectedCategory('All'); setSelectedSubCategory('all'); }} />
+                  </span>
+                )}
+                {selectedSubCategory !== 'all' && (
+                  <span
+                    className="clean-badge"
+                    style={{ fontSize: '0.62rem', padding: '1px 6px', background: 'rgba(239, 68, 68, 0.25)', color: '#fca5a5', borderColor: 'rgba(239, 68, 68, 0.5)' }}
+                  >
+                    Focus: {selectedSubCategory}
+                    <X size={9} style={{ cursor: 'pointer', marginLeft: '3px' }} onClick={() => setSelectedSubCategory('all')} />
                   </span>
                 )}
                 {selectedEquipment !== 'All' && (
@@ -461,43 +452,137 @@ export default function ExerciseLibraryModal({
               </div>
             )}
 
-            {/* Quick Muscle Pills */}
+            {/* 1. Primary 7 Master Muscle Pillars */}
             <div
               style={{
                 display: 'flex',
                 gap: '4px',
                 overflowX: 'auto',
-                paddingBottom: '6px',
-                marginBottom: '8px',
+                paddingBottom: '4px',
+                marginBottom: '6px',
                 flexShrink: 0,
               }}
             >
-              {POPULAR_CATEGORIES.map((cat) => (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCategory('All');
+                  setSelectedSubCategory('all');
+                }}
+                style={{
+                  background:
+                    selectedCategory === 'All'
+                      ? 'rgba(239, 68, 68, 0.2)'
+                      : 'rgba(255, 255, 255, 0.04)',
+                  border: `1px solid ${
+                    selectedCategory === 'All' ? 'var(--accent-red)' : 'var(--border)'
+                  }`,
+                  color: selectedCategory === 'All' ? '#fff' : 'var(--text-dim)',
+                  borderRadius: '7px',
+                  padding: '3px 8px',
+                  fontSize: '0.66rem',
+                  fontFamily: 'var(--font-mono)',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                All ({library.length})
+              </button>
+
+              {SEVEN_MASTER_PILLARS.map((pillar) => (
                 <button
-                  key={cat.name}
+                  key={pillar.id}
                   type="button"
-                  onClick={() => setSelectedCategory(cat.name)}
+                  onClick={() => {
+                    setSelectedCategory(pillar.name);
+                    setSelectedSubCategory('all');
+                  }}
                   style={{
                     background:
-                      selectedCategory === cat.name
+                      selectedCategory === pillar.name
                         ? 'rgba(239, 68, 68, 0.2)'
                         : 'rgba(255, 255, 255, 0.04)',
                     border: `1px solid ${
-                      selectedCategory === cat.name ? 'var(--accent-red)' : 'var(--border)'
+                      selectedCategory === pillar.name ? 'var(--accent-red)' : 'var(--border)'
                     }`,
-                    color: selectedCategory === cat.name ? '#fff' : 'var(--text-dim)',
+                    color: selectedCategory === pillar.name ? '#fff' : 'var(--text-dim)',
                     borderRadius: '7px',
-                    padding: '2px 8px',
-                    fontSize: '0.65rem',
+                    padding: '3px 8px',
+                    fontSize: '0.66rem',
                     fontFamily: 'var(--font-mono)',
                     cursor: 'pointer',
                     whiteSpace: 'nowrap',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
                   }}
                 >
-                  {cat.label}
+                  <span>{pillar.icon}</span>
+                  <span>{pillar.label}</span>
                 </button>
               ))}
             </div>
+
+            {/* 2. Contextual Sub-Category Chips */}
+            {selectedCategory !== 'All' && (() => {
+              const activePillar = SEVEN_MASTER_PILLARS.find((p) => p.name === selectedCategory);
+              if (!activePillar || !activePillar.subCategories?.length) return null;
+              return (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    overflowX: 'auto',
+                    paddingBottom: '6px',
+                    marginBottom: '8px',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                    borderRadius: '7px',
+                    padding: '4px 6px',
+                    flexShrink: 0,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: '0.62rem',
+                      fontWeight: 700,
+                      color: 'var(--text-dim)',
+                      textTransform: 'uppercase',
+                      fontFamily: 'var(--font-mono)',
+                      marginRight: '2px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Focus:
+                  </span>
+                  {activePillar.subCategories.map((sub) => {
+                    const isSubActive = selectedSubCategory === sub.id;
+                    return (
+                      <button
+                        key={sub.id}
+                        type="button"
+                        onClick={() => setSelectedSubCategory(sub.id)}
+                        style={{
+                          background: isSubActive ? 'var(--accent-red)' : 'rgba(255, 255, 255, 0.04)',
+                          border: `1px solid ${isSubActive ? 'var(--accent-red)' : 'rgba(255, 255, 255, 0.1)'}`,
+                          color: isSubActive ? '#fff' : 'var(--text-muted)',
+                          borderRadius: '5px',
+                          padding: '2px 6px',
+                          fontSize: '0.64rem',
+                          fontWeight: isSubActive ? 700 : 500,
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {sub.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
             {/* Result Count */}
             <div

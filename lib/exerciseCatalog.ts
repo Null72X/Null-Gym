@@ -11401,6 +11401,906 @@ export const ALL_CATALOG_EXERCISES: ExerciseLibraryItem[] = [
     "defaultReps": "30-60s hold",
     "defaultRpe": "6-7",
     "defaultRest": "15s"
+  },
+  {
+      "id": "ex_chest_decline_dumbbell_bench_press",
+      "name": "Decline Dumbbell Bench Press",
+      "muscleGroup": "Chest",
+      "category": "Chest",
+      "subMuscle": "Lower Chest",
+      "equipment": "Dumbbells",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Decline+Dumbbell+Bench+Press",
+      "notes": "Targets lower pectoralis fibers. Set bench to 15-30 degree decline, press with controlled descent.",
+      "movementPattern": "Horizontal Press",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Intermediate",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "10-12",
+      "defaultRpe": "8.5",
+      "defaultRest": "90s"
+  },
+  {
+      "id": "ex_chest_low_to_high_cable_crossover",
+      "name": "Low-to-High Cable Crossover",
+      "muscleGroup": "Chest",
+      "category": "Chest",
+      "subMuscle": "Upper Chest",
+      "equipment": "Cable",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Low+to+High+Cable+Crossover",
+      "notes": "Direct clavicular head chest isolation. Scoop arms upward and inward towards chin height.",
+      "movementPattern": "Chest Fly / Adduction",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Beginner",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "12-15",
+      "defaultRpe": "9",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_chest_dip_forward_lean",
+      "name": "Chest Dip (Forward Lean)",
+      "muscleGroup": "Chest",
+      "category": "Chest",
+      "subMuscle": "Lower Chest",
+      "equipment": "Bodyweight",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Chest+Dip+Forward+Lean",
+      "notes": "Lean torso 30 degrees forward and flare elbows slightly to bias chest over triceps.",
+      "movementPattern": "Vertical Press / Dip",
+      "requiresLoad": false,
+      "trackingType": "bodyweight_reps",
+      "unilateral": false,
+      "difficulty": "Intermediate",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "8-12",
+      "defaultRpe": "9",
+      "defaultRest": "90s"
+  },
+  {
+      "id": "ex_chest_guillotine_press",
+      "name": "Guillotine Press",
+      "muscleGroup": "Chest",
+      "category": "Chest",
+      "subMuscle": "Upper Chest",
+      "equipment": "Barbell",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Guillotine+Press",
+      "notes": "Vince Gironda upper chest staple. Lower bar to neck with light-to-moderate load and flared elbows.",
+      "movementPattern": "Horizontal Press",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Advanced",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "10-12",
+      "defaultRpe": "8",
+      "defaultRest": "90s"
+  },
+  {
+      "id": "ex_chest_svend_press",
+      "name": "Svend Press",
+      "muscleGroup": "Chest",
+      "category": "Chest",
+      "subMuscle": "Mid Chest",
+      "equipment": "Plates",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Svend+Press",
+      "notes": "Pinch two small plates together against your chest and press forward for peak isometric contraction.",
+      "movementPattern": "Isometric Chest Press",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Beginner",
+      "defaultWarmupSets": 0,
+      "defaultWorkingSets": 3,
+      "defaultReps": "12-15",
+      "defaultRpe": "8.5",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_back_chest_supported_t_bar_row",
+      "name": "Chest-Supported T-Bar Row",
+      "muscleGroup": "Back",
+      "category": "Back",
+      "subMuscle": "Upper Back & Rhomboids",
+      "equipment": "Machine",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Chest+Supported+T+Bar+Row",
+      "notes": "Takes lower back strain out of the equation. Drive elbows high and wide to hit rhomboids and upper back.",
+      "movementPattern": "Horizontal Pull",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Intermediate",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "8-12",
+      "defaultRpe": "9",
+      "defaultRest": "90s"
+  },
+  {
+      "id": "ex_back_lat_prayer_pullover",
+      "name": "Lat Prayer / Straight-Arm Cable Pullover",
+      "muscleGroup": "Back",
+      "category": "Back",
+      "subMuscle": "Lats",
+      "equipment": "Cable",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Lat+Prayer+Cable",
+      "notes": "High stretch lat isolation. Hinge at hips and drive rope down towards hips with straight arms.",
+      "movementPattern": "Shoulder Extension / Pullover",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Beginner",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "10-15",
+      "defaultRpe": "9",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_back_prone_y_raise",
+      "name": "Prone Y-Raise (Lower Traps)",
+      "muscleGroup": "Back",
+      "category": "Back",
+      "subMuscle": "Trapezius",
+      "equipment": "Dumbbells",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Prone+Y+Raise",
+      "notes": "Target lower traps and scapular upward rotation. Lie on incline bench, raise arms in Y shape with thumbs up.",
+      "movementPattern": "Scapular Depression & Retraction",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Beginner",
+      "defaultWarmupSets": 0,
+      "defaultWorkingSets": 3,
+      "defaultReps": "12-15",
+      "defaultRpe": "8",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_back_kelso_shrug",
+      "name": "Kelso Shrug",
+      "muscleGroup": "Back",
+      "category": "Back",
+      "subMuscle": "Trapezius",
+      "equipment": "Dumbbells",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Kelso+Shrug",
+      "notes": "Chest-supported scapular retraction for mid traps and rhomboids without spinal compression.",
+      "movementPattern": "Scapular Retraction",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Intermediate",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "12-15",
+      "defaultRpe": "8.5",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_back_good_morning_barbell",
+      "name": "Good Morning (Barbell)",
+      "muscleGroup": "Back",
+      "category": "Back",
+      "subMuscle": "Lower Back & Erector",
+      "equipment": "Barbell",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Good+Morning+Barbell",
+      "notes": "Posterior chain builder targeting erector spinae, hamstrings, and glutes through hip hinge.",
+      "movementPattern": "Hip Hinge",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Advanced",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "8-10",
+      "defaultRpe": "8",
+      "defaultRest": "120s"
+  },
+  {
+      "id": "ex_back_hyperextension_45_degree",
+      "name": "Hyperextension (45-Degree Back Extension)",
+      "muscleGroup": "Back",
+      "category": "Back",
+      "subMuscle": "Lower Back & Erector",
+      "equipment": "Bodyweight",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Hyperextension+Back+Extension",
+      "notes": "Strengthens lumbar spine and erectors. Hold a plate at your chest once bodyweight becomes easy.",
+      "movementPattern": "Spinal Extension",
+      "requiresLoad": false,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Beginner",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "12-15",
+      "defaultRpe": "8.5",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_shoulders_behind_the_neck_barbell_press",
+      "name": "Behind-The-Neck Barbell Press",
+      "muscleGroup": "Shoulders",
+      "category": "Shoulders",
+      "subMuscle": "Front Delts",
+      "equipment": "Barbell",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Behind+The+Neck+Barbell+Press",
+      "notes": "Old-school overhead press targeting side and front deltoids. Requires good shoulder mobility.",
+      "movementPattern": "Vertical Press",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Advanced",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "8-10",
+      "defaultRpe": "8",
+      "defaultRest": "90s"
+  },
+  {
+      "id": "ex_shoulders_lu_raises_full_rom",
+      "name": "Lu Raises (Full ROM Lateral Raise)",
+      "muscleGroup": "Shoulders",
+      "category": "Shoulders",
+      "subMuscle": "Lateral Delts",
+      "equipment": "Plates",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Lu+Raises",
+      "notes": "Olympic weightlifter Lu Xiaojun lateral raise with full range of motion touching plates overhead.",
+      "movementPattern": "Lateral Abduction",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Intermediate",
+      "defaultWarmupSets": 0,
+      "defaultWorkingSets": 3,
+      "defaultReps": "12-15",
+      "defaultRpe": "8.5",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_shoulders_prone_incline_rear_delt_fly",
+      "name": "Prone Incline Rear Delt Fly",
+      "muscleGroup": "Shoulders",
+      "category": "Shoulders",
+      "subMuscle": "Rear Delts",
+      "equipment": "Dumbbells",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Prone+Incline+Rear+Delt+Fly",
+      "notes": "Lie chest-down on 30-degree bench. Sweep dumbbells wide to isolate posterior deltoids without momentum.",
+      "movementPattern": "Horizontal Abduction",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Beginner",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "12-15",
+      "defaultRpe": "9",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_shoulders_cuban_press",
+      "name": "Cuban Press",
+      "muscleGroup": "Shoulders",
+      "category": "Shoulders",
+      "subMuscle": "Rotator Cuff",
+      "equipment": "Dumbbells",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Cuban+Press",
+      "notes": "Upright row to external rotation to overhead press. Bulletproofs shoulder stabilizers.",
+      "movementPattern": "Rotator Cuff & Overhead",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Intermediate",
+      "defaultWarmupSets": 0,
+      "defaultWorkingSets": 3,
+      "defaultReps": "10-12",
+      "defaultRpe": "8",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_shoulders_face_pull_external_rotation",
+      "name": "Face Pull with External Rotation",
+      "muscleGroup": "Shoulders",
+      "category": "Shoulders",
+      "subMuscle": "Rotator Cuff",
+      "equipment": "Cable",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Face+Pull+with+External+Rotation",
+      "notes": "Pull rope towards forehead while rotating knuckles backwards into a double bicep pose.",
+      "movementPattern": "Scapular Pull & External Rotation",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Beginner",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "15-20",
+      "defaultRpe": "8.5",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_shoulders_cable_external_shoulder_rotation",
+      "name": "Cable External Shoulder Rotation",
+      "muscleGroup": "Shoulders",
+      "category": "Shoulders",
+      "subMuscle": "Rotator Cuff",
+      "equipment": "Cable",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Cable+External+Shoulder+Rotation",
+      "notes": "Infraspinatus and teres minor rotator cuff isolation with constant cable tension.",
+      "movementPattern": "Shoulder External Rotation",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": true,
+      "difficulty": "Beginner",
+      "defaultWarmupSets": 0,
+      "defaultWorkingSets": 3,
+      "defaultReps": "12-15",
+      "defaultRpe": "8",
+      "defaultRest": "45s"
+  },
+  {
+      "id": "ex_biceps_spider_curl_incline_bench",
+      "name": "Spider Curl (Incline Bench)",
+      "muscleGroup": "Biceps",
+      "category": "Biceps",
+      "subMuscle": "Biceps Brachii",
+      "equipment": "Dumbbells",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Spider+Curl+Incline+Bench",
+      "notes": "Chest against incline bench with arms hanging vertically. Eliminates shoulder swing for strict peak contraction.",
+      "movementPattern": "Elbow Flexion",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Intermediate",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "10-12",
+      "defaultRpe": "9",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_biceps_waiter_curl",
+      "name": "Waiter Curl",
+      "muscleGroup": "Biceps",
+      "category": "Biceps",
+      "subMuscle": "Biceps Brachii",
+      "equipment": "Dumbbells",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Waiter+Curl",
+      "notes": "Hold a single dumbbell with both palms under the top plate. Isolates bicep peak.",
+      "movementPattern": "Elbow Flexion",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Beginner",
+      "defaultWarmupSets": 0,
+      "defaultWorkingSets": 3,
+      "defaultReps": "12-15",
+      "defaultRpe": "8.5",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_triceps_jm_press",
+      "name": "JM Press",
+      "muscleGroup": "Triceps",
+      "category": "Triceps",
+      "subMuscle": "Lateral & Medial Heads",
+      "equipment": "Barbell",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+JM+Press",
+      "notes": "Hybrid between close grip bench and skull crusher. Heavy powerlifting tricep mass builder.",
+      "movementPattern": "Compound Elbow Extension",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Advanced",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "6-10",
+      "defaultRpe": "8.5",
+      "defaultRest": "90s"
+  },
+  {
+      "id": "ex_triceps_katana_extension_cables",
+      "name": "Katana Tricep Extension (Cables)",
+      "muscleGroup": "Triceps",
+      "category": "Triceps",
+      "subMuscle": "Long Head",
+      "equipment": "Cable",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Katana+Tricep+Extension",
+      "notes": "Cross cable overhead extension. Perfectly aligns cables with triceps long head orientation.",
+      "movementPattern": "Overhead Elbow Extension",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Intermediate",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "10-15",
+      "defaultRpe": "9",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_triceps_overhead_rope_extension",
+      "name": "Overhead Rope Tricep Extension",
+      "muscleGroup": "Triceps",
+      "category": "Triceps",
+      "subMuscle": "Long Head",
+      "equipment": "Cable",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Overhead+Rope+Tricep+Extension",
+      "notes": "Deep overhead stretch for the tricep long head. Spread rope ends apart at top lockout.",
+      "movementPattern": "Overhead Elbow Extension",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Beginner",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "12-15",
+      "defaultRpe": "9",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_triceps_tate_press",
+      "name": "Tate Press",
+      "muscleGroup": "Triceps",
+      "category": "Triceps",
+      "subMuscle": "Lateral & Medial Heads",
+      "equipment": "Dumbbells",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Tate+Press",
+      "notes": "Lie on flat bench, point elbows out, press dumbbells outward through elbow extension.",
+      "movementPattern": "Elbow Extension",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Intermediate",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "10-12",
+      "defaultRpe": "8.5",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_forearms_reverse_barbell_wrist_curl",
+      "name": "Reverse Barbell Wrist Curl",
+      "muscleGroup": "Forearms & Grip",
+      "category": "Forearms & Grip",
+      "subMuscle": "Wrist Flexors / Extensors & Grip",
+      "equipment": "Barbell",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Reverse+Barbell+Wrist+Curl",
+      "notes": "Forearm extensor builder. Forearms rested on bench with palms facing down, curl knuckles up.",
+      "movementPattern": "Wrist Extension",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Beginner",
+      "defaultWarmupSets": 0,
+      "defaultWorkingSets": 3,
+      "defaultReps": "15-20",
+      "defaultRpe": "9",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_forearms_wrist_roller_extension",
+      "name": "Wrist Roller Extension",
+      "muscleGroup": "Forearms & Grip",
+      "category": "Forearms & Grip",
+      "subMuscle": "Wrist Flexors / Extensors & Grip",
+      "equipment": "Other",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Wrist+Roller",
+      "notes": "Intense forearm burn. Roll suspended weight up and slowly unwind under full control.",
+      "movementPattern": "Wrist Flexion & Extension",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Intermediate",
+      "defaultWarmupSets": 0,
+      "defaultWorkingSets": 3,
+      "defaultReps": "3-5 rolls",
+      "defaultRpe": "9.5",
+      "defaultRest": "90s"
+  },
+  {
+      "id": "ex_forearms_dead_hang_fat_gripz",
+      "name": "Dead Hang with Fat Gripz",
+      "muscleGroup": "Forearms & Grip",
+      "category": "Forearms & Grip",
+      "subMuscle": "Wrist Flexors / Extensors & Grip",
+      "equipment": "Bodyweight",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Dead+Hang+Fat+Gripz",
+      "notes": "Thick axle / Fat Gripz dead hang to massively build crushing grip strength.",
+      "movementPattern": "Isometric Grip",
+      "requiresLoad": false,
+      "trackingType": "time_only",
+      "unilateral": false,
+      "difficulty": "Intermediate",
+      "defaultWarmupSets": 0,
+      "defaultWorkingSets": 3,
+      "defaultReps": "30-60s hold",
+      "defaultRpe": "9",
+      "defaultRest": "90s"
+  },
+  {
+      "id": "ex_hamstrings_deficit_rdl",
+      "name": "Deficit Romanian Deadlift",
+      "muscleGroup": "Hamstrings",
+      "category": "Hamstrings",
+      "subMuscle": "Hamstrings",
+      "equipment": "Barbell",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Deficit+Romanian+Deadlift",
+      "notes": "Stand on a 1-2 inch plate for greater loaded stretch on the hamstring insertion points.",
+      "movementPattern": "Hip Hinge",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Intermediate",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "8-10",
+      "defaultRpe": "8.5",
+      "defaultRest": "120s"
+  },
+  {
+      "id": "ex_legs_tibialis_raise_wall_barbell",
+      "name": "Tibialis Raise (Wall / Barbell)",
+      "muscleGroup": "Calves",
+      "category": "Calves",
+      "subMuscle": "Tibialis Anterior",
+      "equipment": "Bodyweight",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Tibialis+Raise",
+      "notes": "Back to wall or heels on step, flex toes toward shins to strengthen tibialis anterior and save knees.",
+      "movementPattern": "Ankle Dorsiflexion",
+      "requiresLoad": false,
+      "trackingType": "bodyweight_reps",
+      "unilateral": false,
+      "difficulty": "Beginner",
+      "defaultWarmupSets": 0,
+      "defaultWorkingSets": 3,
+      "defaultReps": "15-25",
+      "defaultRpe": "9",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_legs_copenhagen_plank_adductor",
+      "name": "Copenhagen Plank (Adductor)",
+      "muscleGroup": "Hips & Adductors",
+      "category": "Hips & Adductors",
+      "subMuscle": "Adductors (Inner Thigh)",
+      "equipment": "Bodyweight",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Copenhagen+Plank",
+      "notes": "Top leg resting on bench in side plank. Massive inner thigh adductor activation and groin resilience.",
+      "movementPattern": "Hip Adduction / Core",
+      "requiresLoad": false,
+      "trackingType": "time_only",
+      "unilateral": true,
+      "difficulty": "Intermediate",
+      "defaultWarmupSets": 0,
+      "defaultWorkingSets": 3,
+      "defaultReps": "20-40s hold",
+      "defaultRpe": "8.5",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_legs_seated_machine_hip_abduction",
+      "name": "Seated Machine Hip Abduction",
+      "muscleGroup": "Glutes",
+      "category": "Glutes",
+      "subMuscle": "Glute Medius",
+      "equipment": "Machine",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Seated+Machine+Hip+Abduction",
+      "notes": "Lean slightly forward to bias glute medius and upper glute shelf.",
+      "movementPattern": "Hip Abduction",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Beginner",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "12-15",
+      "defaultRpe": "9",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_legs_deficit_standing_calf_raise",
+      "name": "Deficit Standing Calf Raise",
+      "muscleGroup": "Calves",
+      "category": "Calves",
+      "subMuscle": "Gastrocnemius",
+      "equipment": "Machine",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Standing+Calf+Raise",
+      "notes": "Stand on elevated edge, pause for 2 seconds at full bottom stretch and squeeze at the peak.",
+      "movementPattern": "Ankle Plantarflexion",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Beginner",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 4,
+      "defaultReps": "10-15",
+      "defaultRpe": "9.5",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_core_pallof_press_rotation",
+      "name": "Pallof Press with Rotation",
+      "muscleGroup": "Abs",
+      "category": "Abs",
+      "subMuscle": "Obliques",
+      "equipment": "Cable",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Pallof+Press+with+Rotation",
+      "notes": "Anti-rotation into controlled oblique rotational strength against cable resistance.",
+      "movementPattern": "Anti-Rotation & Core",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": true,
+      "difficulty": "Intermediate",
+      "defaultWarmupSets": 0,
+      "defaultWorkingSets": 3,
+      "defaultReps": "10-12",
+      "defaultRpe": "8.5",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_core_hanging_windshield_wipers",
+      "name": "Hanging Windshield Wipers",
+      "muscleGroup": "Abs",
+      "category": "Abs",
+      "subMuscle": "Obliques",
+      "equipment": "Bodyweight",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Hanging+Windshield+Wipers",
+      "notes": "Hang from pull-up bar, raise toes to bar and rotate legs side-to-side for elite oblique power.",
+      "movementPattern": "Torso Rotation & Flexion",
+      "requiresLoad": false,
+      "trackingType": "bodyweight_reps",
+      "unilateral": false,
+      "difficulty": "Advanced",
+      "defaultWarmupSets": 0,
+      "defaultWorkingSets": 3,
+      "defaultReps": "8-12",
+      "defaultRpe": "9.5",
+      "defaultRest": "90s"
+  },
+  {
+      "id": "ex_core_ab_wheel_rollout_from_feet",
+      "name": "Ab Wheel Rollout from Feet",
+      "muscleGroup": "Abs",
+      "category": "Abs",
+      "subMuscle": "Deep Core & Stability",
+      "equipment": "Bodyweight",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Standing+Ab+Wheel+Rollout",
+      "notes": "Pinnacle core anti-extension exercise. Only perform once kneeling rollouts are mastered.",
+      "movementPattern": "Anti-Extension",
+      "requiresLoad": false,
+      "trackingType": "bodyweight_reps",
+      "unilateral": false,
+      "difficulty": "Advanced",
+      "defaultWarmupSets": 0,
+      "defaultWorkingSets": 3,
+      "defaultReps": "5-8",
+      "defaultRpe": "9.5",
+      "defaultRest": "120s"
+  },
+  {
+      "id": "ex_core_cable_woodchopper_high_to_low",
+      "name": "Cable Woodchopper (High to Low)",
+      "muscleGroup": "Abs",
+      "category": "Abs",
+      "subMuscle": "Obliques",
+      "equipment": "Cable",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Cable+Woodchopper+High+to+Low",
+      "notes": "Diagonal rotational power exercise targeting internal and external obliques.",
+      "movementPattern": "Diagonal Rotation",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": true,
+      "difficulty": "Intermediate",
+      "defaultWarmupSets": 0,
+      "defaultWorkingSets": 3,
+      "defaultReps": "10-12",
+      "defaultRpe": "8.5",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_core_serratus_anterior_cable_punch",
+      "name": "Serratus Anterior Cable Punch",
+      "muscleGroup": "Abs",
+      "category": "Abs",
+      "subMuscle": "Deep Core & Stability",
+      "equipment": "Cable",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Serratus+Punch+Cable",
+      "notes": "Scapular protraction with arm straight, punching forward to activate the serratus anterior boxer muscle.",
+      "movementPattern": "Scapular Protraction",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": true,
+      "difficulty": "Beginner",
+      "defaultWarmupSets": 0,
+      "defaultWorkingSets": 3,
+      "defaultReps": "12-15",
+      "defaultRpe": "8",
+      "defaultRest": "45s"
+  },
+  {
+      "id": "ex_core_stomach_vacuum_transverse",
+      "name": "Stomach Vacuum (Transverse Abdominis)",
+      "muscleGroup": "Abs",
+      "category": "Abs",
+      "subMuscle": "Deep Core & Stability",
+      "equipment": "Bodyweight",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Stomach+Vacuum",
+      "notes": "Exhale completely and draw navel toward spine. Builds deep transverse abdominis for waist control.",
+      "movementPattern": "Core Isometric Contraction",
+      "requiresLoad": false,
+      "trackingType": "time_only",
+      "unilateral": false,
+      "difficulty": "Beginner",
+      "defaultWarmupSets": 0,
+      "defaultWorkingSets": 3,
+      "defaultReps": "15-30s hold",
+      "defaultRpe": "8",
+      "defaultRest": "45s"
+  },
+  {
+      "id": "ex_neck_plate_loaded_lying_flexion",
+      "name": "Plate-Loaded Lying Neck Flexion",
+      "muscleGroup": "Neck",
+      "category": "Neck",
+      "subMuscle": "Cervical Spine Flexors / Extensors",
+      "equipment": "Plates",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Plate+Loaded+Neck+Flexion",
+      "notes": "Lie on back on flat bench with head off edge. Place folded towel with light plate on forehead and curl chin to chest.",
+      "movementPattern": "Cervical Flexion",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Intermediate",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "15-20",
+      "defaultRpe": "8",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_neck_weighted_harness_extension",
+      "name": "Weighted Neck Harness Extension",
+      "muscleGroup": "Neck",
+      "category": "Neck",
+      "subMuscle": "Cervical Spine Flexors / Extensors",
+      "equipment": "Other",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Neck+Harness+Extension",
+      "notes": "Fasten head harness with plate or cable attachment. Hinge at hips and extend neck backwards through full range.",
+      "movementPattern": "Cervical Extension",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Intermediate",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "12-15",
+      "defaultRpe": "8.5",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_neck_cable_flexion",
+      "name": "Cable Neck Flexion",
+      "muscleGroup": "Neck",
+      "category": "Neck",
+      "subMuscle": "Cervical Spine Flexors / Extensors",
+      "equipment": "Cable",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Cable+Neck+Flexion",
+      "notes": "Use head harness or soft strap attached to low/mid cable pulley for smooth, continuous neck flexion resistance.",
+      "movementPattern": "Cervical Flexion",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Intermediate",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "12-15",
+      "defaultRpe": "8",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_neck_side_lying_plate_lateral_raise",
+      "name": "Side-Lying Plate Lateral Neck Raise",
+      "muscleGroup": "Neck",
+      "category": "Neck",
+      "subMuscle": "Cervical Spine Flexors / Extensors",
+      "equipment": "Plates",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Side+Lying+Neck+Raise",
+      "notes": "Lie on your side on bench, place towel and light plate on side of head, raise head upward towards shoulder.",
+      "movementPattern": "Lateral Cervical Flexion",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": true,
+      "difficulty": "Intermediate",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "15-20",
+      "defaultRpe": "8",
+      "defaultRest": "45s"
+  },
+  {
+      "id": "ex_neck_4_way_neck_machine",
+      "name": "4-Way Neck Machine",
+      "muscleGroup": "Neck",
+      "category": "Neck",
+      "subMuscle": "Cervical Spine Flexors / Extensors",
+      "equipment": "Machine",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+4+Way+Neck+Machine",
+      "notes": "Dedicated multi-angle gym neck machine targeting flexion, extension, and both lateral directions.",
+      "movementPattern": "Multi-Angle Cervical Strength",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Beginner",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "12-15",
+      "defaultRpe": "8.5",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_neck_wrestling_bridge",
+      "name": "Neck Bridge / Wrestling Bridge",
+      "muscleGroup": "Neck",
+      "category": "Neck",
+      "subMuscle": "Cervical Spine Flexors / Extensors",
+      "equipment": "Bodyweight",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Wrestling+Neck+Bridge",
+      "notes": "Elite athletic combat neck strengthening. Support bodyweight on feet and crown of head with hands assisting.",
+      "movementPattern": "Isometric Cervical Extension",
+      "requiresLoad": false,
+      "trackingType": "time_only",
+      "unilateral": false,
+      "difficulty": "Advanced",
+      "defaultWarmupSets": 0,
+      "defaultWorkingSets": 3,
+      "defaultReps": "20-40s hold",
+      "defaultRpe": "8.5",
+      "defaultRest": "90s"
+  },
+  {
+      "id": "ex_neck_dumbbell_shrug_3s_isometric_hold",
+      "name": "Dumbbell Shrug with 3s Isometric Hold",
+      "muscleGroup": "Neck",
+      "category": "Neck",
+      "subMuscle": "Trapezius",
+      "equipment": "Dumbbells",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Dumbbell+Shrug+Pause",
+      "notes": "Elevate upper traps with a solid 3-second squeeze at the apex to reinforce neck support.",
+      "movementPattern": "Scapular Elevation",
+      "requiresLoad": true,
+      "trackingType": "weight_reps",
+      "unilateral": false,
+      "difficulty": "Beginner",
+      "defaultWarmupSets": 1,
+      "defaultWorkingSets": 3,
+      "defaultReps": "10-12",
+      "defaultRpe": "9",
+      "defaultRest": "60s"
+  },
+  {
+      "id": "ex_neck_towel_isometric_hold",
+      "name": "Towel Isometric Neck Hold",
+      "muscleGroup": "Neck",
+      "category": "Neck",
+      "subMuscle": "Cervical Spine Flexors / Extensors",
+      "equipment": "Bodyweight",
+      "videoUrl": "https://www.youtube.com/results?search_query=how+to+do+Isometric+Neck+Hold",
+      "notes": "Safe static neck stabilization against towel resistance in all four directions.",
+      "movementPattern": "Isometric Neck Hold",
+      "requiresLoad": false,
+      "trackingType": "time_only",
+      "unilateral": false,
+      "difficulty": "Beginner",
+      "defaultWarmupSets": 0,
+      "defaultWorkingSets": 3,
+      "defaultReps": "15-20s hold",
+      "defaultRpe": "7.5",
+      "defaultRest": "30s"
   }
 ];
 
@@ -11412,88 +12312,243 @@ export const CATALOG_EQUIPMENTS: string[] = Array.from(
   new Set(ALL_CATALOG_EXERCISES.map((e) => e.equipment))
 ).sort();
 
-export function matchCatalogCategory(item: ExerciseLibraryItem, selected: string): boolean {
-  if (!selected || selected === 'All') return true;
-  const sel = selected.toLowerCase().trim();
+export interface MusclePillar {
+  id: string;
+  name: string;
+  label: string;
+  icon: string;
+  subCategories: { id: string; label: string }[];
+}
+
+export const SEVEN_MASTER_PILLARS: MusclePillar[] = [
+  {
+    id: 'chest',
+    name: 'Chest',
+    label: 'Chest',
+    icon: '🛡️',
+    subCategories: [
+      { id: 'all', label: 'All Chest' },
+      { id: 'upper', label: 'Upper Chest' },
+      { id: 'mid', label: 'Mid Chest' },
+      { id: 'lower', label: 'Lower Chest' },
+      { id: 'flyes', label: 'Flyes & Cables' },
+    ],
+  },
+  {
+    id: 'back',
+    name: 'Back',
+    label: 'Back',
+    icon: '🦅',
+    subCategories: [
+      { id: 'all', label: 'All Back' },
+      { id: 'lats', label: 'Lats (Width)' },
+      { id: 'upper_back', label: 'Upper Back & Rhomboids' },
+      { id: 'traps', label: 'Trapezius (Traps)' },
+      { id: 'lower_back', label: 'Lower Back & Erectors' },
+    ],
+  },
+  {
+    id: 'shoulders',
+    name: 'Shoulders',
+    label: 'Shoulders',
+    icon: '🏹',
+    subCategories: [
+      { id: 'all', label: 'All Shoulders' },
+      { id: 'front', label: 'Front Delts' },
+      { id: 'side', label: 'Side Delts' },
+      { id: 'rear', label: 'Rear Delts' },
+      { id: 'rotator', label: 'Rotator Cuff' },
+    ],
+  },
+  {
+    id: 'arms',
+    name: 'Arms',
+    label: 'Arms',
+    icon: '💪',
+    subCategories: [
+      { id: 'all', label: 'All Arms' },
+      { id: 'biceps', label: 'Biceps & Long Head' },
+      { id: 'brachialis', label: 'Brachialis & Hammers' },
+      { id: 'triceps', label: 'Triceps' },
+      { id: 'forearms', label: 'Forearms & Grip' },
+    ],
+  },
+  {
+    id: 'legs',
+    name: 'Legs',
+    label: 'Legs',
+    icon: '🦵',
+    subCategories: [
+      { id: 'all', label: 'All Legs' },
+      { id: 'quads', label: 'Quadriceps' },
+      { id: 'hamstrings', label: 'Hamstrings' },
+      { id: 'glutes', label: 'Glutes' },
+      { id: 'calves', label: 'Calves' },
+      { id: 'adductors', label: 'Adductors & Hips' },
+      { id: 'tibialis', label: 'Tibialis' },
+    ],
+  },
+  {
+    id: 'core',
+    name: 'Core',
+    label: 'Core & Abs',
+    icon: '🧱',
+    subCategories: [
+      { id: 'all', label: 'All Core' },
+      { id: 'abs_upper_lower', label: 'Upper & Lower Abs' },
+      { id: 'obliques', label: 'Obliques & Rotation' },
+      { id: 'deep_core', label: 'Deep Stabilizers & Vacuum' },
+      { id: 'serratus', label: 'Serratus Anterior' },
+    ],
+  },
+  {
+    id: 'neck',
+    name: 'Neck',
+    label: 'Neck',
+    icon: '🥋',
+    subCategories: [
+      { id: 'all', label: 'All Neck' },
+      { id: 'flexion', label: 'Neck Flexion (Front)' },
+      { id: 'extension', label: 'Neck Extension (Rear/Harness)' },
+      { id: 'lateral', label: 'Lateral Neck (Sides)' },
+      { id: 'isometric', label: 'Isometrics & 4-Way Machine' },
+    ],
+  },
+  {
+    id: 'functional',
+    name: 'Functional',
+    label: 'Functional',
+    icon: '⚡',
+    subCategories: [
+      { id: 'all', label: 'All Functional' },
+      { id: 'cardio', label: 'Cardio & HIIT' },
+      { id: 'calisthenics', label: 'Calisthenics' },
+      { id: 'kettlebell', label: 'Kettlebells' },
+      { id: 'mobility', label: 'Mobility & Stretching' },
+    ],
+  },
+];
+
+export function matchCatalogCategory(
+  item: ExerciseLibraryItem,
+  selectedPillar: string,
+  selectedSub: string = 'all'
+): boolean {
+  if (!selectedPillar || selectedPillar === 'All') return true;
+  const pillar = selectedPillar.toLowerCase().trim();
+  const subFilter = (selectedSub || 'all').toLowerCase().trim();
   const mg = (item.muscleGroup || '').toLowerCase().trim();
   const sub = (item.subMuscle || '').toLowerCase().trim();
   const cat = (item.category || '').toLowerCase().trim();
   const name = (item.name || '').toLowerCase().trim();
+  const pattern = (item.movementPattern || '').toLowerCase().trim();
 
-  // Direct match
-  if (mg === sel || cat === sel) return true;
-
-  // Lats & Back
-  if (sel === 'back (lats)' || sel === 'lats') {
-    return sub.includes('lat') || (mg === 'back' && (name.includes('lat') || name.includes('pull') || name.includes('chin')));
-  }
-  if (sel === 'back (upper / mid)' || sel === 'back (upper/mid)' || sel === 'upper back') {
-    return sub.includes('upper back') || sub.includes('rhomboid') || sub.includes('trapezius') || (mg === 'back' && (name.includes('row') || name.includes('shrug') || name.includes('deadlift') || name.includes('hyperextension')));
-  }
-  if (sel === 'back') {
-    return mg === 'back' || cat === 'back' || sub.includes('lat') || sub.includes('upper back');
-  }
-
-  // Shoulders
-  if (sel === 'shoulders (front)' || sel === 'front delts') {
-    return sub.includes('front') || (mg === 'shoulders' && (name.includes('overhead') || name.includes('military') || name.includes('front raise') || name.includes('arnold')));
-  }
-  if (sel === 'shoulders (side)' || sel === 'side delts' || sel === 'lateral delts') {
-    return sub.includes('lateral') || (mg === 'shoulders' && name.includes('lateral'));
-  }
-  if (sel === 'shoulders (rear)' || sel === 'rear delts') {
-    return sub.includes('rear') || (mg === 'shoulders' && (name.includes('rear') || name.includes('face pull') || name.includes('reverse')));
-  }
-  if (sel === 'shoulders') {
-    return mg === 'shoulders' || cat === 'shoulders';
+  // 1. CHEST PILLAR
+  if (pillar === 'chest' || pillar === 'chest (pectorals)') {
+    const isChest = mg === 'chest' || cat === 'chest';
+    if (!isChest) return false;
+    if (subFilter === 'all') return true;
+    if (subFilter === 'upper') return sub.includes('upper') || name.includes('incline') || name.includes('low-to-high') || name.includes('guillotine');
+    if (subFilter === 'mid') return sub.includes('mid') || name.includes('flat') || name.includes('svend') || name.includes('bench press');
+    if (subFilter === 'lower') return sub.includes('lower') || name.includes('decline') || name.includes('dip') || name.includes('high-to-low');
+    if (subFilter === 'flyes') return pattern.includes('fly') || name.includes('fly') || name.includes('crossover') || name.includes('cable');
+    return true;
   }
 
-  // Chest
-  if (sel === 'chest (upper)' || sel === 'upper chest') {
-    return sub.includes('upper chest') || (mg === 'chest' && name.includes('incline'));
-  }
-  if (sel === 'chest') {
-    return mg === 'chest' || cat === 'chest';
-  }
-
-  // Core & Abs
-  if (sel === 'core (upper & lower)' || sel === 'core' || sel === 'abs & core' || sel === 'abs') {
-    return mg === 'abs' || cat === 'abs' || sub.includes('core') || sub.includes('abdominis') || sub.includes('oblique');
-  }
-
-  // Arms
-  if (sel === 'biceps') return mg === 'biceps' || cat === 'biceps';
-  if (sel === 'triceps') return mg === 'triceps' || cat === 'triceps';
-  if (sel === 'forearms & grip' || sel === 'forearms') return mg === 'forearms & grip' || sub.includes('forearm') || sub.includes('wrist');
-
-  // Legs
-  if (sel === 'quads') return mg === 'quads' || cat === 'quads' || sub.includes('quad');
-  if (sel === 'hamstrings') return mg === 'hamstrings' || cat === 'hamstrings' || sub.includes('hamstring');
-  if (sel === 'glutes') return mg === 'glutes' || cat === 'glutes' || sub.includes('glute');
-  if (sel === 'calves') return mg === 'calves' || cat === 'calves' || sub.includes('gastrocnemius') || sub.includes('soleus');
-
-  // Cardio & Conditioning
-  if (sel.includes('cardio') || sel === 'hiit' || sel === 'liss') {
-    return mg.startsWith('cardio') || mg === 'hiit' || mg === 'liss' || cat.startsWith('cardio') || cat === 'hiit' || cat === 'liss';
+  // 2. BACK PILLAR
+  if (pillar === 'back' || pillar === 'back (posterior chain)') {
+    const isBack = mg === 'back' || cat === 'back';
+    if (!isBack) return false;
+    if (subFilter === 'all') return true;
+    if (subFilter === 'lats') return sub.includes('lat') || name.includes('lat') || name.includes('pulldown') || name.includes('pull-up') || name.includes('chin-up') || name.includes('pullover');
+    if (subFilter === 'upper_back') return sub.includes('upper back') || sub.includes('rhomboid') || name.includes('row') || name.includes('face pull') || name.includes('t-bar');
+    if (subFilter === 'traps') return sub.includes('trapezius') || sub.includes('trap') || name.includes('shrug') || name.includes('y-raise');
+    if (subFilter === 'lower_back') return sub.includes('lower back') || sub.includes('erector') || name.includes('deadlift') || name.includes('good morning') || name.includes('hyperextension') || name.includes('back extension');
+    return true;
   }
 
-  // Calisthenics
-  if (sel === 'calisthenics' || sel === 'bodyweight') {
-    return mg === 'calisthenics' || cat === 'calisthenics' || item.equipment === 'Bodyweight';
+  // 3. SHOULDERS PILLAR
+  if (pillar === 'shoulders' || pillar === 'shoulders (deltoids)') {
+    const isShoulder = mg === 'shoulders' || cat === 'shoulders';
+    if (!isShoulder) return false;
+    if (subFilter === 'all') return true;
+    if (subFilter === 'front') return sub.includes('front') || name.includes('overhead') || name.includes('military') || name.includes('front raise') || name.includes('arnold') || name.includes('behind-the-neck');
+    if (subFilter === 'side') return sub.includes('lateral') || name.includes('lateral') || name.includes('side raise') || name.includes('lu raise');
+    if (subFilter === 'rear') return sub.includes('rear') || name.includes('rear') || name.includes('reverse fly');
+    if (subFilter === 'rotator') return sub.includes('rotator') || name.includes('external rotation') || name.includes('cuban') || name.includes('face pull');
+    return true;
   }
 
-  // Mobility & Stretching
-  if (sel.includes('mobility') || sel.includes('warmup')) {
-    return mg === 'mobility' || mg === 'dynamic warmup & activation';
-  }
-  if (sel.includes('stretching')) {
-    return mg === 'stretching';
+  // 4. ARMS PILLAR
+  if (pillar === 'arms' || pillar === 'arms (biceps & triceps)') {
+    const isArm = mg === 'biceps' || mg === 'triceps' || mg === 'forearms & grip' || cat === 'biceps' || cat === 'triceps' || cat === 'forearms & grip';
+    if (!isArm) return false;
+    if (subFilter === 'all') return true;
+    if (subFilter === 'biceps') return mg === 'biceps' && !name.includes('hammer');
+    if (subFilter === 'brachialis') return name.includes('hammer') || name.includes('reverse curl') || sub.includes('brachialis');
+    if (subFilter === 'triceps') return mg === 'triceps';
+    if (subFilter === 'forearms') return mg === 'forearms & grip' || sub.includes('wrist') || sub.includes('grip') || name.includes('wrist') || name.includes('hang');
+    return true;
   }
 
-  // Kettlebell & Olympic
-  if (sel === 'kettlebell') return mg === 'kettlebell' || item.equipment === 'Kettlebell';
-  if (sel.includes('olympic')) return mg === 'olympic lifts';
+  // 5. LEGS PILLAR
+  if (pillar === 'legs' || pillar === 'legs (lower body)') {
+    const isLeg = mg === 'quads' || mg === 'hamstrings' || mg === 'glutes' || mg === 'calves' || mg === 'hips & adductors' || cat === 'quads' || cat === 'hamstrings' || cat === 'glutes' || cat === 'calves' || cat === 'hips & adductors';
+    if (!isLeg) return false;
+    if (subFilter === 'all') return true;
+    if (subFilter === 'quads') return mg === 'quads' || sub.includes('quad');
+    if (subFilter === 'hamstrings') return mg === 'hamstrings' || sub.includes('hamstring');
+    if (subFilter === 'glutes') return mg === 'glutes' || sub.includes('glute');
+    if (subFilter === 'calves') return (mg === 'calves' && !sub.includes('tibialis')) || sub.includes('gastrocnemius') || sub.includes('soleus');
+    if (subFilter === 'adductors') return mg === 'hips & adductors' || sub.includes('adductor') || sub.includes('abductor');
+    if (subFilter === 'tibialis') return sub.includes('tibialis') || name.includes('tibialis');
+    return true;
+  }
 
-  return mg.includes(sel) || sub.includes(sel) || cat.includes(sel);
+  // 6. CORE PILLAR
+  if (pillar === 'core' || pillar === 'core & abs' || pillar === 'core & abdominals' || pillar === 'abs') {
+    const isCore = mg === 'abs' || cat === 'abs' || sub.includes('core') || sub.includes('abdominis') || sub.includes('oblique');
+    if (!isCore) return false;
+    if (subFilter === 'all') return true;
+    if (subFilter === 'abs_upper_lower') return sub.includes('rectus') || name.includes('crunch') || name.includes('leg raise') || name.includes('dragon flag') || name.includes('toe to bar');
+    if (subFilter === 'obliques') return sub.includes('oblique') || name.includes('twist') || name.includes('pallof') || name.includes('windshield') || name.includes('woodchopper') || name.includes('side plank');
+    if (subFilter === 'deep_core') return sub.includes('deep core') || sub.includes('stability') || name.includes('plank') || name.includes('rollout') || name.includes('vacuum') || name.includes('dead bug');
+    if (subFilter === 'serratus') return name.includes('serratus') || sub.includes('serratus') || name.includes('push-up plus');
+    return true;
+  }
+
+  // 7. NECK PILLAR
+  if (pillar === 'neck' || pillar === 'neck & cervical spine') {
+    const isNeck = mg === 'neck' || cat === 'neck' || sub.includes('cervical') || name.includes('neck');
+    if (!isNeck) return false;
+    if (subFilter === 'all') return true;
+    if (subFilter === 'flexion') return name.includes('flexion') || name.includes('curl') || pattern.includes('flexion');
+    if (subFilter === 'extension') return name.includes('extension') || name.includes('harness') || pattern.includes('extension');
+    if (subFilter === 'lateral') return name.includes('lateral') || name.includes('side');
+    if (subFilter === 'isometric') return name.includes('isometric') || name.includes('hold') || name.includes('machine') || name.includes('bridge');
+    return true;
+  }
+
+  // 8. FUNCTIONAL PILLAR
+  if (pillar === 'functional' || pillar === 'functional & conditioning') {
+    const isFunc = mg.startsWith('cardio') || mg === 'hiit' || mg === 'liss' || mg === 'calisthenics' || mg === 'kettlebell' || mg === 'olympic lifts' || mg === 'plyometrics' || mg === 'carries & sled' || mg === 'mobility' || mg === 'stretching';
+    if (!isFunc) return false;
+    if (subFilter === 'all') return true;
+    if (subFilter === 'cardio') return mg.startsWith('cardio') || mg === 'hiit' || mg === 'liss';
+    if (subFilter === 'calisthenics') return mg === 'calisthenics' || item.equipment === 'Bodyweight';
+    if (subFilter === 'kettlebell') return mg === 'kettlebell' || mg === 'olympic lifts' || item.equipment === 'Kettlebell';
+    if (subFilter === 'mobility') return mg === 'mobility' || mg === 'stretching';
+    return true;
+  }
+
+  // Backward compatibility fallback for legacy direct string filters (e.g. 'Biceps', 'Triceps', etc.)
+  if (pillar === 'biceps') return mg === 'biceps';
+  if (pillar === 'triceps') return mg === 'triceps';
+  if (pillar === 'quads') return mg === 'quads';
+  if (pillar === 'hamstrings') return mg === 'hamstrings';
+  if (pillar === 'glutes') return mg === 'glutes';
+  if (pillar === 'calves') return mg === 'calves';
+  if (pillar === 'forearms & grip' || pillar === 'forearms') return mg === 'forearms & grip' || sub.includes('forearm');
+
+  return mg.includes(pillar) || sub.includes(pillar) || cat.includes(pillar);
 }
-

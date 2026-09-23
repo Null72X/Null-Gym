@@ -191,7 +191,18 @@ export function getSavedLibrary(): ExerciseLibraryItem[] {
       localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(DEFAULT_LIBRARY));
       return DEFAULT_LIBRARY;
     }
-    return JSON.parse(raw);
+    const saved = JSON.parse(raw);
+    if (Array.isArray(saved)) {
+      const savedIds = new Set(saved.map((x: any) => x.id));
+      const newItems = DEFAULT_LIBRARY.filter((item) => !savedIds.has(item.id));
+      if (newItems.length > 0) {
+        const merged = [...saved, ...newItems];
+        localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(merged));
+        return merged;
+      }
+      return saved;
+    }
+    return DEFAULT_LIBRARY;
   } catch (err) {
     return DEFAULT_LIBRARY;
   }
