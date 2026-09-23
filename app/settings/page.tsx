@@ -361,7 +361,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* 2. Intelligent 4-Week Progression Engine */}
+      {/* 2. Intelligent 6-Week Progression Engine */}
       <div className="clean-card" style={{ marginBottom: '14px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
           <h3
@@ -375,7 +375,7 @@ export default function SettingsPage() {
             }}
           >
             <Zap size={16} color="var(--accent-amber)" />
-            <span>Intelligent 4-Week Progression Engine</span>
+            <span>Intelligent 6-Week Progression Engine</span>
           </h3>
           <span
             className="cloud-status-pill synced"
@@ -396,7 +396,7 @@ export default function SettingsPage() {
         </div>
 
         <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
-          When active, setting up <strong>Week 1</strong> automatically programs <strong>Weeks 2, 3, and 4</strong> with calculated progressive overload (increments on working sets, +1 rep on bodyweight).
+          When active, setting up <strong>Week 1</strong> automatically programs <strong>Weeks 2, 3, 4, 5, and 6</strong> with calculated progressive overload (increments on working sets, +1 rep on bodyweight).
         </p>
 
         {/* Auto Progression Toggle */}
@@ -414,10 +414,10 @@ export default function SettingsPage() {
         >
           <div>
             <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#fff' }}>
-              Auto-Scale Weeks 2, 3 &amp; 4 from Week 1
+              Auto-Scale Weeks 2 through 6 from Week 1
             </div>
             <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-              Automatically calculates weekly overload across your full 4-week cycle
+              Automatically calculates weekly overload across your full 6-week cycle
             </div>
           </div>
           <button
@@ -473,7 +473,7 @@ export default function SettingsPage() {
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <Sparkles size={13} />
-            <span>Auto-Setup Weeks 2, 3 &amp; 4 Now ⚡</span>
+            <span>Auto-Setup Weeks 2 to 6 Now ⚡</span>
           </button>
 
           <Link
@@ -493,7 +493,7 @@ export default function SettingsPage() {
           Weight Unit Preference
         </h3>
         <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '10px' }}>
-          Primary unit for load tracking and stepper increments across all 4 weeks.
+          Primary unit for load tracking and stepper increments across all 6 weeks.
         </p>
 
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -539,7 +539,7 @@ export default function SettingsPage() {
         </div>
 
         <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
-          Your workouts, 4-week program, history, and PRs automatically persist and sync across your phone, tablet, and PC in real time.
+          Your workouts, 6-week program, history, and PRs automatically persist and sync across your phone, tablet, and PC in real time.
         </p>
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>

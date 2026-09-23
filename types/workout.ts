@@ -60,7 +60,7 @@ export interface DayWorkout {
 }
 
 export interface WeekPlan {
-  weekNumber: number; // 1 - 4
+  weekNumber: number; // 1 - 6
   days: DayWorkout[];
 }
 

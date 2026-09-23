@@ -36,6 +36,7 @@ interface ExerciseCardProps {
   onMoveUp?: () => void;
   onMoveDown?: () => void;
   onStartRest: (restStr: string) => void;
+  onStartExerciseTimer?: (exerciseName: string, durationSecs: number, setIdx: number) => void;
 }
 
 export default function ExerciseCard({
@@ -52,6 +53,7 @@ export default function ExerciseCard({
   onMoveUp,
   onMoveDown,
   onStartRest,
+  onStartExerciseTimer,
 }: ExerciseCardProps) {
   const [showNotesEdit, setShowNotesEdit] = useState(false);
   const [notesDraft, setNotesDraft] = useState(exercise.notes || '');
@@ -130,6 +132,26 @@ export default function ExerciseCard({
   let dropsetCounter = 0;
   let failureCounter = 0;
 
+  const handleStartTimer = () => {
+    if (!onStartExerciseTimer) return;
+    const incompleteIdx = exercise.sets.findIndex((s) => !s.completed);
+    const targetIdx = incompleteIdx >= 0 ? incompleteIdx : 0;
+    const targetSet = exercise.sets[targetIdx];
+
+    let duration = 45;
+    if (targetSet?.duration) {
+      const match = String(targetSet.duration).match(/\d+/);
+      if (match) {
+        const parsed = parseInt(match[0], 10);
+        if (parsed > 0) duration = parsed;
+      }
+    } else if (exercise.trackingType === 'time_only') {
+      duration = 45;
+    }
+
+    onStartExerciseTimer(exercise.name, duration, targetIdx);
+  };
+
   return (
     <div className={`clean-card ${allSetsCompleted ? 'exercise-done' : ''}`}>
       {/* Header */}
@@ -150,6 +172,31 @@ export default function ExerciseCard({
         </div>
 
         <div className="card-actions-group">
+          {/* Start Exercise Work Timer Button */}
+          {onStartExerciseTimer && (
+            <button
+              type="button"
+              className="btn-clean btn-sm"
+              onClick={handleStartTimer}
+              title={`Start work timer for ${exercise.name}`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '3px 8px',
+                fontSize: '0.68rem',
+                fontWeight: 700,
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid rgba(239, 68, 68, 0.35)',
+                color: '#fca5a5',
+                cursor: 'pointer',
+              }}
+            >
+              <Clock size={11} color="var(--accent-red)" />
+              <span>Start Timer</span>
+            </button>
+          )}
+
           {/* Reorder Up/Down (Only in Planner) */}
           {mode === 'planner' && index > 0 && onMoveUp && (
             <button

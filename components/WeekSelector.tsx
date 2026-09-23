@@ -8,7 +8,7 @@ interface WeekSelectorProps {
 }
 
 export default function WeekSelector({ selectedWeek, onSelectWeek }: WeekSelectorProps) {
-  const weeks = [1, 2, 3, 4];
+  const weeks = [1, 2, 3, 4, 5, 6];
 
   return (
     <div className="week-segmented">

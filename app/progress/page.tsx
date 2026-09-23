@@ -59,9 +59,9 @@ export default function ProgressPage() {
     }
   }, []);
 
-  // Compute 4-Week Completion Rates
+  // Compute 6-Week Completion Rates
   const weeklyRates = useMemo(() => {
-    return [1, 2, 3, 4].map((wNum) => {
+    return [1, 2, 3, 4, 5, 6].map((wNum) => {
       const week = weeks[wNum - 1];
       if (!week) return { week: wNum, percent: 0, completedSets: 0, totalSets: 0 };
 
@@ -159,7 +159,7 @@ export default function ProgressPage() {
             <span>Progress &amp; Performance Analytics</span>
           </h2>
           <p>
-            4-week progression metrics, personal records, load volume, and completed workout logs.
+            6-week progression metrics, personal records, load volume, and completed workout logs.
           </p>
         </div>
 
@@ -593,8 +593,8 @@ export default function ProgressPage() {
           </h3>
 
           {/* Week Filter Tabs */}
-          <div style={{ display: 'flex', gap: '4px' }}>
-            {(['all', 1, 2, 3, 4] as const).map((w) => (
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+            {(['all', 1, 2, 3, 4, 5, 6] as const).map((w) => (
               <button
                 key={w}
                 type="button"
@@ -616,7 +616,7 @@ export default function ProgressPage() {
               When you finish your session in the tracker and click &ldquo;Save Workout to History&rdquo;, it will appear here.
             </p>
             <Link href="/" className="btn-clean btn-primary btn-sm">
-              <span>Go to Today&apos;s Workout</span>
+              <span>Go to Workout</span>
               <ArrowRight size={13} />
             </Link>
           </div>

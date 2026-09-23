@@ -229,10 +229,10 @@ export function WeeklyBarChart({ weeklyRates }: WeeklyBarChartProps) {
       }}
     >
       <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#fff', marginBottom: '12px' }}>
-        4-Week Completion Rates
+        6-Week Completion Rates
       </h4>
 
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${weeklyRates.length || 4}, 1fr)`, gap: '8px', alignItems: 'flex-end', height: '120px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${weeklyRates.length || 6}, 1fr)`, gap: '8px', alignItems: 'flex-end', height: '120px' }}>
         {weeklyRates.map((w) => {
           const heightPct = Math.max(8, w.percent);
           const isComplete = w.percent === 100 && w.totalSets > 0;

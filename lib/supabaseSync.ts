@@ -122,7 +122,7 @@ export async function pullPlanFromCloud(): Promise<WeekPlan[] | null> {
       const res = await fetch('/api/sync');
       if (res.ok) {
         const body = await res.json();
-        if (body.success && Array.isArray(body.plan) && body.plan.length === 4) {
+        if (body.success && Array.isArray(body.plan) && body.plan.length >= 4) {
           notifyStatus('synced', 'Database Synced');
           return body.plan as WeekPlan[];
         }
@@ -137,7 +137,7 @@ export async function pullPlanFromCloud(): Promise<WeekPlan[] | null> {
         .eq('id', 'default_plan')
         .maybeSingle();
 
-      if (data && Array.isArray(data.weeks) && data.weeks.length === 4) {
+      if (data && Array.isArray(data.weeks) && data.weeks.length >= 4) {
         notifyStatus('synced', 'Database Synced');
         return data.weeks as WeekPlan[];
       }

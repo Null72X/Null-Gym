@@ -14,14 +14,30 @@ import {
   ChevronDown,
   Check,
   Zap,
+  Dumbbell,
+  Coffee,
+  ArrowRight,
 } from 'lucide-react';
 
-interface RestTimerBarProps {
+export interface RestTimerBarProps {
   initialSeconds: number | null;
+  mode?: 'rest' | 'exercise';
+  exerciseName?: string;
   onDismiss: () => void;
+  onCompleteExerciseSet?: () => void;
+  onSwitchToRest?: (restSeconds?: number) => void;
 }
 
-export default function RestTimerBar({ initialSeconds, onDismiss }: RestTimerBarProps) {
+export default function RestTimerBar({
+  initialSeconds,
+  mode = 'rest',
+  exerciseName = '',
+  onDismiss,
+  onCompleteExerciseSet,
+  onSwitchToRest,
+}: RestTimerBarProps) {
+  const [currentMode, setCurrentMode] = useState<'rest' | 'exercise'>('rest');
+  const [currentExerciseName, setCurrentExerciseName] = useState<string>('');
   const [totalSeconds, setTotalSeconds] = useState<number>(90);
   const [seconds, setSeconds] = useState<number>(0);
   const [isRunning, setIsRunning] = useState<boolean>(true);
@@ -32,16 +48,18 @@ export default function RestTimerBar({ initialSeconds, onDismiss }: RestTimerBar
   const intervalRef = useRef<any>(null);
   const audioCtxRef = useRef<any>(null);
 
-  // Setup / Reset timer when initialSeconds changes
+  // Setup / Reset timer when initialSeconds or mode changes
   useEffect(() => {
     if (initialSeconds !== null && initialSeconds > 0) {
+      setCurrentMode(mode);
+      setCurrentExerciseName(exerciseName);
       setTotalSeconds(initialSeconds);
       setSeconds(initialSeconds);
       setIsRunning(true);
       setIsFinished(false);
       setIsExpanded(true);
     }
-  }, [initialSeconds]);
+  }, [initialSeconds, mode, exerciseName]);
 
   // Audio tone generator using Web Audio API
   const getAudioContext = () => {
@@ -77,8 +95,8 @@ export default function RestTimerBar({ initialSeconds, onDismiss }: RestTimerBar
     } catch {}
   };
 
-  // Play double celebration chime when rest is complete
-  const playChime = () => {
+  // Play celebration chime when timer finishes
+  const playChime = (isExercise: boolean) => {
     if (isMuted) return;
     try {
       const ctx = getAudioContext();
@@ -86,29 +104,44 @@ export default function RestTimerBar({ initialSeconds, onDismiss }: RestTimerBar
 
       const now = ctx.currentTime;
 
-      // Note 1: E5 (659Hz)
-      const osc1 = ctx.createOscillator();
-      const gain1 = ctx.createGain();
-      osc1.type = 'triangle';
-      osc1.frequency.setValueAtTime(659, now);
-      gain1.gain.setValueAtTime(0.35, now);
-      gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
-      osc1.connect(gain1);
-      gain1.connect(ctx.destination);
-      osc1.start(now);
-      osc1.stop(now + 0.35);
+      if (isExercise) {
+        // High-energy 3-tone celebration for exercise set completion: D5 (587Hz) -> G5 (784Hz) -> B5 (987Hz)
+        [587, 784, 987].forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + i * 0.12);
+          gain.gain.setValueAtTime(0.32, now + i * 0.12);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.12 + 0.3);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + i * 0.12);
+          osc.stop(now + i * 0.12 + 0.3);
+        });
+      } else {
+        // Double chime for rest completion: E5 (659Hz) -> A5 (880Hz)
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'triangle';
+        osc1.frequency.setValueAtTime(659, now);
+        gain1.gain.setValueAtTime(0.35, now);
+        gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.35);
 
-      // Note 2: A5 (880Hz)
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      osc2.type = 'triangle';
-      osc2.frequency.setValueAtTime(880, now + 0.18);
-      gain2.gain.setValueAtTime(0.4, now + 0.18);
-      gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.65);
-      osc2.connect(gain2);
-      gain2.connect(ctx.destination);
-      osc2.start(now + 0.18);
-      osc2.stop(now + 0.65);
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(880, now + 0.18);
+        gain2.gain.setValueAtTime(0.4, now + 0.18);
+        gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.65);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(now + 0.18);
+        osc2.stop(now + 0.65);
+      }
     } catch {}
   };
 
@@ -125,10 +158,16 @@ export default function RestTimerBar({ initialSeconds, onDismiss }: RestTimerBar
           clearInterval(intervalRef.current);
           setIsFinished(true);
           setIsRunning(false);
-          playChime();
+          playChime(currentMode === 'exercise');
           if (typeof window !== 'undefined' && 'vibrate' in navigator) {
             navigator.vibrate([100, 60, 100, 60, 250]);
           }
+
+          // If exercise finished, trigger set complete
+          if (currentMode === 'exercise' && onCompleteExerciseSet) {
+            onCompleteExerciseSet();
+          }
+
           return 0;
         }
 
@@ -144,7 +183,7 @@ export default function RestTimerBar({ initialSeconds, onDismiss }: RestTimerBar
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isRunning, seconds, isMuted]);
+  }, [isRunning, seconds, isMuted, currentMode]);
 
   // Actions
   const adjustSeconds = (delta: number) => {
@@ -173,6 +212,40 @@ export default function RestTimerBar({ initialSeconds, onDismiss }: RestTimerBar
     setIsRunning((prev) => !prev);
   };
 
+  // Finish Exercise early and transition to rest
+  const handleFinishExerciseNow = () => {
+    setSeconds(0);
+    setIsFinished(true);
+    setIsRunning(false);
+    playChime(true);
+    if (onCompleteExerciseSet) {
+      onCompleteExerciseSet();
+    }
+  };
+
+  // Transition to Rest Timer
+  const handleTransitionToRest = (restSecs = 90) => {
+    if (onSwitchToRest) {
+      onSwitchToRest(restSecs);
+    } else {
+      setCurrentMode('rest');
+      setTotalSeconds(restSecs);
+      setSeconds(restSecs);
+      setIsRunning(true);
+      setIsFinished(false);
+    }
+  };
+
+  // Switch mode directly
+  const handleSwitchMode = (targetMode: 'rest' | 'exercise') => {
+    setCurrentMode(targetMode);
+    const defaultSecs = targetMode === 'exercise' ? 45 : 90;
+    setTotalSeconds(defaultSecs);
+    setSeconds(defaultSecs);
+    setIsRunning(true);
+    setIsFinished(false);
+  };
+
   if (initialSeconds === null) return null;
 
   // Format MM:SS
@@ -186,11 +259,20 @@ export default function RestTimerBar({ initialSeconds, onDismiss }: RestTimerBar
   const progressRatio = totalSeconds > 0 ? Math.max(0, Math.min(1, seconds / totalSeconds)) : 0;
   const strokeDashoffset = circumference * (1 - progressRatio);
 
+  const isExerciseMode = currentMode === 'exercise';
+
   const getRingColor = () => {
     if (isFinished) return 'var(--accent-green)';
+    if (isExerciseMode) {
+      return seconds <= 10 ? 'var(--accent-amber)' : 'var(--accent-red)';
+    }
     if (seconds <= 10) return 'var(--accent-amber)';
-    return 'var(--accent-red)';
+    return '#38bdf8'; // Cyan for rest
   };
+
+  const exercisePresets = [20, 30, 45, 60, 90];
+  const restPresets = [30, 60, 90, 120, 180];
+  const activePresets = isExerciseMode ? exercisePresets : restPresets;
 
   return (
     <div
@@ -204,9 +286,17 @@ export default function RestTimerBar({ initialSeconds, onDismiss }: RestTimerBar
         maxWidth: '480px',
         background: 'rgba(14, 14, 20, 0.96)',
         backdropFilter: 'blur(16px)',
-        border: `1px solid ${isFinished ? 'rgba(34, 197, 94, 0.5)' : 'rgba(239, 68, 68, 0.4)'}`,
+        border: `1px solid ${
+          isFinished
+            ? 'rgba(34, 197, 94, 0.5)'
+            : isExerciseMode
+            ? 'rgba(239, 68, 68, 0.45)'
+            : 'rgba(56, 189, 248, 0.4)'
+        }`,
         boxShadow: isFinished
           ? '0 8px 30px rgba(34, 197, 94, 0.25)'
+          : isExerciseMode
+          ? '0 8px 30px rgba(239, 68, 68, 0.3)'
           : '0 8px 30px rgba(0, 0, 0, 0.7)',
         borderRadius: '14px',
         padding: isExpanded ? '10px 14px' : '8px 12px',
@@ -218,11 +308,11 @@ export default function RestTimerBar({ initialSeconds, onDismiss }: RestTimerBar
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
         {/* Left Side: Circular Ring + Time */}
         <div
-          style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', minWidth: 0, flex: 1 }}
           onClick={() => setIsExpanded((prev) => !prev)}
         >
           {/* Animated SVG Progress Ring */}
-          <div style={{ position: 'relative', width: '46px', height: '46px' }}>
+          <div style={{ position: 'relative', width: '46px', height: '46px', flexShrink: 0 }}>
             <svg width="46" height="46" style={{ transform: 'rotate(-90deg)' }}>
               {/* Background Track */}
               <circle
@@ -270,17 +360,53 @@ export default function RestTimerBar({ initialSeconds, onDismiss }: RestTimerBar
             </div>
           </div>
 
-          <div>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <div
               style={{
                 fontSize: '0.62rem',
                 fontWeight: 800,
                 textTransform: 'uppercase',
                 letterSpacing: '0.6px',
-                color: isFinished ? 'var(--accent-green)' : seconds <= 10 ? 'var(--accent-amber)' : 'var(--text-dim)',
+                color: isFinished
+                  ? 'var(--accent-green)'
+                  : seconds <= 10
+                  ? 'var(--accent-amber)'
+                  : isExerciseMode
+                  ? '#f87171'
+                  : '#38bdf8',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
               }}
             >
-              {isFinished ? '🎉 READY TO LIFT!' : isRunning ? 'Rest Timer' : 'Paused'}
+              <span>
+                {isFinished
+                  ? isExerciseMode
+                    ? '🎉 SET COMPLETE!'
+                    : '🎉 READY TO LIFT!'
+                  : isRunning
+                  ? isExerciseMode
+                    ? '⚡ Active Exercise'
+                    : '💤 Rest Timer'
+                  : 'Paused'}
+              </span>
+              {currentExerciseName && isExerciseMode && (
+                <span
+                  style={{
+                    color: '#e2e8f0',
+                    fontWeight: 700,
+                    textTransform: 'none',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxWidth: '140px',
+                  }}
+                >
+                  · {currentExerciseName}
+                </span>
+              )}
             </div>
             <div
               style={{
@@ -298,7 +424,47 @@ export default function RestTimerBar({ initialSeconds, onDismiss }: RestTimerBar
         </div>
 
         {/* Right Side: Quick Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+          {isExerciseMode && !isFinished && (
+            <button
+              type="button"
+              className="btn-clean btn-sm"
+              onClick={handleFinishExerciseNow}
+              title="Finish Set & Start Rest"
+              style={{
+                background: 'rgba(34, 197, 94, 0.2)',
+                borderColor: 'rgba(34, 197, 94, 0.4)',
+                color: '#86efac',
+                fontSize: '0.68rem',
+                padding: '3px 8px',
+                fontWeight: 700,
+              }}
+            >
+              <Check size={12} />
+              <span>Done</span>
+            </button>
+          )}
+
+          {isFinished && isExerciseMode && (
+            <button
+              type="button"
+              className="btn-clean btn-sm btn-primary"
+              onClick={() => handleTransitionToRest(90)}
+              title="Start Rest Timer"
+              style={{
+                fontSize: '0.68rem',
+                padding: '3px 8px',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+              }}
+            >
+              <span>Rest (90s)</span>
+              <ArrowRight size={11} />
+            </button>
+          )}
+
           <button
             type="button"
             className="timer-action-btn"
@@ -362,7 +528,7 @@ export default function RestTimerBar({ initialSeconds, onDismiss }: RestTimerBar
         </div>
       </div>
 
-      {/* Expanded Quick Presets Bar */}
+      {/* Expanded Quick Presets & Mode Toggle Bar */}
       {isExpanded && (
         <div
           style={{
@@ -372,29 +538,89 @@ export default function RestTimerBar({ initialSeconds, onDismiss }: RestTimerBar
             marginTop: '8px',
             paddingTop: '8px',
             borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-            gap: '4px',
+            gap: '6px',
+            flexWrap: 'wrap',
           }}
         >
-          <span style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>
-            Presets:
-          </span>
-          <div style={{ display: 'flex', gap: '5px' }}>
-            {[30, 60, 90, 120, 180].map((preset) => {
+          {/* Mode Switcher */}
+          <div style={{ display: 'flex', gap: '3px' }}>
+            <button
+              type="button"
+              onClick={() => handleSwitchMode('exercise')}
+              style={{
+                background: isExerciseMode ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.04)',
+                border: `1px solid ${isExerciseMode ? 'var(--accent-red)' : 'var(--border)'}`,
+                color: isExerciseMode ? '#ffffff' : 'var(--text-muted)',
+                fontSize: '0.63rem',
+                fontWeight: isExerciseMode ? 800 : 600,
+                padding: '2px 6px',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+              }}
+            >
+              <Zap size={10} color={isExerciseMode ? 'var(--accent-red)' : 'currentColor'} />
+              <span>Work</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchMode('rest')}
+              style={{
+                background: !isExerciseMode ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255, 255, 255, 0.04)',
+                border: `1px solid ${!isExerciseMode ? '#38bdf8' : 'var(--border)'}`,
+                color: !isExerciseMode ? '#ffffff' : 'var(--text-muted)',
+                fontSize: '0.63rem',
+                fontWeight: !isExerciseMode ? 800 : 600,
+                padding: '2px 6px',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+              }}
+            >
+              <Coffee size={10} color={!isExerciseMode ? '#38bdf8' : 'currentColor'} />
+              <span>Rest</span>
+            </button>
+          </div>
+
+          {/* Quick Presets */}
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+            {activePresets.map((preset) => {
               const isSelected = totalSeconds === preset;
-              const label = preset < 60 ? `${preset}s` : preset === 60 ? '1m' : preset === 90 ? '90s' : `${preset / 60}m`;
+              const label =
+                preset < 60
+                  ? `${preset}s`
+                  : preset === 60
+                  ? '1m'
+                  : preset === 90
+                  ? '90s'
+                  : `${preset / 60}m`;
               return (
                 <button
                   key={preset}
                   type="button"
                   onClick={() => setPreset(preset)}
                   style={{
-                    background: isSelected ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.04)',
-                    border: `1px solid ${isSelected ? 'var(--accent-red)' : 'var(--border)'}`,
+                    background: isSelected
+                      ? isExerciseMode
+                        ? 'rgba(239, 68, 68, 0.25)'
+                        : 'rgba(56, 189, 248, 0.25)'
+                      : 'rgba(255, 255, 255, 0.04)',
+                    border: `1px solid ${
+                      isSelected
+                        ? isExerciseMode
+                          ? 'var(--accent-red)'
+                          : '#38bdf8'
+                        : 'var(--border)'
+                    }`,
                     color: isSelected ? '#ffffff' : 'var(--text-muted)',
-                    fontSize: '0.65rem',
+                    fontSize: '0.64rem',
                     fontWeight: isSelected ? 800 : 600,
-                    padding: '3px 7px',
-                    borderRadius: '6px',
+                    padding: '2px 6px',
+                    borderRadius: '5px',
                     cursor: 'pointer',
                     fontFamily: 'var(--font-mono)',
                     transition: 'all 0.15s ease',
@@ -412,19 +638,23 @@ export default function RestTimerBar({ initialSeconds, onDismiss }: RestTimerBar
               setSeconds(0);
               setIsFinished(true);
               setIsRunning(false);
+              playChime(isExerciseMode);
+              if (isExerciseMode && onCompleteExerciseSet) {
+                onCompleteExerciseSet();
+              }
             }}
             style={{
               background: 'none',
               border: 'none',
               color: 'var(--accent-green)',
-              fontSize: '0.65rem',
+              fontSize: '0.64rem',
               fontWeight: 800,
               cursor: 'pointer',
               padding: '2px 4px',
             }}
-            title="Skip rest"
+            title={isExerciseMode ? 'Complete set' : 'Skip rest'}
           >
-            Skip ✓
+            {isExerciseMode ? 'Finish Set ✓' : 'Skip Rest ✓'}
           </button>
         </div>
       )}

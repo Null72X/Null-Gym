@@ -74,6 +74,9 @@ export default function LibraryPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedEquipment, setSelectedEquipment] = useState('All');
+  const [selectedLoadType, setSelectedLoadType] = useState('All');
+  const [selectedDifficulty, setSelectedDifficulty] = useState('All');
+  const [sortBy, setSortBy] = useState<'name_asc' | 'name_desc' | 'muscle' | 'equipment'>('name_asc');
   const [isCreating, setIsCreating] = useState(false);
 
   // Target picker for direct Add to Plan
@@ -109,6 +112,23 @@ export default function LibraryPage() {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 2200);
   };
+
+  const resetAllFilters = () => {
+    setSearchTerm('');
+    setSelectedCategory('All');
+    setSelectedEquipment('All');
+    setSelectedLoadType('All');
+    setSelectedDifficulty('All');
+    setSortBy('name_asc');
+  };
+
+  const hasActiveFilters =
+    searchTerm.trim() !== '' ||
+    selectedCategory !== 'All' ||
+    selectedEquipment !== 'All' ||
+    selectedLoadType !== 'All' ||
+    selectedDifficulty !== 'All' ||
+    sortBy !== 'name_asc';
 
   const resetForm = () => {
     setName('');
@@ -240,19 +260,24 @@ export default function LibraryPage() {
     triggerToast(`Added "${item.name}" to Week ${targetWeek} · ${targetDay}!`);
   };
 
-  // Robust, smart filter that guarantees 100% accurate results for all buttons
+  // Advanced multi-token search, multi-faceted filtering & smart sorting
   const filtered = useMemo(() => {
-    const query = searchTerm.toLowerCase().trim();
-    return library.filter((item) => {
+    const rawTokens = searchTerm.toLowerCase().trim().split(/\s+/).filter(Boolean);
+
+    const matches = library.filter((item) => {
       const matchesSearch =
-        query === '' ||
-        item.name.toLowerCase().includes(query) ||
-        item.muscleGroup.toLowerCase().includes(query) ||
-        (item.category && item.category.toLowerCase().includes(query)) ||
-        (item.subMuscle && item.subMuscle.toLowerCase().includes(query)) ||
-        (item.equipment && item.equipment.toLowerCase().includes(query)) ||
-        (item.movementPattern && item.movementPattern.toLowerCase().includes(query)) ||
-        (item.notes && item.notes.toLowerCase().includes(query));
+        rawTokens.length === 0 ||
+        rawTokens.every(
+          (t) =>
+            item.name.toLowerCase().includes(t) ||
+            item.muscleGroup.toLowerCase().includes(t) ||
+            (item.category && item.category.toLowerCase().includes(t)) ||
+            (item.subMuscle && item.subMuscle.toLowerCase().includes(t)) ||
+            (item.equipment && item.equipment.toLowerCase().includes(t)) ||
+            (item.movementPattern && item.movementPattern.toLowerCase().includes(t)) ||
+            (item.notes && item.notes.toLowerCase().includes(t)) ||
+            (item.difficulty && item.difficulty.toLowerCase().includes(t))
+        );
 
       const matchesCat = matchCatalogCategory(item, selectedCategory);
 
@@ -260,9 +285,44 @@ export default function LibraryPage() {
         selectedEquipment === 'All' ||
         (item.equipment && item.equipment.toLowerCase() === selectedEquipment.toLowerCase());
 
-      return matchesSearch && matchesCat && matchesEq;
+      const matchesLoad =
+        selectedLoadType === 'All' ||
+        (selectedLoadType === 'weighted' &&
+          item.requiresLoad !== false &&
+          item.trackingType !== 'bodyweight_reps') ||
+        (selectedLoadType === 'bodyweight' &&
+          (item.requiresLoad === false || item.trackingType === 'bodyweight_reps')) ||
+        (selectedLoadType === 'timed' && item.trackingType === 'time_only') ||
+        (selectedLoadType === 'cardio' &&
+          (item.trackingType === 'cardio_metrics' ||
+            item.muscleGroup.toLowerCase().includes('cardio')));
+
+      const matchesDiff =
+        selectedDifficulty === 'All' ||
+        (item.difficulty &&
+          item.difficulty.toLowerCase() === selectedDifficulty.toLowerCase());
+
+      return matchesSearch && matchesCat && matchesEq && matchesLoad && matchesDiff;
     });
-  }, [library, searchTerm, selectedCategory, selectedEquipment]);
+
+    return matches.sort((a, b) => {
+      if (sortBy === 'name_asc') return a.name.localeCompare(b.name);
+      if (sortBy === 'name_desc') return b.name.localeCompare(a.name);
+      if (sortBy === 'muscle')
+        return a.muscleGroup.localeCompare(b.muscleGroup) || a.name.localeCompare(b.name);
+      if (sortBy === 'equipment')
+        return (a.equipment || '').localeCompare(b.equipment || '') || a.name.localeCompare(b.name);
+      return 0;
+    });
+  }, [
+    library,
+    searchTerm,
+    selectedCategory,
+    selectedEquipment,
+    selectedLoadType,
+    selectedDifficulty,
+    sortBy,
+  ]);
 
   return (
     <div>
@@ -472,46 +532,243 @@ export default function LibraryPage() {
         </div>
       )}
 
-      {/* Quick Bar: Search Input + Clean Equipment Dropdown (Matches New folder design) */}
-      <div className="quick-bar">
-        <input
-          type="text"
-          className="search-input"
-          placeholder="Search exercises, cues, muscles, patterns..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-        <select
-          className="unit-toggle-btn"
-          value={selectedEquipment}
-          onChange={(e) => setSelectedEquipment(e.target.value)}
-          title="Filter by Equipment"
+      {/* Advanced Search & Filtering Controls */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+        {/* Search Bar */}
+        <div
           style={{
-            cursor: 'pointer',
-            paddingRight: '6px',
-            fontSize: '0.72rem',
+            display: 'flex',
+            alignItems: 'center',
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            borderRadius: '10px',
+            padding: '4px 10px',
+            gap: '8px',
           }}
         >
-          <option value="All">All Equipment</option>
-          {CATALOG_EQUIPMENTS.map((eq) => (
-            <option key={eq} value={eq}>
-              {eq}
-            </option>
-          ))}
-        </select>
-        {(searchTerm || selectedCategory !== 'All' || selectedEquipment !== 'All') && (
-          <button
-            type="button"
-            className="unit-toggle-btn"
-            onClick={() => {
-              setSearchTerm('');
-              setSelectedCategory('All');
-              setSelectedEquipment('All');
+          <Search size={15} color="var(--accent-red)" />
+          <input
+            type="text"
+            placeholder="Search 570 exercises by name, muscle, cues, equipment..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              flex: 1,
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              color: '#fff',
+              fontSize: '0.8rem',
+              padding: '6px 0',
             }}
-            title="Reset filters"
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-dim)',
+                cursor: 'pointer',
+                padding: '2px',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Filter Dropdowns Grid */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(115px, 1fr))',
+            gap: '6px',
+          }}
+        >
+          {/* Equipment Dropdown */}
+          <select
+            className="clean-input"
+            value={selectedEquipment}
+            onChange={(e) => setSelectedEquipment(e.target.value)}
+            style={{ fontSize: '0.72rem', padding: '6px 8px', height: '34px' }}
+            title="Filter by Equipment"
           >
-            <RotateCcw size={13} />
-          </button>
+            <option value="All">All Equipment</option>
+            {CATALOG_EQUIPMENTS.map((eq) => (
+              <option key={eq} value={eq}>
+                {eq}
+              </option>
+            ))}
+          </select>
+
+          {/* Tracking / Load Type Dropdown */}
+          <select
+            className="clean-input"
+            value={selectedLoadType}
+            onChange={(e) => setSelectedLoadType(e.target.value)}
+            style={{ fontSize: '0.72rem', padding: '6px 8px', height: '34px' }}
+            title="Filter by Tracking Type"
+          >
+            <option value="All">All Load Types</option>
+            <option value="weighted">Weighted (Barbell/DB/Cable)</option>
+            <option value="bodyweight">Bodyweight (Reps)</option>
+            <option value="timed">Timed Holds (Sec)</option>
+            <option value="cardio">Cardio &amp; Distance</option>
+          </select>
+
+          {/* Difficulty Dropdown */}
+          <select
+            className="clean-input"
+            value={selectedDifficulty}
+            onChange={(e) => setSelectedDifficulty(e.target.value)}
+            style={{ fontSize: '0.72rem', padding: '6px 8px', height: '34px' }}
+            title="Filter by Difficulty"
+          >
+            <option value="All">All Levels</option>
+            <option value="Beginner">Beginner</option>
+            <option value="Intermediate">Intermediate</option>
+            <option value="Advanced">Advanced</option>
+          </select>
+
+          {/* Sort By Dropdown */}
+          <select
+            className="clean-input"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            style={{ fontSize: '0.72rem', padding: '6px 8px', height: '34px' }}
+            title="Sort Exercises"
+          >
+            <option value="name_asc">Sort: A to Z</option>
+            <option value="name_desc">Sort: Z to A</option>
+            <option value="muscle">Sort: Muscle Group</option>
+            <option value="equipment">Sort: Equipment</option>
+          </select>
+        </div>
+
+        {/* Active Filter Chips Bar */}
+        {hasActiveFilters && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              flexWrap: 'wrap',
+              paddingTop: '2px',
+            }}
+          >
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>
+              Active:
+            </span>
+
+            {searchTerm.trim() && (
+              <span
+                className="clean-badge"
+                style={{
+                  fontSize: '0.65rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  color: '#fca5a5',
+                  borderColor: 'rgba(239, 68, 68, 0.3)',
+                  padding: '2px 7px',
+                }}
+              >
+                &ldquo;{searchTerm}&rdquo;
+                <X size={10} style={{ cursor: 'pointer' }} onClick={() => setSearchTerm('')} />
+              </span>
+            )}
+
+            {selectedCategory !== 'All' && (
+              <span
+                className="clean-badge"
+                style={{
+                  fontSize: '0.65rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  color: '#fca5a5',
+                  borderColor: 'rgba(239, 68, 68, 0.3)',
+                  padding: '2px 7px',
+                }}
+              >
+                {selectedCategory}
+                <X size={10} style={{ cursor: 'pointer' }} onClick={() => setSelectedCategory('All')} />
+              </span>
+            )}
+
+            {selectedEquipment !== 'All' && (
+              <span
+                className="clean-badge"
+                style={{
+                  fontSize: '0.65rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '2px 7px',
+                }}
+              >
+                {selectedEquipment}
+                <X size={10} style={{ cursor: 'pointer' }} onClick={() => setSelectedEquipment('All')} />
+              </span>
+            )}
+
+            {selectedLoadType !== 'All' && (
+              <span
+                className="clean-badge"
+                style={{
+                  fontSize: '0.65rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '2px 7px',
+                }}
+              >
+                {selectedLoadType}
+                <X size={10} style={{ cursor: 'pointer' }} onClick={() => setSelectedLoadType('All')} />
+              </span>
+            )}
+
+            {selectedDifficulty !== 'All' && (
+              <span
+                className="clean-badge"
+                style={{
+                  fontSize: '0.65rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '2px 7px',
+                }}
+              >
+                {selectedDifficulty}
+                <X size={10} style={{ cursor: 'pointer' }} onClick={() => setSelectedDifficulty('All')} />
+              </span>
+            )}
+
+            <button
+              type="button"
+              className="btn-clean btn-sm"
+              onClick={resetAllFilters}
+              style={{
+                fontSize: '0.62rem',
+                padding: '1px 6px',
+                color: 'var(--accent-red)',
+                borderColor: 'rgba(239, 68, 68, 0.25)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '3px',
+              }}
+            >
+              <RotateCcw size={10} />
+              <span>Reset All</span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -682,7 +939,7 @@ export default function LibraryPage() {
                         value={targetWeek}
                         onChange={(e) => setTargetWeek(parseInt(e.target.value, 10))}
                       >
-                        {[1, 2, 3, 4].map((wk) => (
+                        {[1, 2, 3, 4, 5, 6].map((wk) => (
                           <option key={wk} value={wk}>
                             Week {wk}
                           </option>

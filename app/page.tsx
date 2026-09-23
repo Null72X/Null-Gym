@@ -37,7 +37,13 @@ export default function DashboardPage() {
   const [currentDayIndex, setCurrentDayIndex] = useState<number>(0);
   const [unit, setUnit] = useState<WeightUnit>('kg');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [activeRestSeconds, setActiveRestSeconds] = useState<number | null>(null);
+  const [activeTimer, setActiveTimer] = useState<{
+    seconds: number;
+    mode: 'rest' | 'exercise';
+    exerciseName?: string;
+    exerciseIndex?: number;
+    setIndex?: number;
+  } | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
 
@@ -95,7 +101,54 @@ export default function DashboardPage() {
       const match = str.match(/\d+/);
       if (match) sec = parseInt(match[0], 10);
     }
-    setActiveRestSeconds(sec);
+    setActiveTimer({ seconds: sec, mode: 'rest' });
+  };
+
+  // Start active work timer for exercise
+  const handleStartExerciseTimer = (
+    exerciseName: string,
+    durationSecs: number,
+    exerciseIndex: number,
+    setIndex: number
+  ) => {
+    setActiveTimer({
+      seconds: durationSecs,
+      mode: 'exercise',
+      exerciseName,
+      exerciseIndex,
+      setIndex,
+    });
+    triggerToast(`⏱ Started timer: ${exerciseName} (${durationSecs}s)`);
+  };
+
+  // Automatically check off set when exercise timer completes or user clicks finish set
+  const handleCompleteActiveSet = () => {
+    if (!activeTimer || activeTimer.exerciseIndex === undefined || activeTimer.setIndex === undefined) return;
+    const { exerciseIndex, setIndex } = activeTimer;
+
+    const updatedWeeks = [...weeks];
+    const targetDay = updatedWeeks[currentWeek - 1]?.days[currentDayIndex];
+    if (!targetDay) return;
+    const targetEx = targetDay.exercises[exerciseIndex];
+    if (!targetEx || !targetEx.sets[setIndex]) return;
+
+    targetEx.sets[setIndex].completed = true;
+    targetEx.completed = targetEx.sets.every((s) => s.completed);
+    setWeeks(updatedWeeks);
+    saveWeeks(updatedWeeks);
+
+    // Switch directly to Rest timer with the set's rest configuration
+    const restStr = targetEx.sets[setIndex].rest || '90s';
+    let restSec = 90;
+    const match = restStr.match(/\d+/);
+    if (match) restSec = parseInt(match[0], 10);
+
+    setActiveTimer({
+      seconds: restSec,
+      mode: 'rest',
+      exerciseName: targetEx.name,
+    });
+    triggerToast(`Set ${setIndex + 1} complete! Rest timer started.`);
   };
 
   // Update current day's exercise (weights / reps / completion tracking in tracker mode)
@@ -296,13 +349,10 @@ export default function DashboardPage() {
       {currentDayData.isRestDay ? (
         <div className="empty-state">
           <Sparkles size={32} color="var(--accent-amber)" style={{ margin: '0 auto 10px' }} />
-          <div className="empty-state-title">Rest & Recovery Day</div>
-          <p style={{ fontSize: '0.8rem', maxWidth: '300px', margin: '0 auto 16px' }}>
-            Allow your muscles to recover, hydrate, focus on sleep, and prepare for the upcoming workouts.
+          <div className="empty-state-title">Rest &amp; Recovery Day</div>
+          <p style={{ fontSize: '0.8rem', maxWidth: '300px', margin: '0 auto' }}>
+            Allow your muscles to recover, hydrate, and prepare for upcoming workouts.
           </p>
-          <Link href="/planner" className="btn-clean btn-sm">
-            Edit in Planner ↗
-          </Link>
         </div>
       ) : filteredExercises.length === 0 ? (
         <div className="empty-state">
@@ -314,14 +364,10 @@ export default function DashboardPage() {
           ) : (
             <>
               <Dumbbell size={32} color="var(--text-dim)" style={{ margin: '0 auto 10px' }} />
-              <div className="empty-state-title">No Exercises Planned</div>
-              <p style={{ fontSize: '0.8rem', marginBottom: '14px', maxWidth: '320px', margin: '0 auto 14px' }}>
-                Add exercises and build your custom routine in the Workout Planner.
+              <div className="empty-state-title">No Exercises Scheduled</div>
+              <p style={{ fontSize: '0.8rem', maxWidth: '320px', margin: '0 auto' }}>
+                Select a workout day from the grid above to start tracking your sets.
               </p>
-              <Link href="/planner" className="btn-clean btn-primary">
-                <Edit2 size={14} />
-                <span>Go to Workout Planner ↗</span>
-              </Link>
             </>
           )}
         </div>
@@ -341,6 +387,9 @@ export default function DashboardPage() {
                 weekNumber={currentWeek}
                 onUpdate={(updated) => handleUpdateExercise(exIdx, updated)}
                 onStartRest={handleStartRest}
+                onStartExerciseTimer={(name, duration, setIdx) =>
+                  handleStartExerciseTimer(name, duration, exIdx, setIdx)
+                }
               />
             );
           })}
@@ -348,47 +397,44 @@ export default function DashboardPage() {
       )}
 
       {/* Workout Bottom Action Bar */}
-      {!currentDayData.isRestDay && (
+      {!currentDayData.isRestDay && totalExercises > 0 && (
         <div
           style={{
             marginTop: '20px',
             display: 'flex',
             gap: '8px',
-            flexWrap: 'wrap',
           }}
         >
-          {totalExercises > 0 && (
-            <button
-              type="button"
-              className="btn-clean btn-primary"
-              style={{ flex: 1, padding: '12px 14px' }}
-              onClick={handleFinishWorkout}
-            >
-              <CheckCircle2 size={16} />
-              <span>
-                {workoutPercent === 100
-                  ? 'Save Workout to History ✓'
-                  : `Finish Workout (${doneExercises}/${totalExercises} Exercises)`}
-              </span>
-            </button>
-          )}
-
-          <Link
-            href="/planner"
-            className={`btn-clean ${totalExercises === 0 ? 'btn-primary' : ''}`}
-            style={{ padding: '12px 16px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-            title="Open Planner to configure exercises"
+          <button
+            type="button"
+            className="btn-clean btn-primary"
+            style={{ width: '100%', padding: '12px 14px' }}
+            onClick={handleFinishWorkout}
           >
-            <Edit2 size={15} />
-            <span>Edit Routine in Planner ↗</span>
-          </Link>
+            <CheckCircle2 size={16} />
+            <span>
+              {workoutPercent === 100
+                ? 'Save Workout to History ✓'
+                : `Finish Workout (${doneExercises}/${totalExercises} Exercises)`}
+            </span>
+          </button>
         </div>
       )}
 
-      {/* Floating Rest Bar */}
+      {/* Floating Rest / Work Timer Bar */}
       <RestTimerBar
-        initialSeconds={activeRestSeconds}
-        onDismiss={() => setActiveRestSeconds(null)}
+        initialSeconds={activeTimer ? activeTimer.seconds : null}
+        mode={activeTimer?.mode || 'rest'}
+        exerciseName={activeTimer?.exerciseName || ''}
+        onDismiss={() => setActiveTimer(null)}
+        onCompleteExerciseSet={handleCompleteActiveSet}
+        onSwitchToRest={(restSecs) =>
+          setActiveTimer({
+            seconds: restSecs || 90,
+            mode: 'rest',
+            exerciseName: activeTimer?.exerciseName,
+          })
+        }
       />
 
       {/* Toast Notification */}

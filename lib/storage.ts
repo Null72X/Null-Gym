@@ -31,7 +31,7 @@ const STORAGE_KEYS = {
 // 570 Master exercise library with YouTube search links and intelligent tracking types
 export const DEFAULT_LIBRARY: ExerciseLibraryItem[] = ALL_CATALOG_EXERCISES;
 
-// Helper to create blank 4 weeks with zero exercises
+// Helper to create blank 6 weeks with zero exercises
 export function createBlankWeeks(): WeekPlan[] {
   const dayNames: DayWorkout['dayOfWeek'][] = [
     'Monday',
@@ -43,7 +43,7 @@ export function createBlankWeeks(): WeekPlan[] {
     'Sunday',
   ];
 
-  return Array.from({ length: 4 }, (_, wIdx) => ({
+  return Array.from({ length: 6 }, (_, wIdx) => ({
     weekNumber: wIdx + 1,
     days: dayNames.map((d, dIdx) => ({
       id: `w${wIdx + 1}_d${dIdx}`,
@@ -95,10 +95,20 @@ export function getSavedWeeks(): WeekPlan[] {
       return initial;
     }
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length !== 4) {
+    if (!Array.isArray(parsed) || parsed.length === 0) {
       const initial = createBlankWeeks();
       localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(initial));
       return initial;
+    }
+    if (parsed.length < 6) {
+      // Seamlessly upgrade 4-week plans to 6 weeks without losing any user data!
+      const blank = createBlankWeeks();
+      const expanded = [
+        ...parsed,
+        ...blank.slice(parsed.length),
+      ];
+      localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(expanded));
+      return expanded;
     }
     return parsed;
   } catch (err) {
@@ -182,7 +192,7 @@ export function getActiveSelection(): { weekNumber: number; dayIndex: number; un
     const raw = localStorage.getItem(STORAGE_KEYS.ACTIVE);
     if (!raw) return { weekNumber: 1, dayIndex: 0, unit: 'kg' };
     const parsed = JSON.parse(raw);
-    const weekNumber = Math.min(4, Math.max(1, parsed.weekNumber || 1));
+    const weekNumber = Math.min(6, Math.max(1, parsed.weekNumber || 1));
     const dayIndex = Math.min(6, Math.max(0, parsed.dayIndex || 0));
     return { weekNumber, dayIndex, unit: parsed.unit || 'kg' };
   } catch (err) {
@@ -244,28 +254,32 @@ export function initBackgroundCloudSync() {
 
   // Pull plan from cloud
   pullPlanFromCloud().then((cloudWeeks) => {
-    if (cloudWeeks && Array.isArray(cloudWeeks) && cloudWeeks.length === 4) {
+    if (cloudWeeks && Array.isArray(cloudWeeks) && cloudWeeks.length >= 4) {
+      const validCloudWeeks =
+        cloudWeeks.length < 6
+          ? [...cloudWeeks, ...createBlankWeeks().slice(cloudWeeks.length)]
+          : cloudWeeks;
       const localRaw = localStorage.getItem(STORAGE_KEYS.WEEKS);
       const localWeeks = localRaw ? JSON.parse(localRaw) : null;
 
       const localHasExercises =
         localWeeks &&
         localWeeks.some((w: any) => w.days.some((d: any) => d.exercises?.length > 0));
-      const cloudHasExercises = cloudWeeks.some((w: any) =>
+      const cloudHasExercises = validCloudWeeks.some((w: any) =>
         w.days.some((d: any) => d.exercises?.length > 0)
       );
 
       if (!localHasExercises && cloudHasExercises) {
         // Fresh device or empty local cache -> use cloud data!
-        localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(cloudWeeks));
-        planListeners.forEach((l) => l(cloudWeeks));
+        localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(validCloudWeeks));
+        planListeners.forEach((l) => l(validCloudWeeks));
       } else if (localHasExercises && !cloudHasExercises) {
         // Initial cloud upload!
         pushPlanToCloud(localWeeks);
       } else {
         // Sync cloud plan
-        localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(cloudWeeks));
-        planListeners.forEach((l) => l(cloudWeeks));
+        localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(validCloudWeeks));
+        planListeners.forEach((l) => l(validCloudWeeks));
       }
     } else {
       // Cloud is blank or table newly initialized -> push local data to cloud
@@ -318,9 +332,13 @@ export async function forcePullAllFromCloud(): Promise<boolean> {
   const cloudSettings = await pullSettingsFromCloud();
 
   let updated = false;
-  if (cloudWeeks && cloudWeeks.length === 4) {
-    localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(cloudWeeks));
-    planListeners.forEach((l) => l(cloudWeeks));
+  if (cloudWeeks && cloudWeeks.length >= 4) {
+    const validCloudWeeks =
+      cloudWeeks.length < 6
+        ? [...cloudWeeks, ...createBlankWeeks().slice(cloudWeeks.length)]
+        : cloudWeeks;
+    localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(validCloudWeeks));
+    planListeners.forEach((l) => l(validCloudWeeks));
     updated = true;
   }
   if (cloudHistory) {

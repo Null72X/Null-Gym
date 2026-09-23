@@ -116,7 +116,7 @@ export default function Navbar() {
           className={`nav-item ${pathname === '/' ? 'active' : ''}`}
         >
           <Dumbbell size={18} />
-          <span>Today</span>
+          <span>Workout</span>
         </Link>
         <Link
           href="/planner"
