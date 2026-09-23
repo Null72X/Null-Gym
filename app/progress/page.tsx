@@ -185,14 +185,7 @@ export default function ProgressPage() {
       </section>
 
       {/* Summary Stat Cards */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-          gap: '8px',
-          marginBottom: '16px',
-        }}
-      >
+      <div className="responsive-grid-4" style={{ marginBottom: '16px' }}>
         <div
           style={{
             background: 'var(--card)',

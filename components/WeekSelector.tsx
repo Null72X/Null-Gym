@@ -19,7 +19,9 @@ export default function WeekSelector({ selectedWeek, onSelectWeek }: WeekSelecto
           className={`week-seg-btn ${selectedWeek === w ? 'active' : ''}`}
           onClick={() => onSelectWeek(w)}
         >
-          Week {w}
+          <span className="week-full">Week </span>
+          <span className="week-short">W</span>
+          {w}
         </button>
       ))}
     </div>

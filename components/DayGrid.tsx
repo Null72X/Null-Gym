@@ -30,6 +30,14 @@ export default function DayGrid({ days, selectedDayIndex, onSelectDay }: DayGrid
             ? (fallbackTitles[idx] || day.title)
             : day.title.replace(' #', ' ');
 
+          const shortTitle = day.isRestDay
+            ? 'Rest'
+            : displayTitle.startsWith('Push')
+            ? `Psh ${displayTitle.replace('Push ', '')}`
+            : displayTitle.startsWith('Pull')
+            ? `Pul ${displayTitle.replace('Pull ', '')}`
+            : displayTitle;
+
           return (
             <button
               key={day.id || idx}
@@ -45,7 +53,10 @@ export default function DayGrid({ days, selectedDayIndex, onSelectDay }: DayGrid
               }}
             >
               <span className="day-btn-name">{SHORT_NAMES[idx] || day.dayOfWeek.substring(0, 3)}</span>
-              <span className="day-btn-title">{displayTitle}</span>
+              <span className="day-btn-title">
+                <span className="day-title-full">{displayTitle}</span>
+                <span className="day-title-short">{shortTitle}</span>
+              </span>
             </button>
           );
       })}

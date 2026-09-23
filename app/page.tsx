@@ -315,67 +315,79 @@ export default function DashboardPage() {
       />
 
       {/* Day Summary Card */}
-      <section className="day-summary-card">
-        <div className="day-summary-info">
-          <h2>
-            {currentDayData.dayOfWeek} · {currentDayData.title}
-          </h2>
-          <p>{currentDayData.isRestDay ? 'Scheduled Rest Day' : currentDayData.focus || 'Training Session'}</p>
+      <section className="day-summary-card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+          <div className="day-summary-info">
+            <h2>
+              {currentDayData.dayOfWeek} · {currentDayData.title}
+            </h2>
+            <p>{currentDayData.isRestDay ? 'Scheduled Rest Day' : currentDayData.focus || 'Training Session'}</p>
+          </div>
 
-          {/* Dynamic Muscle Pillar Tags */}
-          {!currentDayData.isRestDay && (
-            <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '8px' }}>
-              {muscleBreakdown.length > 0 ? (
-                muscleBreakdown.map((item) => (
-                  <span
-                    key={item.pillar}
-                    className="clean-badge"
-                    style={{
-                      background: item.meta.bg,
-                      color: item.meta.color,
-                      borderColor: item.meta.border,
-                      fontSize: '0.66rem',
-                      fontWeight: 700,
-                      padding: '2px 7px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                    }}
-                  >
-                    <span>{item.meta.icon}</span>
-                    <span>{item.pillar}</span>
-                    <span style={{ opacity: 0.8, fontSize: '0.6rem' }}>
-                      ({item.exerciseCount})
-                    </span>
-                  </span>
-                ))
-              ) : (
+          <div className="progress-pill">
+            <div className="progress-num">
+              {doneSets}/{totalSets}
+            </div>
+            <div className="progress-label">
+              {totalSets > 0 ? `${workoutPercent}% Sets` : 'No Sets'}
+            </div>
+          </div>
+        </div>
+
+        {/* Dynamic Muscle Pillar Tags */}
+        {!currentDayData.isRestDay && (
+          <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '8px' }}>
+            {muscleBreakdown.length > 0 ? (
+              muscleBreakdown.map((item) => (
                 <span
+                  key={item.pillar}
                   className="clean-badge"
                   style={{
-                    background: 'rgba(239, 68, 68, 0.12)',
-                    color: '#fca5a5',
-                    borderColor: 'rgba(239, 68, 68, 0.25)',
+                    background: item.meta.bg,
+                    color: item.meta.color,
+                    borderColor: item.meta.border,
                     fontSize: '0.66rem',
                     fontWeight: 700,
                     padding: '2px 7px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
                   }}
                 >
-                  Target: {currentDayData.focus || 'Push / Pull / Legs'}
+                  <span>{item.meta.icon}</span>
+                  <span>{item.pillar}</span>
+                  <span style={{ opacity: 0.8, fontSize: '0.6rem' }}>
+                    ({item.exerciseCount})
+                  </span>
                 </span>
-              )}
-            </div>
-          )}
-        </div>
+              ))
+            ) : (
+              <span
+                className="clean-badge"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.12)',
+                  color: '#fca5a5',
+                  borderColor: 'rgba(239, 68, 68, 0.25)',
+                  fontSize: '0.66rem',
+                  fontWeight: 700,
+                  padding: '2px 7px',
+                }}
+              >
+                Target: {currentDayData.focus || 'Push / Pull / Legs'}
+              </span>
+            )}
+          </div>
+        )}
 
-        <div className="progress-pill">
-          <div className="progress-num">
-            {doneSets}/{totalSets}
+        {/* Dynamic Visual Progress Bar */}
+        {!currentDayData.isRestDay && totalSets > 0 && (
+          <div className="workout-progress-track">
+            <div
+              className={`workout-progress-fill ${workoutPercent === 100 ? 'complete' : ''}`}
+              style={{ width: `${workoutPercent}%` }}
+            />
           </div>
-          <div className="progress-label">
-            {totalSets > 0 ? `${workoutPercent}% Sets` : 'No Sets'}
-          </div>
-        </div>
+        )}
       </section>
 
       {/* Quick Search & Unit Bar */}
@@ -387,32 +399,34 @@ export default function DashboardPage() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
-        <button
-          type="button"
-          className="unit-toggle-btn"
-          onClick={toggleUnit}
-          title="Toggle default unit (KG / LBS)"
-        >
-          {unit.toUpperCase()}
-        </button>
-        <button
-          type="button"
-          className="unit-toggle-btn"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-          onClick={() => handleStartRest('90s')}
-          title="Start 90s Rest Timer"
-        >
-          <Clock size={13} color="var(--accent-red)" />
-          <span>Rest</span>
-        </button>
-        <button
-          type="button"
-          className="unit-toggle-btn"
-          onClick={handleResetDayCheckmarks}
-          title="Reset checkmarks for today"
-        >
-          <RotateCcw size={14} />
-        </button>
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
+          <button
+            type="button"
+            className="unit-toggle-btn"
+            onClick={toggleUnit}
+            title="Toggle default unit (KG / LBS)"
+          >
+            {unit.toUpperCase()}
+          </button>
+          <button
+            type="button"
+            className="unit-toggle-btn"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+            onClick={() => handleStartRest('90s')}
+            title="Start 90s Rest Timer"
+          >
+            <Clock size={13} color="var(--accent-red)" />
+            <span>Rest</span>
+          </button>
+          <button
+            type="button"
+            className="unit-toggle-btn"
+            onClick={handleResetDayCheckmarks}
+            title="Reset checkmarks for today"
+          >
+            <RotateCcw size={14} />
+          </button>
+        </div>
       </div>
 
       {/* Rest Day Message or Exercise List */}

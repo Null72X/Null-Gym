@@ -81,6 +81,45 @@ export default function Navbar() {
           <span className="app-title">Null Gym</span>
         </Link>
 
+        {/* Desktop Header Navigation (Visible on tablet & desktop >= 768px) */}
+        <nav className="desktop-nav" aria-label="Main Navigation">
+          <Link
+            href="/"
+            className={`desktop-nav-link ${pathname === '/' ? 'active' : ''}`}
+          >
+            <Dumbbell size={15} />
+            <span>Workout</span>
+          </Link>
+          <Link
+            href="/planner"
+            className={`desktop-nav-link ${pathname === '/planner' ? 'active' : ''}`}
+          >
+            <Calendar size={15} />
+            <span>Planner</span>
+          </Link>
+          <Link
+            href="/library"
+            className={`desktop-nav-link ${pathname === '/library' ? 'active' : ''}`}
+          >
+            <BookOpen size={15} />
+            <span>Library</span>
+          </Link>
+          <Link
+            href="/progress"
+            className={`desktop-nav-link ${pathname === '/progress' ? 'active' : ''}`}
+          >
+            <TrendingUp size={15} />
+            <span>Progress</span>
+          </Link>
+          <Link
+            href="/settings"
+            className={`desktop-nav-link ${pathname === '/settings' ? 'active' : ''}`}
+          >
+            <Settings size={15} />
+            <span>Settings</span>
+          </Link>
+        </nav>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {saveStatus === 'saving' ? (
             <span className="cloud-status-pill syncing">

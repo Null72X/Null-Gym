@@ -262,286 +262,339 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      {/* 1. Mobile App Installation Card */}
-      <div className="clean-card" style={{ marginBottom: '14px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <h3
-            style={{
-              fontSize: '0.88rem',
-              fontWeight: 800,
-              color: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <Smartphone size={16} color="var(--accent-red)" />
-            <span>Install Null Gym App</span>
-          </h3>
-          <span
-            className="cloud-status-pill synced"
-            style={{ fontSize: '0.68rem', padding: '3px 8px' }}
-          >
-            {isInstalled ? '✓ App Installed' : '📱 PWA Ready'}
-          </span>
+      {/* Settings Grid (Cards 1-6) */}
+      <div className="responsive-grid-2" style={{ marginBottom: '14px' }}>
+        {/* 1. Mobile App Installation Card */}
+        <div className="clean-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <h3
+              style={{
+                fontSize: '0.88rem',
+                fontWeight: 800,
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <Smartphone size={16} color="var(--accent-red)" />
+              <span>Install Null Gym App</span>
+            </h3>
+            <span
+              className="cloud-status-pill synced"
+              style={{ fontSize: '0.68rem', padding: '3px 8px' }}
+            >
+              {isInstalled ? '✓ App Installed' : '📱 PWA Ready'}
+            </span>
+          </div>
+
+          <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
+            Install Null Gym on your phone or desktop for an edge-to-edge native app experience with zero browser bars, instant launch from your home screen, and full offline support.
+          </p>
+
+          {isIOS && !isInstalled ? (
+            <div
+              style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                padding: '10px 12px',
+                marginBottom: '12px',
+                fontSize: '0.74rem',
+                color: '#e2e8f0',
+                lineHeight: 1.5,
+              }}
+            >
+              <div style={{ fontWeight: 800, color: '#fff', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Share2 size={13} color="var(--accent-red)" />
+                <span>How to Install on iPhone / iPad:</span>
+              </div>
+              1. Tap the <strong>Share</strong> button in Safari toolbar (square with arrow up ⎋)<br />
+              2. Scroll down and tap <strong>&ldquo;Add to Home Screen&rdquo;</strong> (⊞)<br />
+              3. Tap <strong>&ldquo;Add&rdquo;</strong> in the top right corner.
+            </div>
+          ) : null}
+
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn-clean btn-primary btn-sm"
+              onClick={handleInstallClick}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Smartphone size={13} />
+              <span>{isInstalled ? 'App Is Installed ✓' : 'Add to Home Screen / Install'}</span>
+            </button>
+          </div>
         </div>
 
-        <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
-          Install Null Gym on your phone or desktop for an edge-to-edge native app experience with zero browser bars, instant launch from your home screen, and full offline support.
-        </p>
+        {/* 2. Intelligent 6-Week Progression Engine */}
+        <div className="clean-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <h3
+              style={{
+                fontSize: '0.88rem',
+                fontWeight: 800,
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <Zap size={16} color="var(--accent-amber)" />
+              <span>Intelligent 6-Week Progression Engine</span>
+            </h3>
+            <span
+              className="cloud-status-pill synced"
+              style={{
+                fontSize: '0.68rem',
+                padding: '3px 8px',
+                background: progressionConfig.autoProgressionEnabled
+                  ? 'rgba(34, 197, 94, 0.15)'
+                  : 'rgba(255, 255, 255, 0.05)',
+                color: progressionConfig.autoProgressionEnabled ? '#86efac' : 'var(--text-muted)',
+                borderColor: progressionConfig.autoProgressionEnabled
+                  ? 'rgba(34, 197, 94, 0.3)'
+                  : 'var(--border)',
+              }}
+            >
+              {progressionConfig.autoProgressionEnabled ? '⚡ Auto-Scale Active' : 'Manual Mode'}
+            </span>
+          </div>
 
-        {isIOS && !isInstalled ? (
+          <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
+            When active, setting up <strong>Week 1</strong> automatically programs <strong>Weeks 2, 3, 4, 5, and 6</strong> with calculated progressive overload (increments on working sets, +1 rep on bodyweight).
+          </p>
+
+          {/* Auto Progression Toggle */}
           <div
             style={{
-              background: 'rgba(255, 255, 255, 0.03)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'rgba(255, 255, 255, 0.02)',
               border: '1px solid var(--border)',
               borderRadius: '8px',
               padding: '10px 12px',
-              marginBottom: '12px',
-              fontSize: '0.74rem',
-              color: '#e2e8f0',
-              lineHeight: 1.5,
+              marginBottom: '10px',
             }}
           >
-            <div style={{ fontWeight: 800, color: '#fff', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Share2 size={13} color="var(--accent-red)" />
-              <span>How to Install on iPhone / iPad:</span>
+            <div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#fff' }}>
+                Auto-Scale Weeks 2 through 6 from Week 1
+              </div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                Automatically calculates weekly overload across your full 6-week cycle
+              </div>
             </div>
-            1. Tap the <strong>Share</strong> button in Safari toolbar (square with arrow up ⎋)<br />
-            2. Scroll down and tap <strong>&ldquo;Add to Home Screen&rdquo;</strong> (⊞)<br />
-            3. Tap <strong>&ldquo;Add&rdquo;</strong> in the top right corner.
+            <button
+              type="button"
+              className={`btn-clean btn-sm ${progressionConfig.autoProgressionEnabled ? 'btn-primary' : ''}`}
+              onClick={() =>
+                handleUpdateProgression({
+                  autoProgressionEnabled: !progressionConfig.autoProgressionEnabled,
+                })
+              }
+            >
+              {progressionConfig.autoProgressionEnabled ? 'Enabled ✓' : 'Disabled'}
+            </button>
           </div>
-        ) : null}
 
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            className="btn-clean btn-primary btn-sm"
-            onClick={handleInstallClick}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Smartphone size={13} />
-            <span>{isInstalled ? 'App Is Installed ✓' : 'Add to Home Screen / Install'}</span>
-          </button>
+          {/* Weekly Overload Step Selection */}
+          <div style={{ marginBottom: '12px' }}>
+            <label className="clean-label" style={{ marginBottom: '6px' }}>
+              Weekly Overload Increment (per lift)
+            </label>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {(unit === 'kg' ? [1.25, 2.5, 5] : [2.5, 5, 10]).map((val) => {
+                const isSelected =
+                  unit === 'kg'
+                    ? progressionConfig.weeklyIncrementKg === val
+                    : progressionConfig.weeklyIncrementLbs === val;
+                return (
+                  <button
+                    key={val}
+                    type="button"
+                    className={`btn-clean btn-sm ${isSelected ? 'btn-primary' : ''}`}
+                    onClick={() =>
+                      handleUpdateProgression(
+                        unit === 'kg'
+                          ? { weeklyIncrementKg: val }
+                          : { weeklyIncrementLbs: val }
+                      )
+                    }
+                  >
+                    +{val} {unit.toUpperCase()} {val === (unit === 'kg' ? 2.5 : 5) ? '(Recommended)' : ''}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Action Button: Trigger Auto-Scale Now */}
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn-clean btn-primary btn-sm"
+              onClick={handleTriggerAutoScale}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Sparkles size={13} />
+              <span>Auto-Setup Weeks 2 to 6 Now ⚡</span>
+            </button>
+
+            <Link
+              href="/planner"
+              className="btn-clean btn-sm"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Calendar size={13} />
+              <span>Open Planner ↗</span>
+            </Link>
+          </div>
         </div>
-      </div>
 
-      {/* 2. Intelligent 6-Week Progression Engine */}
-      <div className="clean-card" style={{ marginBottom: '14px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <h3
-            style={{
-              fontSize: '0.88rem',
-              fontWeight: 800,
-              color: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <Zap size={16} color="var(--accent-amber)" />
-            <span>Intelligent 6-Week Progression Engine</span>
+        {/* 3. Weight Unit Preference */}
+        <div className="clean-card">
+          <h3 style={{ fontSize: '0.88rem', fontWeight: 800, color: '#fff', marginBottom: '6px' }}>
+            Weight Unit Preference
           </h3>
-          <span
-            className="cloud-status-pill synced"
-            style={{
-              fontSize: '0.68rem',
-              padding: '3px 8px',
-              background: progressionConfig.autoProgressionEnabled
-                ? 'rgba(34, 197, 94, 0.15)'
-                : 'rgba(255, 255, 255, 0.05)',
-              color: progressionConfig.autoProgressionEnabled ? '#86efac' : 'var(--text-muted)',
-              borderColor: progressionConfig.autoProgressionEnabled
-                ? 'rgba(34, 197, 94, 0.3)'
-                : 'var(--border)',
-            }}
-          >
-            {progressionConfig.autoProgressionEnabled ? '⚡ Auto-Scale Active' : 'Manual Mode'}
-          </span>
-        </div>
+          <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '10px' }}>
+            Primary unit for load tracking and stepper increments across all 6 weeks.
+          </p>
 
-        <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
-          When active, setting up <strong>Week 1</strong> automatically programs <strong>Weeks 2, 3, 4, 5, and 6</strong> with calculated progressive overload (increments on working sets, +1 rep on bodyweight).
-        </p>
-
-        {/* Auto Progression Toggle */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid var(--border)',
-            borderRadius: '8px',
-            padding: '10px 12px',
-            marginBottom: '10px',
-          }}
-        >
-          <div>
-            <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#fff' }}>
-              Auto-Scale Weeks 2 through 6 from Week 1
-            </div>
-            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-              Automatically calculates weekly overload across your full 6-week cycle
-            </div>
-          </div>
-          <button
-            type="button"
-            className={`btn-clean btn-sm ${progressionConfig.autoProgressionEnabled ? 'btn-primary' : ''}`}
-            onClick={() =>
-              handleUpdateProgression({
-                autoProgressionEnabled: !progressionConfig.autoProgressionEnabled,
-              })
-            }
-          >
-            {progressionConfig.autoProgressionEnabled ? 'Enabled ✓' : 'Disabled'}
-          </button>
-        </div>
-
-        {/* Weekly Overload Step Selection */}
-        <div style={{ marginBottom: '12px' }}>
-          <label className="clean-label" style={{ marginBottom: '6px' }}>
-            Weekly Overload Increment (per lift)
-          </label>
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            {(unit === 'kg' ? [1.25, 2.5, 5] : [2.5, 5, 10]).map((val) => {
-              const isSelected =
-                unit === 'kg'
-                  ? progressionConfig.weeklyIncrementKg === val
-                  : progressionConfig.weeklyIncrementLbs === val;
-              return (
-                <button
-                  key={val}
-                  type="button"
-                  className={`btn-clean btn-sm ${isSelected ? 'btn-primary' : ''}`}
-                  onClick={() =>
-                    handleUpdateProgression(
-                      unit === 'kg'
-                        ? { weeklyIncrementKg: val }
-                        : { weeklyIncrementLbs: val }
-                    )
-                  }
-                >
-                  +{val} {unit.toUpperCase()} {val === (unit === 'kg' ? 2.5 : 5) ? '(Recommended)' : ''}
-                </button>
-              );
-            })}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              className={`btn-clean ${unit === 'kg' ? 'btn-primary' : ''}`}
+              onClick={() => handleUnitChange('kg')}
+            >
+              KG (Kilograms)
+            </button>
+            <button
+              type="button"
+              className={`btn-clean ${unit === 'lbs' ? 'btn-primary' : ''}`}
+              onClick={() => handleUnitChange('lbs')}
+            >
+              LBS (Pounds)
+            </button>
           </div>
         </div>
 
-        {/* Action Button: Trigger Auto-Scale Now */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            className="btn-clean btn-primary btn-sm"
-            onClick={handleTriggerAutoScale}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Sparkles size={13} />
-            <span>Auto-Setup Weeks 2 to 6 Now ⚡</span>
-          </button>
+        {/* 4. Multi-Device Cloud Sync */}
+        <div className="clean-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <h3
+              style={{
+                fontSize: '0.88rem',
+                fontWeight: 800,
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <Cloud size={16} color="var(--accent-green)" />
+              <span>Multi-Device Cloud Sync</span>
+            </h3>
+            <span
+              className={`cloud-status-pill ${cloudInfo.status === 'offline' ? 'offline' : 'synced'}`}
+              style={{ fontSize: '0.68rem', padding: '3px 8px' }}
+            >
+              {cloudInfo.status === 'offline' ? '📶 Offline' : '🟢 100% Automatic'}
+            </span>
+          </div>
 
-          <Link
-            href="/planner"
-            className="btn-clean btn-sm"
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Calendar size={13} />
-            <span>Open Planner ↗</span>
-          </Link>
-        </div>
-      </div>
+          <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
+            Your workouts, 6-week program, history, and PRs automatically persist and sync across your phone, tablet, and PC in real time.
+          </p>
 
-      {/* 3. Weight Unit Preference */}
-      <div className="clean-card" style={{ marginBottom: '14px' }}>
-        <h3 style={{ fontSize: '0.88rem', fontWeight: 800, color: '#fff', marginBottom: '6px' }}>
-          Weight Unit Preference
-        </h3>
-        <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '10px' }}>
-          Primary unit for load tracking and stepper increments across all 6 weeks.
-        </p>
-
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            type="button"
-            className={`btn-clean ${unit === 'kg' ? 'btn-primary' : ''}`}
-            onClick={() => handleUnitChange('kg')}
-          >
-            KG (Kilograms)
-          </button>
-          <button
-            type="button"
-            className={`btn-clean ${unit === 'lbs' ? 'btn-primary' : ''}`}
-            onClick={() => handleUnitChange('lbs')}
-          >
-            LBS (Pounds)
-          </button>
-        </div>
-      </div>
-
-      {/* 4. Multi-Device Cloud Sync */}
-      <div className="clean-card" style={{ marginBottom: '14px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <h3
-            style={{
-              fontSize: '0.88rem',
-              fontWeight: 800,
-              color: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <Cloud size={16} color="var(--accent-green)" />
-            <span>Multi-Device Cloud Sync</span>
-          </h3>
-          <span
-            className={`cloud-status-pill ${cloudInfo.status === 'offline' ? 'offline' : 'synced'}`}
-            style={{ fontSize: '0.68rem', padding: '3px 8px' }}
-          >
-            {cloudInfo.status === 'offline' ? '📶 Offline' : '🟢 100% Automatic'}
-          </span>
-        </div>
-
-        <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
-          Your workouts, 6-week program, history, and PRs automatically persist and sync across your phone, tablet, and PC in real time.
-        </p>
-
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            background: 'rgba(34, 197, 94, 0.08)',
-            border: '1px solid rgba(34, 197, 94, 0.25)',
-            borderRadius: '8px',
-            padding: '10px 14px',
-          }}
-        >
           <div
             style={{
-              width: '9px',
-              height: '9px',
-              borderRadius: '50%',
-              backgroundColor: '#22c55e',
-              boxShadow: '0 0 8px #22c55e',
-              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              background: 'rgba(34, 197, 94, 0.08)',
+              border: '1px solid rgba(34, 197, 94, 0.25)',
+              borderRadius: '8px',
+              padding: '10px 14px',
             }}
-          />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#4ade80' }}>
-              Always-On Continuous Cloud Sync Active
-            </span>
-            <span style={{ fontSize: '0.70rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-              Zero buttons needed. Every set check, weight modification, and program edit syncs across all your devices automatically.
-            </span>
+          >
+            <div
+              style={{
+                width: '9px',
+                height: '9px',
+                borderRadius: '50%',
+                backgroundColor: '#22c55e',
+                boxShadow: '0 0 8px #22c55e',
+                flexShrink: 0,
+              }}
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#4ade80' }}>
+                Always-On Continuous Cloud Sync Active
+              </span>
+              <span style={{ fontSize: '0.70rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                Zero buttons needed. Every set check, weight modification, and program edit syncs across all your devices automatically.
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* 5. Master Exercise Catalog */}
-      <div className="clean-card" style={{ marginBottom: '14px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+        {/* 5. Master Exercise Catalog */}
+        <div className="clean-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <h3
+              style={{
+                fontSize: '0.88rem',
+                fontWeight: 800,
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <BookOpen size={15} color="var(--accent-red)" />
+              <span>Master Exercise Library ({libraryCount} Exercises)</span>
+            </h3>
+            <Link
+              href="/library"
+              className="btn-clean btn-sm"
+              style={{ fontSize: '0.7rem', padding: '3px 8px' }}
+            >
+              Browse Library ↗
+            </Link>
+          </div>
+
+          <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
+            Curated library across the 7 Master Muscle Pillars and functional categories, with instant YouTube tutorials for each exercise.
+          </p>
+
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn-clean btn-primary btn-sm"
+              onClick={handleRestoreCatalog}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <RefreshCw size={13} />
+              <span>Restore {ALL_CATALOG_EXERCISES.length} Master Catalog</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn-clean btn-sm"
+              onClick={handleClearLibrary}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Trash2 size={13} />
+              <span>Clear Library</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 6. Personal Workout Backup & Restore */}
+        <div className="clean-card">
           <h3
             style={{
               fontSize: '0.88rem',
@@ -550,95 +603,45 @@ export default function SettingsPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
+              marginBottom: '8px',
             }}
           >
-            <BookOpen size={15} color="var(--accent-red)" />
-            <span>Master Exercise Library ({libraryCount} Exercises)</span>
+            <Download size={15} color="var(--accent-red)" />
+            <span>Personal Workout Backup &amp; Transfer</span>
           </h3>
-          <Link
-            href="/library"
-            className="btn-clean btn-sm"
-            style={{ fontSize: '0.7rem', padding: '3px 8px' }}
-          >
-            Browse Library ↗
-          </Link>
-        </div>
+          <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
+            Download a complete backup file of your 6-week program, completed workouts, and PRs to transfer to another device.
+          </p>
 
-        <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-          Curated library across the 7 Master Muscle Pillars and functional categories, with instant YouTube tutorials for each exercise.
-        </p>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn-clean btn-primary btn-sm"
+              onClick={handleExport}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Download size={13} />
+              <span>Download Backup File</span>
+            </button>
 
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            className="btn-clean btn-primary btn-sm"
-            onClick={handleRestoreCatalog}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <RefreshCw size={13} />
-            <span>Restore {ALL_CATALOG_EXERCISES.length} Master Catalog</span>
-          </button>
+            <button
+              type="button"
+              className="btn-clean btn-sm"
+              onClick={() => fileInputRef.current?.click()}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Upload size={13} />
+              <span>Restore from File</span>
+            </button>
 
-          <button
-            type="button"
-            className="btn-clean btn-sm"
-            onClick={handleClearLibrary}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Trash2 size={13} />
-            <span>Clear Library</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 6. Personal Workout Backup & Restore */}
-      <div className="clean-card" style={{ marginBottom: '14px' }}>
-        <h3
-          style={{
-            fontSize: '0.88rem',
-            fontWeight: 800,
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            marginBottom: '8px',
-          }}
-        >
-          <Download size={15} color="var(--accent-red)" />
-          <span>Personal Workout Backup &amp; Transfer</span>
-        </h3>
-        <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-          Download a complete backup file of your 6-week program, completed workouts, and PRs to transfer to another device.
-        </p>
-
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            className="btn-clean btn-primary btn-sm"
-            onClick={handleExport}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Download size={13} />
-            <span>Download Backup File</span>
-          </button>
-
-          <button
-            type="button"
-            className="btn-clean btn-sm"
-            onClick={() => fileInputRef.current?.click()}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Upload size={13} />
-            <span>Restore from File</span>
-          </button>
-
-          <input
-            type="file"
-            ref={fileInputRef}
-            style={{ display: 'none' }}
-            accept=".json"
-            onChange={handleFileChange}
-          />
+            <input
+              type="file"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              accept=".json"
+              onChange={handleFileChange}
+            />
+          </div>
         </div>
       </div>
 

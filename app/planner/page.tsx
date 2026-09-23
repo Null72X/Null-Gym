@@ -327,10 +327,11 @@ export default function PlannerPage() {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            gap: '8px',
+            gap: '10px',
+            flexWrap: 'wrap',
           }}
         >
-          <div>
+          <div style={{ flex: 1, minWidth: '200px' }}>
             <div
               style={{
                 fontSize: '0.8rem',
@@ -352,7 +353,7 @@ export default function PlannerPage() {
             type="button"
             className="btn-clean btn-primary btn-sm"
             onClick={handleAutoScaleWeeks}
-            style={{ fontSize: '0.72rem', padding: '6px 10px', whiteSpace: 'nowrap' }}
+            style={{ fontSize: '0.72rem', padding: '6px 12px', whiteSpace: 'nowrap' }}
           >
             <Sparkles size={12} />
             <span>Auto-Setup Weeks 2–6 ⚡</span>
@@ -496,19 +497,20 @@ export default function PlannerPage() {
         <div
           style={{
             display: 'flex',
-            gap: '6px',
+            gap: '8px',
             marginTop: '10px',
             paddingTop: '8px',
             borderTop: '1px solid var(--border)',
             justifyContent: 'space-between',
             alignItems: 'center',
+            flexWrap: 'wrap',
           }}
         >
           <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
             {currentDayData.exercises.length} Exercises Planned
           </span>
 
-          <div style={{ display: 'flex', gap: '6px' }}>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {currentDayData.exercises.length > 0 && (
               <button
                 type="button"

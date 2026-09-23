@@ -907,8 +907,8 @@ export default function LibraryPage() {
         );
       })()}
 
-      {/* Exercise Cards List (Identical to New folder and Tracker card styles) */}
-      <div className="ex-card-list">
+      {/* Exercise Cards List (Responsive 1-col on mobile, 2-col on desktop) */}
+      <div className="responsive-grid-2">
         {filtered.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-title">No exercises found</div>
