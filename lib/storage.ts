@@ -180,12 +180,22 @@ export function getSavedLibrary(): ExerciseLibraryItem[] {
       return DEFAULT_LIBRARY;
     }
     const saved = JSON.parse(raw);
-    // Auto-upgrade if cached library is old (less than 1000 items or missing exdb IDs)
-    const isOldLibrary = Array.isArray(saved) && (saved.length < 1000 || !saved.some((e: any) => e.id?.startsWith('exdb_')));
-    if (isOldLibrary) {
-      cachedLibrary = DEFAULT_LIBRARY;
-      localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(DEFAULT_LIBRARY));
-      return DEFAULT_LIBRARY;
+    // Auto-upgrade if cached library is old or contains outdated naming (e.g. '3 4 Sit Up', '45 Side Bend', 'Rollerout')
+    const needsUpgrade =
+      !Array.isArray(saved) ||
+      saved.length < 1000 ||
+      !saved.some((e: any) => e.id?.startsWith('exdb_')) ||
+      saved.some((e: any) => e.name === '3 4 Sit Up' || e.name === '45 Side Bend' || e.name === 'Arms Overhead Full Sit Up Male' || (typeof e.name === 'string' && e.name.includes('Rollerout')));
+
+    if (needsUpgrade) {
+      // Retain any user-created custom exercises
+      const customExercises = Array.isArray(saved)
+        ? saved.filter((e: any) => e && e.id && !e.id.startsWith('exdb_'))
+        : [];
+      const upgraded = [...DEFAULT_LIBRARY, ...customExercises];
+      cachedLibrary = upgraded;
+      localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(upgraded));
+      return upgraded;
     }
     if (Array.isArray(saved) && saved.length > 0) {
       cachedLibrary = saved;

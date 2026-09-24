@@ -46,6 +46,9 @@ export const FITNESS_SYNONYMS: Record<string, string[]> = {
   pullups: ['pull-ups', 'pull ups'],
   pushup: ['push-up', 'push up'],
   pushups: ['push-ups', 'push ups'],
+  situp: ['sit-up', 'sit up'],
+  situps: ['sit-ups', 'sit ups'],
+  vup: ['v-up', 'v up'],
   row: ['rows', 'rowing'],
   rows: ['row'],
 
