@@ -26,12 +26,12 @@ import { supabase, isSupabaseConfigured } from './supabaseClient';
 const STORAGE_KEYS = {
   WEEKS: 'gym_weeks_v6',
   HISTORY: 'gym_history_v6',
-  LIBRARY: 'gym_library_v6',
+  LIBRARY: 'gym_library_v7_exercisedb',
   ACTIVE: 'gym_active_v6',
   PROGRESSION: 'gym_progression_v6',
 };
 
-// 710+ Master exercise library with YouTube search links and intelligent tracking types
+// 1,320+ ExerciseDB Master exercise library with animated demonstrations & coaching cues
 export const DEFAULT_LIBRARY: ExerciseLibraryItem[] = ALL_CATALOG_EXERCISES;
 
 import { createBlankWeeks, ensureSixWeeks } from './planDefaults';
@@ -180,6 +180,13 @@ export function getSavedLibrary(): ExerciseLibraryItem[] {
       return DEFAULT_LIBRARY;
     }
     const saved = JSON.parse(raw);
+    // Auto-upgrade if cached library is old (less than 1000 items or missing exdb IDs)
+    const isOldLibrary = Array.isArray(saved) && (saved.length < 1000 || !saved.some((e: any) => e.id?.startsWith('exdb_')));
+    if (isOldLibrary) {
+      cachedLibrary = DEFAULT_LIBRARY;
+      localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(DEFAULT_LIBRARY));
+      return DEFAULT_LIBRARY;
+    }
     if (Array.isArray(saved) && saved.length > 0) {
       cachedLibrary = saved;
       return saved;

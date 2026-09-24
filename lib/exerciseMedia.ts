@@ -24,8 +24,18 @@ function toSlug(name: string): string {
  * Resolves media demonstration (GIF, thumbnail, coaching instructions, images)
  * for any exercise by ID or name.
  */
-export function getExerciseMedia(exercise: { id?: string; name: string } | null | undefined): ExerciseMediaData | null {
+export function getExerciseMedia(exercise: { id?: string; name: string; gifUrl?: string; thumbUrl?: string; instructions?: string[]; images?: string[] } | null | undefined): ExerciseMediaData | null {
   if (!exercise) return null;
+
+  // 0. If exercise already contains media fields directly
+  if (exercise.gifUrl || exercise.thumbUrl || (exercise.instructions && exercise.instructions.length > 0)) {
+    return {
+      gifUrl: exercise.gifUrl,
+      thumbUrl: exercise.thumbUrl,
+      instructions: exercise.instructions,
+      images: exercise.images,
+    };
+  }
 
   // 1. Direct ID lookup
   if (exercise.id && mediaMap[exercise.id]) {

@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Navbar from '../components/Navbar';
+import ServiceWorkerRegistrar from '../components/ServiceWorkerRegistrar';
 
 export const metadata: Metadata = {
   title: 'Null Gym · 6-Week Workout Planner & Tracker',
-  description: 'Private 6-week workout planner, progressive overload tracker, and 710+ exercise library across 7 master muscle pillars.',
+  description: 'Private 6-week workout planner, progressive overload tracker, and 1,320+ ExerciseDB exercise library across 7 master muscle pillars with offline support.',
   manifest: '/manifest.json',
   icons: {
     icon: '/icons/icon-192.svg',
@@ -53,6 +54,7 @@ export default function RootLayout({
           <Navbar />
           <main>{children}</main>
         </div>
+        <ServiceWorkerRegistrar />
       </body>
     </html>
   );

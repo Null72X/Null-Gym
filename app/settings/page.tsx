@@ -40,7 +40,18 @@ import {
   PlusSquare,
   Sparkles,
   TrendingUp,
+  Wifi,
+  WifiOff,
+  HardDrive,
 } from 'lucide-react';
+import {
+  isAppOffline,
+  isForcedOffline,
+  setForcedOffline,
+  onOfflineChange,
+  clearOfflineCache,
+  getOfflineCacheStats,
+} from '../../lib/offlineManager';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -74,12 +85,27 @@ export default function SettingsPage() {
   const [isInstalled, setIsInstalled] = useState<boolean>(false);
   const [isIOS, setIsIOS] = useState<boolean>(false);
 
+  // Offline mode state & stats
+  const [isOffline, setIsOffline] = useState<boolean>(() => isAppOffline());
+  const [isForced, setIsForced] = useState<boolean>(() => isForcedOffline());
+  const [cacheStats, setCacheStats] = useState<{ cachedMedia: number; cacheSizeMb: string }>({
+    cachedMedia: 0,
+    cacheSizeMb: '0.0',
+  });
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const unsubCloud = onCloudStatus((info) => {
       setCloudInfo(info);
     });
+
+    const unsubOffline = onOfflineChange((offline) => {
+      setIsOffline(offline);
+      setIsForced(isForcedOffline());
+    });
+
+    getOfflineCacheStats().then(setCacheStats);
 
     // PWA Install Prompt detection
     const handleBeforeInstall = (e: any) => {
@@ -105,6 +131,7 @@ export default function SettingsPage() {
 
     return () => {
       unsubCloud();
+      unsubOffline();
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
     };
   }, []);
@@ -112,6 +139,27 @@ export default function SettingsPage() {
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 2800);
+  };
+
+  const handleToggleForcedOffline = () => {
+    const next = !isForced;
+    setForcedOffline(next);
+    setIsForced(next);
+    setIsOffline(isAppOffline());
+    triggerToast(next ? '📶 Forced Offline Mode Activated (Zero Network)' : '🟢 Online Mode Restored');
+  };
+
+  const handleClearCache = async () => {
+    await clearOfflineCache();
+    const stats = await getOfflineCacheStats();
+    setCacheStats(stats);
+    triggerToast('Offline media cache cleared');
+  };
+
+  const handleRestoreLibrary = () => {
+    const restored = restoreDefaultLibrary();
+    setLibraryCount(restored.length);
+    triggerToast(`Restored all ${restored.length} ExerciseDB exercises! 🏋️`);
   };
 
   // Handle PWA Install
@@ -259,8 +307,117 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      {/* Settings Grid (Cards 1-6) */}
+      {/* Settings Grid */}
       <div className="responsive-grid-2" style={{ marginBottom: '14px' }}>
+        {/* Offline Mode & Local Storage Engine Card */}
+        <div className="clean-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <h3
+              style={{
+                fontSize: '0.88rem',
+                fontWeight: 800,
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <WifiOff size={16} color={isOffline ? '#fbbf24' : 'var(--accent-red)'} />
+              <span>Offline Mode &amp; Local Storage</span>
+            </h3>
+            <span
+              className={`cloud-status-pill ${isOffline ? 'offline' : 'synced'}`}
+              style={{ fontSize: '0.68rem', padding: '3px 8px' }}
+            >
+              {isOffline ? '📶 Offline Active' : '🟢 Online'}
+            </span>
+          </div>
+
+          <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
+            Null Gym stores all <strong>1,320+ ExerciseDB exercises</strong>, plans, sets, and timers locally on your device. The app operates 100% offline in gym basements or airplane mode.
+          </p>
+
+          {/* Force Offline Mode Toggle */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
+              padding: '10px 12px',
+              marginBottom: '10px',
+            }}
+          >
+            <div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#fff' }}>
+                Force Offline (Gym / Airplane Mode)
+              </div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                Prevents network calls, saves battery, and ensures 100% local operation
+              </div>
+            </div>
+            <button
+              type="button"
+              className={`btn-clean btn-sm ${isForced ? 'btn-primary' : ''}`}
+              onClick={handleToggleForcedOffline}
+            >
+              {isForced ? 'Active (Offline) ✓' : 'Auto (Online)'}
+            </button>
+          </div>
+
+          {/* Offline Cache Stats & Status */}
+          <div
+            style={{
+              background: 'rgba(255, 255, 255, 0.015)',
+              border: '1px solid rgba(255, 255, 255, 0.06)',
+              borderRadius: '8px',
+              padding: '8px 12px',
+              marginBottom: '12px',
+              fontSize: '0.72rem',
+              color: '#cbd5e1',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Exercise Database:</span>
+              <strong style={{ color: '#fff' }}>{libraryCount} ExerciseDB Items (Local)</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Cached Media Assets:</span>
+              <span style={{ color: 'var(--text-dim)' }}>{cacheStats.cachedMedia} files ({cacheStats.cacheSizeMb} MB)</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Service Worker Engine:</span>
+              <span style={{ color: '#86efac' }}>Active (App Shell &amp; Asset Cache)</span>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn-clean btn-sm"
+              onClick={handleClearCache}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Trash2 size={13} />
+              <span>Clear Offline Media Cache</span>
+            </button>
+            <button
+              type="button"
+              className="btn-clean btn-sm"
+              onClick={handleRestoreLibrary}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-red)' }}
+            >
+              <RefreshCw size={13} />
+              <span>Reload ExerciseDB Library</span>
+            </button>
+          </div>
+        </div>
+
         {/* 1. Mobile App Installation Card */}
         <div className="clean-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>

@@ -6,10 +6,12 @@ import { usePathname } from 'next/navigation';
 import { Dumbbell, Calendar, BookOpen, TrendingUp, Settings, Cloud, Check, AlertCircle, RefreshCw } from 'lucide-react';
 import { initBackgroundCloudSync } from '../lib/storage';
 import { onCloudStatus, getCloudSyncInfo, CloudSyncInfo } from '../lib/supabaseSync';
+import { isAppOffline, onOfflineChange } from '../lib/offlineManager';
 
 export default function Navbar() {
   const pathname = usePathname();
   const [cloudInfo, setCloudInfo] = useState<CloudSyncInfo>(() => getCloudSyncInfo());
+  const [isOffline, setIsOffline] = useState<boolean>(() => isAppOffline());
 
   useEffect(() => {
     // Start background sync on first load
@@ -19,12 +21,29 @@ export default function Navbar() {
       setCloudInfo(info);
     });
 
+    const unsubOffline = onOfflineChange((offline) => {
+      setIsOffline(offline);
+    });
+
     return () => {
       unsubCloud();
+      unsubOffline();
     };
   }, []);
 
   const renderCloudBadge = () => {
+    if (isOffline || cloudInfo.status === 'offline') {
+      return (
+        <Link
+          href="/settings"
+          className="cloud-status-pill offline"
+          title="Offline mode active: all changes saved locally"
+        >
+          <span>📶</span>
+          <span>Offline</span>
+        </Link>
+      );
+    }
     switch (cloudInfo.status) {
       case 'syncing':
         return (
@@ -35,17 +54,6 @@ export default function Navbar() {
           >
             <span>🟡</span>
             <span>Syncing</span>
-          </Link>
-        );
-      case 'offline':
-        return (
-          <Link
-            href="/settings"
-            className="cloud-status-pill offline"
-            title="Offline mode: all changes saved locally"
-          >
-            <span>📶</span>
-            <span>Offline</span>
           </Link>
         );
       case 'synced':

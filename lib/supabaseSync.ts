@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { WeekPlan, WorkoutHistoryEntry, WeightUnit } from '../types/workout';
 import { ensureSixWeeks } from './planDefaults';
+import { isAppOffline } from './offlineManager';
 
 export type CloudSyncStatus = 'synced' | 'syncing' | 'offline';
 
@@ -68,7 +69,7 @@ export function debouncedPushPlanToCloud(weeks: WeekPlan[], delayMs = 400) {
 }
 
 export async function pushPlanToCloud(weeks: WeekPlan[]): Promise<boolean> {
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+  if (isAppOffline()) {
     notifyStatus('offline', 'Offline (Saved locally)');
     return true;
   }
@@ -115,7 +116,8 @@ export async function pushPlanToCloud(weeks: WeekPlan[]): Promise<boolean> {
 // PULL PLAN (Pulls from Server DB or Supabase automatically)
 // -------------------------------------------------------------
 export async function pullPlanFromCloud(): Promise<WeekPlan[] | null> {
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+  if (isAppOffline()) {
+    notifyStatus('offline', 'Offline (Saved locally)');
     return null;
   }
 
@@ -158,7 +160,7 @@ export async function pullPlanFromCloud(): Promise<WeekPlan[] | null> {
 // HISTORY SYNC (Server DB + Silent Supabase Mirror)
 // -------------------------------------------------------------
 export async function pushHistoryToCloud(history: WorkoutHistoryEntry[]): Promise<boolean> {
-  if (typeof navigator !== 'undefined' && !navigator.onLine) return true;
+  if (isAppOffline()) return true;
 
   try {
     // Save to built-in Server Database

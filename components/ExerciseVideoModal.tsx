@@ -13,9 +13,11 @@ import {
   Film,
   ListOrdered,
   Eye,
+  WifiOff,
 } from 'lucide-react';
 import { getExerciseMuscleInfo } from '../lib/muscleMetadata';
 import { getExerciseMedia } from '../lib/exerciseMedia';
+import { isAppOffline, onOfflineChange } from '../lib/offlineManager';
 
 interface ExerciseVideoModalProps {
   isOpen: boolean;
@@ -43,6 +45,15 @@ export default function ExerciseVideoModal({
   const [activeTab, setActiveTab] = useState<'demo' | 'youtube' | 'cues'>('demo');
   const [imgLoaded, setImgLoaded] = useState(false);
   const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [isOffline, setIsOffline] = useState<boolean>(() => isAppOffline());
+
+  // Listen to offline state changes
+  useEffect(() => {
+    const unsub = onOfflineChange((offline) => {
+      setIsOffline(offline);
+    });
+    return () => unsub();
+  }, []);
 
   // Close on Escape key & manage body scroll
   useEffect(() => {
@@ -518,6 +529,28 @@ export default function ExerciseVideoModal({
           {/* TAB 2: YOUTUBE VIDEO TUTORIAL */}
           {activeTab === 'youtube' && (
             <div>
+              {isOffline && (
+                <div
+                  style={{
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    fontSize: '0.74rem',
+                    color: '#fef3c7',
+                    marginBottom: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <WifiOff size={14} color="#fbbf24" style={{ flexShrink: 0 }} />
+                  <span>
+                    Offline Mode Active: Form cues &amp; animated demos are available offline. YouTube video requires active internet.
+                  </span>
+                </div>
+              )}
+
               {/* Responsive 16:9 Video Embed Player */}
               <div
                 style={{
