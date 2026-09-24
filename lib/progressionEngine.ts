@@ -38,22 +38,28 @@ export function scaleExerciseForWeek(
       };
     }
 
+    // Bi-weekly overload: increases on Week 3 (step 1) and Week 5 (step 2)
+    // W1 & W2: Base load (0 increments)
+    // W3 & W4: +1 increment (Increases at W3)
+    // W5 & W6: +2 increments (Increases at W5)
+    const biweeklyOffset = Math.floor(weekOffset / 2);
+
     const increment = unit === 'kg' ? config.weeklyIncrementKg : config.weeklyIncrementLbs;
     let newLoad = set.load;
     let newReps = set.reps;
     let newDuration = set.duration;
 
     if (exercise.requiresLoad && typeof set.load === 'number' && set.load > 0) {
-      newLoad = Math.round((set.load + increment * weekOffset) * 10) / 10;
+      newLoad = Math.round((set.load + increment * biweeklyOffset) * 10) / 10;
     } else if (exercise.trackingType === 'bodyweight_reps') {
       const parsedReps = parseInt(String(set.reps || '10'), 10);
       if (!isNaN(parsedReps)) {
-        newReps = String(parsedReps + config.bodyweightRepIncrement * weekOffset);
+        newReps = String(parsedReps + config.bodyweightRepIncrement * biweeklyOffset);
       }
     } else if (exercise.trackingType === 'time_only') {
       const parsedSecs = parseInt(String(set.duration || '30'), 10);
       if (!isNaN(parsedSecs)) {
-        newDuration = parsedSecs + config.timedHoldIncrementSecs * weekOffset;
+        newDuration = parsedSecs + config.timedHoldIncrementSecs * biweeklyOffset;
       }
     }
 
@@ -122,17 +128,22 @@ export function getProgressionBadge(
   config: ProgressionConfig = DEFAULT_PROGRESSION_CONFIG
 ): string | null {
   if (weekNumber <= 1) return null;
+  const biweeklyOffset = Math.floor((weekNumber - 1) / 2);
   const increment = unit === 'kg' ? config.weeklyIncrementKg : config.weeklyIncrementLbs;
-  const totalOffset = (weekNumber - 1) * increment;
+  const totalOffset = biweeklyOffset * increment;
+
+  if (biweeklyOffset === 0) {
+    return 'Consolidation (Same as W1)';
+  }
 
   if (exercise.requiresLoad) {
     return `+${totalOffset} ${unit} Overload vs W1`;
   }
   if (exercise.trackingType === 'bodyweight_reps') {
-    return `+${(weekNumber - 1) * config.bodyweightRepIncrement} Reps vs W1`;
+    return `+${biweeklyOffset * config.bodyweightRepIncrement} Reps vs W1`;
   }
   if (exercise.trackingType === 'time_only') {
-    return `+${(weekNumber - 1) * config.timedHoldIncrementSecs}s Hold vs W1`;
+    return `+${biweeklyOffset * config.timedHoldIncrementSecs}s Hold vs W1`;
   }
   return null;
 }

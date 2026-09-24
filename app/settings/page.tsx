@@ -538,7 +538,7 @@ export default function SettingsPage() {
                 Auto-Scale Weeks 2 through 6 from Week 1
               </div>
               <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                Automatically calculates weekly overload across your full 6-week cycle
+                Increases load every 2nd week (Weeks 1 &amp; 2 base, Week 3 &amp; 5 bump)
               </div>
             </div>
             <button
@@ -557,7 +557,7 @@ export default function SettingsPage() {
           {/* Weekly Overload Step Selection */}
           <div style={{ marginBottom: '12px' }}>
             <label className="clean-label" style={{ marginBottom: '6px' }}>
-              Weekly Overload Increment (per lift)
+              Overload Increment (Every 2nd Week: W1-2, W3-4, W5-6)
             </label>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {(unit === 'kg' ? [1.25, 2.5, 5] : [2.5, 5, 10]).map((val) => {
