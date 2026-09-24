@@ -66,22 +66,6 @@ export default function Footer() {
           <span>GitHub</span>
         </a>
         <span>·</span>
-        <a
-          href="https://github.com/ExerciseDB/exercisedb-api"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            color: 'var(--text-muted)',
-            textDecoration: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-          }}
-        >
-          <span>ExerciseDB</span>
-          <ExternalLink size={10} />
-        </a>
-        <span>·</span>
         <Link
           href="/settings"
           style={{ color: 'var(--text-muted)', textDecoration: 'none' }}

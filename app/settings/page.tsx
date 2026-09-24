@@ -988,7 +988,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* ExerciseDB Attribution */}
+          {/* Master Exercise Catalog Attribution */}
           <div
             style={{
               background: 'rgba(255, 255, 255, 0.02)',
@@ -998,19 +998,11 @@ export default function SettingsPage() {
             }}
           >
             <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px', fontWeight: 700 }}>
-              Exercise Database &amp; Instructions
+              Master Exercise Catalog
             </div>
             <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fff', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Dumbbell size={14} color="#38bdf8" />
-              <a
-                href="https://github.com/ExerciseDB/exercisedb-api"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-              >
-                ExerciseDB API
-                <ExternalLink size={11} color="var(--text-muted)" />
-              </a>
+              <span>Exercise Catalog (Offline)</span>
             </div>
             <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
               Provides {ALL_CATALOG_EXERCISES.length} indexed exercises with targets, equipment categories, and execution cues.

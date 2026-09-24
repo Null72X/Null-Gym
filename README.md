@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
 [![Next.js](https://img.shields.io/badge/Next.js-14.2-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![ExerciseDB](https://img.shields.io/badge/ExerciseDB-1%2C323_Catalog-10B981?style=for-the-badge&logo=ghost)](https://github.com/ExerciseDB/exercisedb-api)
+[![Catalog](https://img.shields.io/badge/Catalog-1%2C323_Exercises-10B981?style=for-the-badge&logo=ghost)](https://github.com/Null72X/Null-Gym)
 [![PWA Ready](https://img.shields.io/badge/PWA-100%25_Offline-F59E0B?style=for-the-badge&logo=pwa)](https://github.com/Null72X/Null-Gym)
 
 **The Offline-First, High-Performance Progressive Overload & Workout Architecture.**  
@@ -238,7 +238,7 @@ Null Gym is made possible thanks to the dedication of open-source creators and f
 | Contributor / Project | Contribution | Link |
 | :--- | :--- | :--- |
 | **Null72X** | **Lead Developer & Software Architect** — Concept, architecture, progression engine, UI design, and development of Null Gym. | [GitHub Profile](https://github.com/Null72X) · [Null-Gym](https://github.com/Null72X/Null-Gym) |
-| **ExerciseDB** | **Exercise Database & Instructions** — Comprehensive dataset of 1,323 exercises, classifications, muscle targets, and technique cues. | [ExerciseDB Repository](https://github.com/ExerciseDB/exercisedb-api) |
+| **Exercise Catalog** | **Comprehensive Library & Instructions** — Curated dataset of 1,323 exercises, classifications, muscle targets, and technique cues bundled locally. | Built-in Local Dataset |
 | **Jahel Cuadrado** | **Form Visuals & Demonstrations** — Curated high-resolution animated GIF demonstrations mapped to exercises via ExerciseGymGifsDB. | [ExerciseGymGifsDB](https://github.com/JahelCuadrado/ExerciseGymGifsDB) |
 | **Lucide Icons** | Clean, minimalist iconography throughout the interface. | [Lucide](https://lucide.dev/) |
 | **Next.js & Vercel** | React application framework and hosting platform. | [Next.js](https://nextjs.org/) |
