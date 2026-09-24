@@ -404,6 +404,7 @@ export default function DashboardPage() {
     const updatedHistory = [newHistoryEntry, ...history];
     setHistory(updatedHistory);
     saveHistory(updatedHistory);
+    setActiveTimer(null);
 
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate([100, 50, 100, 50, 200]);
@@ -755,28 +756,31 @@ export default function DashboardPage() {
       )}
 
       {/* Floating Rest / Work Timer Bar */}
-      <RestTimerBar
-        initialSeconds={activeTimer ? activeTimer.seconds : null}
-        mode={activeTimer?.mode || 'rest'}
-        exerciseName={activeTimer?.exerciseName || ''}
-        setIndex={activeTimer?.setIndex}
-        totalSets={activeTimer?.totalSets}
-        autoFlow={activeTimer?.autoFlow ?? true}
-        onDismiss={() => setActiveTimer(null)}
-        onCompleteExerciseSet={handleCompleteActiveSet}
-        onSwitchToRest={(restSecs) =>
-          setActiveTimer({
-            seconds: restSecs || 90,
-            mode: 'rest',
-            exerciseName: activeTimer?.exerciseName,
-            exerciseIndex: activeTimer?.exerciseIndex,
-            setIndex: activeTimer?.setIndex,
-            totalSets: activeTimer?.totalSets,
-            autoFlow: activeTimer?.autoFlow ?? true,
-          })
-        }
-        onStartNextSet={handleStartNextSetFromRest}
-      />
+      {activeTimer !== null && activeTimer.seconds > 0 && (
+        <RestTimerBar
+          key={`${activeTimer.exerciseIndex ?? 'global'}_${activeTimer.setIndex ?? 's'}_${activeTimer.mode}`}
+          initialSeconds={activeTimer.seconds}
+          mode={activeTimer.mode}
+          exerciseName={activeTimer.exerciseName || ''}
+          setIndex={activeTimer.setIndex}
+          totalSets={activeTimer.totalSets}
+          autoFlow={activeTimer.autoFlow ?? true}
+          onDismiss={() => setActiveTimer(null)}
+          onCompleteExerciseSet={handleCompleteActiveSet}
+          onSwitchToRest={(restSecs) =>
+            setActiveTimer({
+              seconds: restSecs || 90,
+              mode: 'rest',
+              exerciseName: activeTimer?.exerciseName,
+              exerciseIndex: activeTimer?.exerciseIndex,
+              setIndex: activeTimer?.setIndex,
+              totalSets: activeTimer?.totalSets,
+              autoFlow: activeTimer?.autoFlow ?? true,
+            })
+          }
+          onStartNextSet={handleStartNextSetFromRest}
+        />
+      )}
 
       {/* Toast Notification */}
       <div className={`clean-toast ${toastMessage ? 'show' : ''}`}>

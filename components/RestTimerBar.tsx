@@ -58,44 +58,145 @@ export default function RestTimerBar({
   const intervalRef = useRef<any>(null);
   const audioCtxRef = useRef<any>(null);
   const autoAdvanceTimeoutRef = useRef<any>(null);
+  const wakeLockRef = useRef<any>(null);
 
-  // Setup / Reset timer when initialSeconds or mode changes
+  // Stop timer completely and cancel all background intervals, timeouts, and audio
+  const handleDismiss = () => {
+    // 1. Clear countdown interval immediately
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    // 2. Clear any pending auto-advance timeouts
+    if (autoAdvanceTimeoutRef.current) {
+      clearTimeout(autoAdvanceTimeoutRef.current);
+      autoAdvanceTimeoutRef.current = null;
+    }
+    // 3. Reset all state to inactive
+    setIsRunning(false);
+    setSeconds(0);
+    setIsFinished(false);
+    setTransitionPrompt(null);
+    setCompletedTickSet(null);
+
+    // 4. Release screen wake lock immediately
+    if (wakeLockRef.current && typeof wakeLockRef.current.release === 'function') {
+      wakeLockRef.current.release().catch(() => {});
+      wakeLockRef.current = null;
+    }
+
+    // 5. Suspend or close audio context if active so no lingering tones play
+    if (audioCtxRef.current) {
+      try {
+        if (typeof audioCtxRef.current.close === 'function') {
+          audioCtxRef.current.close().catch(() => {});
+        }
+      } catch {}
+      audioCtxRef.current = null;
+    }
+
+    // 6. Stop any active device vibration immediately
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate(0);
+      } catch {}
+    }
+
+    // 7. Fire dismissal callback to parent
+    onDismiss();
+  };
+
+  // Component unmount cleanup: ensure ZERO background execution when unmounted
   useEffect(() => {
-    if (initialSeconds !== null && initialSeconds > 0) {
-      setCurrentMode(mode);
-      setCurrentExerciseName(exerciseName);
-      setTotalSeconds(initialSeconds);
-      setSeconds(initialSeconds);
-      setIsRunning(true);
-      setIsFinished(false);
-      setTransitionPrompt(null);
-      if (mode === 'exercise') {
-        setCompletedTickSet(null);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
       if (autoAdvanceTimeoutRef.current) {
         clearTimeout(autoAdvanceTimeoutRef.current);
+        autoAdvanceTimeoutRef.current = null;
       }
+      if (wakeLockRef.current && typeof wakeLockRef.current.release === 'function') {
+        wakeLockRef.current.release().catch(() => {});
+        wakeLockRef.current = null;
+      }
+      if (audioCtxRef.current) {
+        try {
+          if (typeof audioCtxRef.current.close === 'function') {
+            audioCtxRef.current.close().catch(() => {});
+          }
+        } catch {}
+        audioCtxRef.current = null;
+      }
+      if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+        try {
+          navigator.vibrate(0);
+        } catch {}
+      }
+    };
+  }, []);
+
+  // Setup / Reset timer when initialSeconds or mode changes
+  useEffect(() => {
+    if (initialSeconds === null || initialSeconds <= 0) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      if (autoAdvanceTimeoutRef.current) {
+        clearTimeout(autoAdvanceTimeoutRef.current);
+        autoAdvanceTimeoutRef.current = null;
+      }
+      if (wakeLockRef.current && typeof wakeLockRef.current.release === 'function') {
+        wakeLockRef.current.release().catch(() => {});
+        wakeLockRef.current = null;
+      }
+      setIsRunning(false);
+      setSeconds(0);
+      setIsFinished(false);
+      setTransitionPrompt(null);
+      setCompletedTickSet(null);
+      return;
+    }
+
+    setCurrentMode(mode);
+    setCurrentExerciseName(exerciseName);
+    setTotalSeconds(initialSeconds);
+    setSeconds(initialSeconds);
+    setIsRunning(true);
+    setIsFinished(false);
+    setTransitionPrompt(null);
+    if (mode === 'exercise') {
+      setCompletedTickSet(null);
+    }
+    if (autoAdvanceTimeoutRef.current) {
+      clearTimeout(autoAdvanceTimeoutRef.current);
+      autoAdvanceTimeoutRef.current = null;
     }
   }, [initialSeconds, mode, exerciseName]);
 
   // Screen Wake Lock API: Keeps phone screen awake while timer runs
   useEffect(() => {
-    let wakeLock: any = null;
     const requestWakeLock = async () => {
       try {
         if (typeof window !== 'undefined' && 'wakeLock' in navigator && (navigator as any).wakeLock) {
-          wakeLock = await (navigator as any).wakeLock.request('screen');
+          wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
         }
       } catch {}
     };
 
     if (isRunning && seconds > 0) {
       requestWakeLock();
+    } else if (wakeLockRef.current && typeof wakeLockRef.current.release === 'function') {
+      wakeLockRef.current.release().catch(() => {});
+      wakeLockRef.current = null;
     }
 
     return () => {
-      if (wakeLock && typeof wakeLock.release === 'function') {
-        wakeLock.release().catch(() => {});
+      if (wakeLockRef.current && typeof wakeLockRef.current.release === 'function') {
+        wakeLockRef.current.release().catch(() => {});
+        wakeLockRef.current = null;
       }
     };
   }, [isRunning, seconds]);
@@ -702,7 +803,7 @@ export default function RestTimerBar({
           <button
             type="button"
             className="timer-action-btn"
-            onClick={onDismiss}
+            onClick={handleDismiss}
             title="Close timer"
             style={{ color: 'var(--text-dim)', minWidth: '28px', height: '30px' }}
           >

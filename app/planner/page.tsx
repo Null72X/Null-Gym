@@ -710,10 +710,12 @@ export default function PlannerPage() {
       )}
 
       {/* Floating Rest Bar */}
-      <RestTimerBar
-        initialSeconds={activeRestSeconds}
-        onDismiss={() => setActiveRestSeconds(null)}
-      />
+      {activeRestSeconds !== null && activeRestSeconds > 0 && (
+        <RestTimerBar
+          initialSeconds={activeRestSeconds}
+          onDismiss={() => setActiveRestSeconds(null)}
+        />
+      )}
 
       {/* Exercise Library Modal */}
       <ExerciseLibraryModal
