@@ -18,6 +18,7 @@ import {
   getActiveSelection,
 } from '../../lib/storage';
 import {
+  ALL_CATALOG_EXERCISES,
   CATALOG_CATEGORIES,
   CATALOG_EQUIPMENTS,
   matchCatalogCategory,
@@ -58,7 +59,7 @@ const DAYS_OF_WEEK = [
 export default function LibraryPage() {
   const [library, setLibrary] = useState<ExerciseLibraryItem[]>(() => {
     if (typeof window !== 'undefined') return getSavedLibrary();
-    return [];
+    return ALL_CATALOG_EXERCISES;
   });
   const [weeks, setWeeks] = useState<WeekPlan[]>(() => {
     if (typeof window !== 'undefined') return getSavedWeeks();
@@ -358,15 +359,17 @@ export default function LibraryPage() {
             <span>Master Exercise Library</span>
           </h2>
           <p>
-            Browse 710+ curated exercises across 7 Master Muscle Pillars with YouTube tutorials. Add directly to any week and day.
+            Browse {cleanLibrary.length ? cleanLibrary.length.toLocaleString() : '1,323'} ExerciseDB movements across 7 Master Muscle Pillars with form animations &amp; YouTube tutorials. Add directly to any week and day.
           </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div className="progress-pill">
-            <div className="progress-num">{renderedCount}</div>
+            <div className="progress-num">
+              {hasActiveFilters ? totalMatches.toLocaleString() : (cleanLibrary.length ? cleanLibrary.length.toLocaleString() : '1,323')}
+            </div>
             <div className="progress-label">
-              {hasActiveFilters ? 'Matching' : (renderedCount === cleanLibrary.length ? 'Total Exercises' : 'Visible')}
+              {hasActiveFilters ? 'Matching' : 'Total Exercises'}
             </div>
           </div>
 
@@ -573,7 +576,7 @@ export default function LibraryPage() {
           <Search size={15} color="var(--accent-red)" />
           <input
             type="text"
-            placeholder={`Search ${library.length || 710} exercises by name, muscle, cues, equipment...`}
+            placeholder={`Search ${cleanLibrary.length ? cleanLibrary.length.toLocaleString() : '1,323'} exercises by name, muscle, cues, equipment...`}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{

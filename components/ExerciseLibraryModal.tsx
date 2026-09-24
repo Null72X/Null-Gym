@@ -52,6 +52,7 @@ export default function ExerciseLibraryModal({
   const [selectedLoadType, setSelectedLoadType] = useState('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState('All');
   const [sortBy, setSortBy] = useState<'name_asc' | 'name_desc' | 'muscle' | 'equipment'>('name_asc');
+  const [displayCount, setDisplayCount] = useState<number>(40);
   const [videoModalExercise, setVideoModalExercise] = useState<ExerciseLibraryItem | null>(null);
 
   // Fast responsive debounce without blocking input typing
@@ -156,6 +157,15 @@ export default function ExerciseLibraryModal({
       })
       .map((r) => r.item);
   }, [baseFiltered, debouncedSearchTerm, sortBy]);
+
+  // Windowed rendering: only render initial slice for 120fps modal performance
+  useEffect(() => {
+    setDisplayCount(40);
+  }, [isOpen, debouncedSearchTerm, selectedCategory, selectedSubCategory, selectedEquipment, selectedLoadType, selectedDifficulty, sortBy]);
+
+  const visibleExercises = useMemo(() => {
+    return renderedExercises.slice(0, displayCount);
+  }, [renderedExercises, displayCount]);
 
   if (!isOpen) return null;
 
@@ -295,7 +305,7 @@ export default function ExerciseLibraryModal({
               <input
                 type="text"
                 className="clean-input"
-                placeholder={`Search ${cleanLibrary.length || 710} exercises by name, muscle, equipment, pattern...`}
+                placeholder={`Search ${cleanLibrary.length ? cleanLibrary.length.toLocaleString() : '1,323'} exercises by name, muscle, equipment, pattern...`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{ paddingLeft: '32px', fontSize: '0.8rem' }}
@@ -618,7 +628,7 @@ export default function ExerciseLibraryModal({
               }}
             >
               <span>
-                Showing {renderedExercises.length} exercise{renderedExercises.length === 1 ? '' : 's'}
+                Showing {visibleExercises.length < renderedExercises.length ? `${visibleExercises.length} of ${renderedExercises.length}` : renderedExercises.length} exercise{renderedExercises.length === 1 ? '' : 's'}
               </span>
               {renderedExercises.length === 0 && (
                 <button
@@ -646,6 +656,14 @@ export default function ExerciseLibraryModal({
                 overflowY: 'auto',
                 flex: 1,
                 paddingRight: '4px',
+              }}
+              onScroll={(e) => {
+                const target = e.currentTarget;
+                if (target.scrollTop + target.clientHeight >= target.scrollHeight - 160) {
+                  if (displayCount < renderedExercises.length) {
+                    setDisplayCount((prev) => Math.min(prev + 40, renderedExercises.length));
+                  }
+                }
               }}
             >
               {renderedExercises.length === 0 ? (
@@ -675,7 +693,7 @@ export default function ExerciseLibraryModal({
                   )}
                 </div>
               ) : (
-                renderedExercises.map((item) => {
+                visibleExercises.map((item) => {
                   const noLoad = item.requiresLoad === false;
                   const muscleInfo = getExerciseMuscleInfo(item);
                   return (
@@ -836,6 +854,29 @@ export default function ExerciseLibraryModal({
                     </div>
                   );
                 })
+              )}
+
+              {displayCount < renderedExercises.length && (
+                <div style={{ padding: '8px 4px 12px', textAlign: 'center' }}>
+                  <button
+                    type="button"
+                    className="btn-clean"
+                    style={{
+                      fontSize: '0.74rem',
+                      padding: '7px 16px',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      width: '100%',
+                      fontWeight: 600,
+                    }}
+                    onClick={() => setDisplayCount((prev) => Math.min(prev + 40, renderedExercises.length))}
+                  >
+                    Load More ({renderedExercises.length - displayCount} remaining)
+                  </button>
+                </div>
               )}
             </div>
           </div>

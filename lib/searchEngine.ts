@@ -181,20 +181,42 @@ export interface SearchMatchResult<T> {
   matchedFields: string[];
 }
 
+export interface PrecomputedField {
+  lower: string;
+  words: string[];
+}
+
+const itemFieldCache = new WeakMap<object, Map<string, PrecomputedField>>();
+
+function getPrecomputedField(item: object, fieldName: string, rawVal: string): PrecomputedField {
+  let itemCache = itemFieldCache.get(item);
+  if (!itemCache) {
+    itemCache = new Map<string, PrecomputedField>();
+    itemFieldCache.set(item, itemCache);
+  }
+  let cached = itemCache.get(fieldName);
+  if (!cached) {
+    const lower = rawVal.toLowerCase();
+    const words = lower.split(/[\s\-_/(),]+/).filter(Boolean);
+    cached = { lower, words };
+    itemCache.set(fieldName, cached);
+  }
+  return cached;
+}
+
 /**
- * Calculates a match score for a given target text against a single query token
+ * Calculates a match score for pre-computed target text & words against a single query token
  */
-function scoreTokenAgainstText(
+function scoreTokenAgainstPrecomputed(
   token: string,
-  target: string,
+  targetLower: string,
+  targetWords: string[],
   fieldWeight: number,
   isPrimary: boolean
 ): { score: number; matched: boolean } {
-  if (!target) return { score: 0, matched: false };
+  if (!targetLower) return { score: 0, matched: false };
 
-  const targetLower = target.toLowerCase();
   const tokenLen = token.length;
-  const targetWords = targetLower.split(/[\s\-_/(),]+/).filter(Boolean);
 
   // 1. Exact match with whole field
   if (targetLower === token) {
@@ -207,7 +229,8 @@ function scoreTokenAgainstText(
   }
 
   // 3. Word boundary exact or prefix match
-  for (const word of targetWords) {
+  for (let i = 0; i < targetWords.length; i++) {
+    const word = targetWords[i];
     if (word === token) {
       return { score: 500 * fieldWeight, matched: true };
     }
@@ -227,7 +250,8 @@ function scoreTokenAgainstText(
   // 5. Fuzzy / Typo match on individual words (only for tokens >= 5 characters to avoid false positives on 4-letter words like hack/rack vs back)
   if (tokenLen >= 5) {
     const maxAllowedDistance = tokenLen >= 8 ? 2 : 1;
-    for (const word of targetWords) {
+    for (let i = 0; i < targetWords.length; i++) {
+      const word = targetWords[i];
       // Don't compare words with vast length difference
       if (Math.abs(word.length - tokenLen) <= maxAllowedDistance) {
         const dist = damerauLevenshtein(token, word);
@@ -240,6 +264,21 @@ function scoreTokenAgainstText(
   }
 
   return { score: 0, matched: false };
+}
+
+/**
+ * Calculates a match score for a given target text against a single query token (backward compatible wrapper)
+ */
+export function scoreTokenAgainstText(
+  token: string,
+  target: string,
+  fieldWeight: number,
+  isPrimary: boolean = false
+): { score: number; matched: boolean } {
+  if (!target) return { score: 0, matched: false };
+  const targetLower = target.toLowerCase();
+  const targetWords = targetLower.split(/[\s\-_/(),]+/).filter(Boolean);
+  return scoreTokenAgainstPrecomputed(token, targetLower, targetWords, fieldWeight, isPrimary);
 }
 
 /**
@@ -286,20 +325,55 @@ export function searchItems<T>(
     const matchedFieldsSet = new Set<string>();
     let allTokensMatched = true;
 
+    // Resolve precomputed fields for this item
+    const resolvedFields: {
+      name: string;
+      weight: number;
+      isPrimary: boolean;
+      lower: string;
+      words: string[];
+    }[] = [];
+
+    for (let f = 0; f < fields.length; f++) {
+      const field = fields[f];
+      const fieldVal = field.getter(item);
+      if (!fieldVal) continue;
+
+      if (typeof item === 'object' && item !== null) {
+        const cached = getPrecomputedField(item, field.name, fieldVal);
+        resolvedFields.push({
+          name: field.name,
+          weight: field.weight,
+          isPrimary: !!field.isPrimary,
+          lower: cached.lower,
+          words: cached.words,
+        });
+      } else {
+        const lower = fieldVal.toLowerCase();
+        resolvedFields.push({
+          name: field.name,
+          weight: field.weight,
+          isPrimary: !!field.isPrimary,
+          lower,
+          words: lower.split(/[\s\-_/(),]+/).filter(Boolean),
+        });
+      }
+    }
+
     // Check primary field exact & prefix matches with full query string
-    const primaryField = fields.find((f) => f.isPrimary) || fields[0];
-    const primaryVal = primaryField ? (primaryField.getter(item) || '').toLowerCase() : '';
+    const primaryResolved = resolvedFields.find((f) => f.isPrimary) || resolvedFields[0];
+    const primaryVal = primaryResolved ? primaryResolved.lower : '';
 
     if (primaryVal) {
       if (primaryVal === fullQueryLower) {
         totalScore += 10000;
-        matchedFieldsSet.add(primaryField.name);
+        matchedFieldsSet.add(primaryResolved.name);
       } else if (primaryVal.startsWith(fullQueryLower)) {
         totalScore += 5000;
-        matchedFieldsSet.add(primaryField.name);
+        matchedFieldsSet.add(primaryResolved.name);
       } else if (primaryVal.includes(fullQueryLower)) {
         totalScore += 2500;
-        matchedFieldsSet.add(primaryField.name);
+        matchedFieldsSet.add(primaryResolved.name);
       }
     }
 
@@ -309,16 +383,17 @@ export function searchItems<T>(
       let tokenMatched = false;
       const candidates = [group.primary, ...group.expansions];
 
-      for (const field of fields) {
-        const fieldVal = field.getter(item);
-        if (!fieldVal) continue;
+      for (let rf = 0; rf < resolvedFields.length; rf++) {
+        const field = resolvedFields[rf];
 
-        for (const candidate of candidates) {
-          const { score, matched } = scoreTokenAgainstText(
+        for (let c = 0; c < candidates.length; c++) {
+          const candidate = candidates[c];
+          const { score, matched } = scoreTokenAgainstPrecomputed(
             candidate,
-            fieldVal,
+            field.lower,
+            field.words,
             field.weight,
-            !!field.isPrimary
+            field.isPrimary
           );
 
           if (matched) {

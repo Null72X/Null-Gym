@@ -255,7 +255,7 @@ export default function SettingsPage() {
     router.push('/planner');
   };
 
-  // Restore Master Exercise Catalog (710+ items)
+  // Restore Master Exercise Catalog (1,323 items)
   const handleRestoreCatalog = () => {
     if (!confirm(`Restore the Master Exercise Library to all ${ALL_CATALOG_EXERCISES.length} default exercises with YouTube tutorials?`)) return;
     const restored = restoreDefaultLibrary();

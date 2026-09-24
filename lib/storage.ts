@@ -31,7 +31,7 @@ const STORAGE_KEYS = {
   PROGRESSION: 'gym_progression_v6',
 };
 
-// 1,320+ ExerciseDB Master exercise library with animated demonstrations & coaching cues
+// 1,323 ExerciseDB Master exercise library with animated demonstrations & coaching cues
 export const DEFAULT_LIBRARY: ExerciseLibraryItem[] = ALL_CATALOG_EXERCISES;
 
 import { createBlankWeeks, ensureSixWeeks } from './planDefaults';

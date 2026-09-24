@@ -1,4 +1,4 @@
-// Master Exercise Library (1,320+ ExerciseDB Exercises) with animated demonstrations,
+// Master Exercise Library (1,323 ExerciseDB Exercises) with animated demonstrations,
 // YouTube search links, equipment types, and intelligent tracking types.
 import { ExerciseLibraryItem } from '../types/workout';
 import exercisesData from './exerciseCatalogData.json';
