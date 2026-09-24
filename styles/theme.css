@@ -1368,6 +1368,7 @@ body {
 
 .timer-text {
   font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: 1.25rem;
   font-weight: 800;
   color: #ffffff;

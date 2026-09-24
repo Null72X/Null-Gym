@@ -355,7 +355,7 @@ export default function RestTimerBar({
               onCompleteExerciseSet();
             }
             if (isAutoFlow) {
-              setTransitionPrompt(`⚡ Set ${currentFinishedSet} Ticked Complete! Starting 90s Rest...`);
+              setTransitionPrompt(`⚡ Set ${currentFinishedSet} Ticked Complete! Starting 90s Rest`);
               autoAdvanceTimeoutRef.current = setTimeout(() => {
                 handleTransitionToRest(90);
               }, 1200);
@@ -364,7 +364,7 @@ export default function RestTimerBar({
 
           // AUTOMATION 2: Rest timer finished
           if (currentMode === 'rest' && isAutoFlow && onStartNextSet) {
-            setTransitionPrompt('🚀 Rest Complete! Auto-Starting Next Set...');
+            setTransitionPrompt('🚀 Rest Complete! Starting Next Set');
             autoAdvanceTimeoutRef.current = setTimeout(() => {
               onStartNextSet();
             }, 1800);
@@ -670,35 +670,22 @@ export default function RestTimerBar({
               )}
             </div>
 
-            {/* Time & Exercise Name */}
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+            {/* Time Display: Rock-solid tabular-nums, NO trailing ellipsis, NO glitching */}
+            <div style={{ display: 'flex', alignItems: 'center', marginTop: '2px' }}>
               <div
                 style={{
                   fontFamily: 'var(--font-mono)',
-                  fontSize: '1.32rem',
+                  fontVariantNumeric: 'tabular-nums',
+                  fontSize: '1.38rem',
                   fontWeight: 900,
                   lineHeight: 1.1,
                   color: isFinished ? 'var(--accent-green)' : '#ffffff',
-                  letterSpacing: '-0.5px',
+                  letterSpacing: '0px',
+                  display: 'inline-block',
                 }}
               >
                 {isFinished ? '00:00' : timeFormatted}
               </div>
-
-              {currentExerciseName && (
-                <span
-                  style={{
-                    fontSize: '0.68rem',
-                    color: 'var(--text-muted)',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    maxWidth: '150px',
-                  }}
-                >
-                  · {currentExerciseName}
-                </span>
-              )}
             </div>
           </div>
         </div>
@@ -826,6 +813,22 @@ export default function RestTimerBar({
             flexWrap: 'wrap',
           }}
         >
+          {currentExerciseName && (
+            <div
+              style={{
+                width: '100%',
+                fontSize: '0.68rem',
+                color: 'var(--text-muted)',
+                marginBottom: '2px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+            >
+              <span>Exercise:</span>
+              <strong style={{ color: '#ffffff' }}>{currentExerciseName}</strong>
+            </div>
+          )}
           {/* Mode Switcher & Auto-Flow Badge */}
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
             <button

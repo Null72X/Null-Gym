@@ -477,61 +477,48 @@ export default function ExerciseCard({
         })}
       </div>
 
-      {/* Add Set Quick Controls (Available in both Planner & Tracker mode) */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '6px',
-          marginTop: '8px',
-          justifyContent: 'flex-start',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-        }}
-      >
-        <button
-          type="button"
-          className="btn-clean"
-          style={{ fontSize: '0.72rem', padding: '5px 11px', borderRadius: '7px' }}
-          onClick={() => handleAddSet('working')}
-          title="Add a set to this exercise"
+      {/* Add Set Quick Controls (Planner Mode Only) */}
+      {mode === 'planner' && (
+        <div
+          style={{
+            display: 'flex',
+            gap: '6px',
+            marginTop: '8px',
+            justifyContent: 'flex-start',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
         >
-          <Plus size={12} />
-          <span>Add Set</span>
-        </button>
-        {mode === 'planner' ? (
-          <>
-            <button
-              type="button"
-              className="btn-clean"
-              style={{ fontSize: '0.72rem', padding: '5px 10px', borderRadius: '7px', color: '#fde68a' }}
-              onClick={() => handleAddSet('warmup')}
-            >
-              <Plus size={12} />
-              <span>Warmup</span>
-            </button>
-            <button
-              type="button"
-              className="btn-clean"
-              style={{ fontSize: '0.72rem', padding: '5px 9px', borderRadius: '7px', color: '#d8b4fe' }}
-              onClick={() => handleAddSet('dropset')}
-              title="Add Drop Set"
-            >
-              Drop
-            </button>
-          </>
-        ) : (
           <button
             type="button"
             className="btn-clean"
-            style={{ fontSize: '0.72rem', padding: '5px 9px', borderRadius: '7px', color: '#fde68a' }}
+            style={{ fontSize: '0.72rem', padding: '5px 11px', borderRadius: '7px' }}
+            onClick={() => handleAddSet('working')}
+            title="Add a set to this exercise"
+          >
+            <Plus size={12} />
+            <span>Add Set</span>
+          </button>
+          <button
+            type="button"
+            className="btn-clean"
+            style={{ fontSize: '0.72rem', padding: '5px 10px', borderRadius: '7px', color: '#fde68a' }}
             onClick={() => handleAddSet('warmup')}
-            title="Add Warmup Set"
           >
             <Plus size={12} />
             <span>Warmup</span>
           </button>
-        )}
-      </div>
+          <button
+            type="button"
+            className="btn-clean"
+            style={{ fontSize: '0.72rem', padding: '5px 9px', borderRadius: '7px', color: '#d8b4fe' }}
+            onClick={() => handleAddSet('dropset')}
+            title="Add Drop Set"
+          >
+            Drop
+          </button>
+        </div>
+      )}
 
       {/* In-App Exercise Video & Form Modal */}
       <ExerciseVideoModal
