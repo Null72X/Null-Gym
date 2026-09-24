@@ -3,15 +3,17 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Dumbbell, Calendar, BookOpen, TrendingUp, Settings, Cloud, Check, AlertCircle, RefreshCw } from 'lucide-react';
+import { Dumbbell, Calendar, BookOpen, TrendingUp, Settings, Cloud, Check, AlertCircle, RefreshCw, Smartphone } from 'lucide-react';
 import { initBackgroundCloudSync } from '../lib/storage';
 import { onCloudStatus, getCloudSyncInfo, CloudSyncInfo } from '../lib/supabaseSync';
 import { isAppOffline, onOfflineChange } from '../lib/offlineManager';
+import DeviceSyncModal from './DeviceSyncModal';
 
 export default function Navbar() {
   const pathname = usePathname();
   const [cloudInfo, setCloudInfo] = useState<CloudSyncInfo>(() => getCloudSyncInfo());
   const [isOffline, setIsOffline] = useState<boolean>(() => isAppOffline());
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     // Start background sync on first load
@@ -120,6 +122,26 @@ export default function Navbar() {
         </nav>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            type="button"
+            className="cloud-status-pill"
+            style={{
+              background: 'rgba(239, 68, 68, 0.12)',
+              border: '1px solid rgba(239, 68, 68, 0.35)',
+              color: '#fca5a5',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '3px 8px',
+            }}
+            onClick={() => setIsSyncModalOpen(true)}
+            title="Sync workouts between PC and Phone"
+          >
+            <Smartphone size={11} color="var(--accent-red)" />
+            <span>Sync</span>
+          </button>
+
           {renderCloudBadge()}
 
           <Link
@@ -132,6 +154,12 @@ export default function Navbar() {
           </Link>
         </div>
       </header>
+
+      {/* Device Sync Modal (QR Code & PIN) */}
+      <DeviceSyncModal
+        isOpen={isSyncModalOpen}
+        onClose={() => setIsSyncModalOpen(false)}
+      />
 
       {/* Bottom Floating App Navigation */}
       <nav className="bottom-nav">

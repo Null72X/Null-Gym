@@ -23,6 +23,7 @@ import {
   onCloudPlanUpdated,
   onCloudHistoryUpdated,
   onCloudSettingsUpdated,
+  redeemDeviceSyncCode,
 } from '../lib/storage';
 import { getLastPerformance } from '../lib/history';
 import { getDayMuscleBreakdown } from '../lib/muscleMetadata';
@@ -87,6 +88,23 @@ export default function DashboardPage() {
     setCurrentDayIndex(active.dayIndex || 0);
     setUnit(active.unit || 'kg');
     setIsLoaded(true);
+
+    // Auto-detect QR sync code from URL parameters (?sync=XXXXXX)
+    if (typeof window !== 'undefined') {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const syncParam = params.get('sync');
+        if (syncParam) {
+          redeemDeviceSyncCode(syncParam).then((res) => {
+            if (res.success) {
+              triggerToast('🎉 Workouts successfully synced from PC!');
+              // Clean up query param from URL without reload
+              window.history.replaceState({}, '', window.location.pathname);
+            }
+          });
+        }
+      } catch {}
+    }
 
     const unsubPlan = onCloudPlanUpdated((newWeeks) => {
       setWeeks(newWeeks);
@@ -182,14 +200,37 @@ export default function DashboardPage() {
     if (!activeTimer || activeTimer.exerciseIndex === undefined || activeTimer.setIndex === undefined) return;
     const { exerciseIndex, setIndex } = activeTimer;
 
-    const updatedWeeks = [...weeks];
-    const targetDay = updatedWeeks[currentWeek - 1]?.days[currentDayIndex];
+    const targetDay = weeks[currentWeek - 1]?.days[currentDayIndex];
     if (!targetDay) return;
     const targetEx = targetDay.exercises[exerciseIndex];
     if (!targetEx || !targetEx.sets[setIndex]) return;
 
-    targetEx.sets[setIndex].completed = true;
-    targetEx.completed = targetEx.sets.every((s) => s.completed);
+    // Deep immutable update so React immediately re-renders SetRow with checked box
+    const updatedWeeks = weeks.map((w, wIdx) => {
+      if (wIdx !== currentWeek - 1) return w;
+      return {
+        ...w,
+        days: w.days.map((d, dIdx) => {
+          if (dIdx !== currentDayIndex) return d;
+          return {
+            ...d,
+            exercises: d.exercises.map((e, eIdx) => {
+              if (eIdx !== exerciseIndex) return e;
+              const updatedSets = e.sets.map((s, sIdx) => {
+                if (sIdx !== setIndex) return s;
+                return { ...s, completed: true };
+              });
+              return {
+                ...e,
+                sets: updatedSets,
+                completed: updatedSets.every((s) => s.completed),
+              };
+            }),
+          };
+        }),
+      };
+    });
+
     setWeeks(updatedWeeks);
     saveWeeks(updatedWeeks);
 
@@ -208,7 +249,7 @@ export default function DashboardPage() {
       totalSets: targetEx.sets.length,
       autoFlow: activeTimer.autoFlow ?? true,
     });
-    triggerToast(`✓ Set ${setIndex + 1} complete! 90s Rest timer started.`);
+    triggerToast(`✓ Set ${setIndex + 1} completed! 90s Rest timer started.`);
   };
 
   // Auto-advance or manual next set trigger after rest finishes

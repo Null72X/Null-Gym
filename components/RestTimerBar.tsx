@@ -12,11 +12,10 @@ import {
   VolumeX,
   Check,
   Zap,
-  Dumbbell,
   Coffee,
-  ArrowRight,
-  Clock,
   Sparkles,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 export interface RestTimerBarProps {
@@ -51,8 +50,9 @@ export default function RestTimerBar({
   const [isRunning, setIsRunning] = useState<boolean>(true);
   const [isFinished, setIsFinished] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
-  const [isExpanded, setIsExpanded] = useState<boolean>(true);
+  const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [isAutoFlow, setIsAutoFlow] = useState<boolean>(autoFlow);
+  const [completedTickSet, setCompletedTickSet] = useState<number | null>(null);
   const [transitionPrompt, setTransitionPrompt] = useState<string | null>(null);
 
   const intervalRef = useRef<any>(null);
@@ -68,15 +68,17 @@ export default function RestTimerBar({
       setSeconds(initialSeconds);
       setIsRunning(true);
       setIsFinished(false);
-      setIsExpanded(true);
       setTransitionPrompt(null);
+      if (mode === 'exercise') {
+        setCompletedTickSet(null);
+      }
       if (autoAdvanceTimeoutRef.current) {
         clearTimeout(autoAdvanceTimeoutRef.current);
       }
     }
   }, [initialSeconds, mode, exerciseName]);
 
-  // Keep phone screen awake during active exercise & rest intervals
+  // Screen Wake Lock API: Keeps phone screen awake while timer runs
   useEffect(() => {
     let wakeLock: any = null;
     const requestWakeLock = async () => {
@@ -84,9 +86,7 @@ export default function RestTimerBar({
         if (typeof window !== 'undefined' && 'wakeLock' in navigator && (navigator as any).wakeLock) {
           wakeLock = await (navigator as any).wakeLock.request('screen');
         }
-      } catch {
-        // Ignored if unsupported or hidden
-      }
+      } catch {}
     };
 
     if (isRunning && seconds > 0) {
@@ -134,7 +134,7 @@ export default function RestTimerBar({
     } catch {}
   };
 
-  // Halfway audio alert (e.g. 45 seconds of 90s)
+  // Halfway audio alert (at 45 seconds of 90s)
   const playHalfway = () => {
     if (isMuted) return;
     try {
@@ -156,7 +156,7 @@ export default function RestTimerBar({
     } catch {}
   };
 
-  // 10s warning alert tone
+  // 10-second intensity alert
   const playTenSecWarning = () => {
     if (isMuted) return;
     try {
@@ -166,14 +166,14 @@ export default function RestTimerBar({
       [640, 640].forEach((freq, i) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        osc.type = 'sine';
+        osc.type = 'triangle';
         osc.frequency.setValueAtTime(freq, now + i * 0.14);
-        gain.gain.setValueAtTime(0.25, now + i * 0.14);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.14 + 0.15);
+        gain.gain.setValueAtTime(0.28, now + i * 0.14);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.14 + 0.1);
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.start(now + i * 0.14);
-        osc.stop(now + i * 0.14 + 0.15);
+        osc.stop(now + i * 0.14 + 0.1);
       });
     } catch {}
   };
@@ -201,7 +201,7 @@ export default function RestTimerBar({
           osc.stop(now + i * 0.12 + 0.35);
         });
       } else {
-        // Double resonant chime for rest completion: E5 (659Hz) -> A5 (880Hz)
+        // Double resonant chime for rest completion
         const osc1 = ctx.createOscillator();
         const gain1 = ctx.createGain();
         osc1.type = 'triangle';
@@ -248,11 +248,13 @@ export default function RestTimerBar({
 
           // AUTOMATION 1: Exercise work timer finished
           if (currentMode === 'exercise') {
+            const currentFinishedSet = setIndex !== undefined ? setIndex + 1 : 1;
+            setCompletedTickSet(currentFinishedSet);
             if (onCompleteExerciseSet) {
               onCompleteExerciseSet();
             }
             if (isAutoFlow) {
-              setTransitionPrompt('⚡ Set Finished! Starting 90s Rest...');
+              setTransitionPrompt(`⚡ Set ${currentFinishedSet} Ticked Complete! Starting 90s Rest...`);
               autoAdvanceTimeoutRef.current = setTimeout(() => {
                 handleTransitionToRest(90);
               }, 1200);
@@ -261,16 +263,16 @@ export default function RestTimerBar({
 
           // AUTOMATION 2: Rest timer finished
           if (currentMode === 'rest' && isAutoFlow && onStartNextSet) {
-            setTransitionPrompt('🚀 Rest Over! Auto-Starting Next Set in 2s...');
+            setTransitionPrompt('🚀 Rest Complete! Auto-Starting Next Set...');
             autoAdvanceTimeoutRef.current = setTimeout(() => {
               onStartNextSet();
-            }, 2000);
+            }, 1800);
           }
 
           return 0;
         }
 
-        // Halfway tone cue (at 45s for a 90s duration)
+        // Halfway tone cue (at 45s for 90s duration)
         if (prev === Math.floor(totalSeconds / 2) + 1 && totalSeconds >= 40) {
           playHalfway();
         }
@@ -280,11 +282,11 @@ export default function RestTimerBar({
           playTenSecWarning();
         }
 
-        // 3, 2, 1 second countdown beeps
-        if (prev === 4 || prev === 3 || prev === 2) {
+        // 3-2-1 countdown ticks
+        if (prev <= 4 && prev >= 2) {
           playTick();
           if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-            navigator.vibrate(25);
+            navigator.vibrate([40]);
           }
         }
 
@@ -295,7 +297,7 @@ export default function RestTimerBar({
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isRunning, seconds, isMuted, currentMode, isAutoFlow, totalSeconds]);
+  }, [isRunning, seconds, isMuted, currentMode, isAutoFlow, totalSeconds, setIndex]);
 
   // Adjust seconds (+ / -)
   const adjustSeconds = (delta: number) => {
@@ -329,12 +331,14 @@ export default function RestTimerBar({
     setIsRunning((prev) => !prev);
   };
 
-  // Finish Exercise early and immediately transition to 90s Rest
+  // Finish Exercise early, tick the set as completed, and start 90s Rest
   const handleFinishExerciseNow = () => {
     setSeconds(0);
     setIsFinished(true);
     setIsRunning(false);
     playChime(true);
+    const finishedSetNum = setIndex !== undefined ? setIndex + 1 : 1;
+    setCompletedTickSet(finishedSetNum);
     if (onCompleteExerciseSet) {
       onCompleteExerciseSet();
     }
@@ -391,87 +395,88 @@ export default function RestTimerBar({
     return '#38bdf8'; // Cyan for rest
   };
 
-  const presets = [30, 45, 60, 90, 120, 180];
+  const presets = [30, 60, 90, 120];
 
   return (
     <div
       className={`floating-rest-bar ${initialSeconds !== null ? 'active' : ''}`}
       style={{
         position: 'fixed',
-        bottom: 'calc(64px + var(--safe-bottom) + 8px)',
+        bottom: 'calc(62px + var(--safe-bottom) + 8px)',
         left: '50%',
         transform: 'translateX(-50%)',
         width: 'min(500px, calc(100% - 16px))',
-        background: 'rgba(14, 14, 20, 0.96)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
+        background: 'linear-gradient(180deg, rgba(20, 20, 28, 0.96) 0%, rgba(12, 12, 18, 0.98) 100%)',
+        backdropFilter: 'blur(28px)',
+        WebkitBackdropFilter: 'blur(28px)',
         border: `1px solid ${
           isFinished
-            ? 'rgba(34, 197, 94, 0.55)'
+            ? 'rgba(34, 197, 94, 0.6)'
             : isExerciseMode
-            ? 'rgba(239, 68, 68, 0.5)'
-            : 'rgba(56, 189, 248, 0.45)'
+            ? 'rgba(239, 68, 68, 0.45)'
+            : 'rgba(56, 189, 248, 0.35)'
         }`,
         boxShadow: isFinished
-          ? '0 8px 32px rgba(34, 197, 94, 0.28)'
+          ? '0 12px 36px rgba(34, 197, 94, 0.25), 0 0 0 1px rgba(34, 197, 94, 0.2)'
           : isExerciseMode
-          ? '0 8px 32px rgba(239, 68, 68, 0.35)'
-          : '0 8px 32px rgba(0, 0, 0, 0.8)',
+          ? '0 12px 36px rgba(239, 68, 68, 0.25), 0 0 0 1px rgba(239, 68, 68, 0.15)'
+          : '0 12px 36px rgba(0, 0, 0, 0.7)',
         borderRadius: '16px',
         zIndex: 900,
         transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
         padding: '10px 14px',
       }}
     >
-      {/* Auto-Flow Transition Banner */}
-      {transitionPrompt && (
+      {/* Set Completed Visual Notification Pill */}
+      {(completedTickSet !== null || transitionPrompt) && (
         <div
           style={{
-            background: isExerciseMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)',
-            border: `1px solid ${isExerciseMode ? 'rgba(239, 68, 68, 0.4)' : 'rgba(34, 197, 94, 0.4)'}`,
+            background: 'rgba(34, 197, 94, 0.15)',
+            border: '1px solid rgba(34, 197, 94, 0.4)',
             borderRadius: '8px',
             padding: '4px 10px',
             marginBottom: '8px',
             fontSize: '0.70rem',
             fontWeight: 800,
-            color: '#fff',
+            color: '#86efac',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '6px',
-            animation: 'pulse 1.5s infinite',
           }}
         >
-          <Sparkles size={12} color={isExerciseMode ? '#fca5a5' : '#86efac'} />
-          <span>{transitionPrompt}</span>
+          <Check size={13} color="var(--accent-green)" />
+          <span>
+            {transitionPrompt || `Set ${completedTickSet} marked complete! ✓ Checkbox ticked`}
+          </span>
         </div>
       )}
 
-      {/* Top Main Row */}
+      {/* Main Bar Row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '10px' }}>
-        {/* Left Side: Circular Ring + Time + Info */}
+        {/* Left Side: Circular Progress Ring + Time + Info */}
         <div
           style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', minWidth: 0, flex: 1 }}
           onClick={() => setIsExpanded((prev) => !prev)}
         >
           {/* Animated SVG Progress Ring */}
-          <div style={{ position: 'relative', width: '48px', height: '48px', flexShrink: 0 }}>
-            <svg width="48" height="48" style={{ transform: 'rotate(-90deg)' }}>
+          <div style={{ position: 'relative', width: '46px', height: '46px', flexShrink: 0 }}>
+            <svg width="46" height="46" style={{ transform: 'rotate(-90deg)' }}>
               <circle
-                cx="24"
-                cy="24"
+                cx="23"
+                cy="23"
                 r={radius}
                 fill="none"
                 stroke="rgba(255, 255, 255, 0.08)"
-                strokeWidth="4"
+                strokeWidth="3.5"
               />
               <circle
-                cx="24"
-                cy="24"
+                cx="23"
+                cy="23"
                 r={radius}
                 fill="none"
                 stroke={getRingColor()}
-                strokeWidth="4"
+                strokeWidth="3.5"
                 strokeDasharray={circumference}
                 strokeDashoffset={strokeDashoffset}
                 strokeLinecap="round"
@@ -502,12 +507,12 @@ export default function RestTimerBar({
           </div>
 
           <div style={{ minWidth: 0, flex: 1 }}>
+            {/* Header Status Tag */}
             <div
               style={{
                 fontSize: '0.62rem',
                 fontWeight: 800,
-                textTransform: 'uppercase',
-                letterSpacing: '0.6px',
+                letterSpacing: '0.5px',
                 color: isFinished
                   ? 'var(--accent-green)'
                   : seconds <= 10
@@ -526,22 +531,20 @@ export default function RestTimerBar({
               <span>
                 {isFinished
                   ? isExerciseMode
-                    ? '🎉 SET COMPLETE!'
-                    : '🎉 REST COMPLETE · READY!'
-                  : isRunning
-                  ? isExerciseMode
-                    ? '⚡ 90s WORK INTERVAL'
-                    : '☕ 90s REST RECOVERY'
-                  : '⏸ PAUSED'}
+                    ? '🎉 SET COMPLETE ✓'
+                    : '🎉 REST OVER · READY'
+                  : isExerciseMode
+                  ? '⚡ 90s WORK INTERVAL'
+                  : '☕ 90s REST RECOVERY'}
               </span>
 
               {setIndex !== undefined && totalSets !== undefined && (
                 <span
                   style={{
-                    background: isExerciseMode ? 'rgba(239, 68, 68, 0.25)' : 'rgba(56, 189, 248, 0.25)',
-                    padding: '1px 5px',
+                    background: isExerciseMode ? 'rgba(239, 68, 68, 0.22)' : 'rgba(56, 189, 248, 0.22)',
+                    padding: '1px 6px',
                     borderRadius: '4px',
-                    fontSize: '0.60rem',
+                    fontSize: '0.58rem',
                     color: '#fff',
                     fontFamily: 'var(--font-mono)',
                   }}
@@ -549,13 +552,29 @@ export default function RestTimerBar({
                   Set {setIndex + 1}/{totalSets}
                 </span>
               )}
+
+              {completedTickSet !== null && !isExerciseMode && (
+                <span
+                  style={{
+                    background: 'rgba(34, 197, 94, 0.2)',
+                    color: '#86efac',
+                    padding: '1px 5px',
+                    borderRadius: '4px',
+                    fontSize: '0.58rem',
+                    fontWeight: 800,
+                  }}
+                >
+                  ✓ Set {completedTickSet} Done
+                </span>
+              )}
             </div>
 
+            {/* Time & Exercise Name */}
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
               <div
                 style={{
                   fontFamily: 'var(--font-mono)',
-                  fontSize: '1.30rem',
+                  fontSize: '1.32rem',
                   fontWeight: 900,
                   lineHeight: 1.1,
                   color: isFinished ? 'var(--accent-green)' : '#ffffff',
@@ -573,7 +592,7 @@ export default function RestTimerBar({
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
-                    maxWidth: '160px',
+                    maxWidth: '150px',
                   }}
                 >
                   · {currentExerciseName}
@@ -583,53 +602,56 @@ export default function RestTimerBar({
           </div>
         </div>
 
-        {/* Right Side: Quick Action Buttons */}
+        {/* Right Side: Primary Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
-          {/* Finish Set early button in Exercise mode */}
+          {/* Work Mode: Done Set Button */}
           {isExerciseMode && !isFinished && (
             <button
               type="button"
               className="btn-clean btn-sm"
               onClick={handleFinishExerciseNow}
-              title="Finish set early and start 90s rest"
+              title="Finish set, tick completed on screen, and start 90s rest"
               style={{
-                background: 'rgba(34, 197, 94, 0.2)',
-                borderColor: 'rgba(34, 197, 94, 0.4)',
+                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(16, 185, 129, 0.3) 100%)',
+                borderColor: 'rgba(34, 197, 94, 0.5)',
                 color: '#86efac',
-                fontSize: '0.68rem',
-                padding: '4px 8px',
+                fontSize: '0.70rem',
+                padding: '5px 10px',
                 fontWeight: 800,
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '3px',
+                gap: '4px',
+                borderRadius: '8px',
               }}
             >
-              <Check size={12} />
+              <Check size={13} color="var(--accent-green)" />
               <span>Done Set</span>
             </button>
           )}
 
-          {/* Quick Start Next Set in Rest Mode */}
+          {/* Rest Mode: Next Set Button */}
           {!isExerciseMode && onStartNextSet && (
             <button
               type="button"
               className="btn-clean btn-sm btn-primary"
               onClick={() => onStartNextSet()}
-              title="Skip rest and start 90s Work Timer for next set"
+              title="Skip remaining rest and start 90s Work Timer for next set"
               style={{
-                fontSize: '0.68rem',
-                padding: '4px 8px',
+                fontSize: '0.70rem',
+                padding: '5px 10px',
                 fontWeight: 800,
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '3px',
+                gap: '4px',
+                borderRadius: '8px',
               }}
             >
-              <Zap size={11} />
+              <Zap size={12} />
               <span>Next Set</span>
             </button>
           )}
 
+          {/* Quick Adjustment */}
           <button
             type="button"
             className="timer-action-btn timer-secondary-actions"
@@ -648,12 +670,13 @@ export default function RestTimerBar({
             +15s
           </button>
 
+          {/* Play/Pause */}
           <button
             type="button"
             className="timer-action-btn"
             style={{
               background: isRunning ? 'rgba(239, 68, 68, 0.15)' : 'rgba(34, 197, 94, 0.15)',
-              borderColor: isRunning ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)',
+              borderColor: isRunning ? 'rgba(239, 68, 68, 0.35)' : 'rgba(34, 197, 94, 0.35)',
               color: isRunning ? '#fca5a5' : '#86efac',
               minWidth: '30px',
               height: '30px',
@@ -664,19 +687,31 @@ export default function RestTimerBar({
             {isRunning ? <Pause size={13} /> : <Play size={13} />}
           </button>
 
+          {/* Expand/Collapse Chevron */}
+          <button
+            type="button"
+            className="timer-action-btn"
+            onClick={() => setIsExpanded((prev) => !prev)}
+            title={isExpanded ? 'Collapse Presets' : 'Expand Presets & Modes'}
+            style={{ color: 'var(--text-dim)', minWidth: '28px', height: '30px' }}
+          >
+            {isExpanded ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+          </button>
+
+          {/* Close Timer */}
           <button
             type="button"
             className="timer-action-btn"
             onClick={onDismiss}
             title="Close timer"
-            style={{ color: 'var(--text-dim)', minWidth: '30px', height: '30px' }}
+            style={{ color: 'var(--text-dim)', minWidth: '28px', height: '30px' }}
           >
-            <X size={13} />
+            <X size={14} />
           </button>
         </div>
       </div>
 
-      {/* Expanded Quick Presets, Auto-Flow & Mode Controls */}
+      {/* Expanded Controls Drawer */}
       {isExpanded && (
         <div
           style={{
@@ -701,8 +736,8 @@ export default function RestTimerBar({
                 color: isExerciseMode ? '#ffffff' : 'var(--text-muted)',
                 fontSize: '0.64rem',
                 fontWeight: isExerciseMode ? 800 : 600,
-                padding: '3px 7px',
-                borderRadius: '5px',
+                padding: '3px 8px',
+                borderRadius: '6px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -722,8 +757,8 @@ export default function RestTimerBar({
                 color: !isExerciseMode ? '#ffffff' : 'var(--text-muted)',
                 fontSize: '0.64rem',
                 fontWeight: !isExerciseMode ? 800 : 600,
-                padding: '3px 7px',
-                borderRadius: '5px',
+                padding: '3px 8px',
+                borderRadius: '6px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -744,8 +779,8 @@ export default function RestTimerBar({
                 color: isAutoFlow ? '#86efac' : 'var(--text-dim)',
                 fontSize: '0.62rem',
                 fontWeight: 800,
-                padding: '3px 7px',
-                borderRadius: '5px',
+                padding: '3px 8px',
+                borderRadius: '6px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -768,10 +803,10 @@ export default function RestTimerBar({
                 preset < 60
                   ? `${preset}s`
                   : preset === 60
-                  ? '1m'
+                  ? '60s'
                   : preset === 90
                   ? '90s ⭐'
-                  : `${preset / 60}m`;
+                  : `${preset}s`;
               return (
                 <button
                   key={preset}
@@ -797,13 +832,12 @@ export default function RestTimerBar({
                     color: isSelected ? '#ffffff' : isDefault90 ? '#fca5a5' : 'var(--text-muted)',
                     fontSize: '0.62rem',
                     fontWeight: isSelected || isDefault90 ? 800 : 600,
-                    padding: '2px 5px',
+                    padding: '2px 6px',
                     borderRadius: '5px',
                     cursor: 'pointer',
                     fontFamily: 'var(--font-mono)',
                     transition: 'all 0.15s ease',
                   }}
-                  title={isDefault90 ? 'Recommended Standard 90s' : undefined}
                 >
                   {label}
                 </button>
@@ -811,13 +845,13 @@ export default function RestTimerBar({
             })}
           </div>
 
-          {/* Utilities: Restart, Mute & Finish/Skip */}
+          {/* Utilities: Restart & Mute */}
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
             <button
               type="button"
               className="timer-action-btn"
               onClick={restartTimer}
-              title="Restart 90s timer"
+              title="Restart timer"
               style={{ padding: '2px 6px', fontSize: '0.64rem' }}
             >
               <RotateCcw size={11} />
@@ -831,33 +865,6 @@ export default function RestTimerBar({
               style={{ color: isMuted ? 'var(--text-dim)' : 'var(--accent-amber)', padding: '2px 6px', fontSize: '0.64rem' }}
             >
               {isMuted ? <VolumeX size={11} /> : <Volume2 size={11} />}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setSeconds(0);
-                setIsFinished(true);
-                setIsRunning(false);
-                playChime(isExerciseMode);
-                if (isExerciseMode && onCompleteExerciseSet) {
-                  onCompleteExerciseSet();
-                } else if (!isExerciseMode && onStartNextSet) {
-                  onStartNextSet();
-                }
-              }}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--accent-green)',
-                fontSize: '0.64rem',
-                fontWeight: 800,
-                cursor: 'pointer',
-                padding: '2px 4px',
-              }}
-              title={isExerciseMode ? 'Complete set' : 'Skip rest'}
-            >
-              {isExerciseMode ? 'Finish Set ✓' : 'Skip Rest ✓'}
             </button>
           </div>
         </div>

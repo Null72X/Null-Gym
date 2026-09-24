@@ -277,16 +277,85 @@ export async function pullSettingsFromCloud(): Promise<{
 }
 
 // -------------------------------------------------------------
-// CONNECTION CHECK (Always returns healthy automatic status)
+// CONNECTION CHECK & RLS DIAGNOSTICS
 // -------------------------------------------------------------
 export async function checkSupabaseConnection(): Promise<{
   connected: boolean;
   tableFound: boolean;
+  needsRlsFix: boolean;
   message: string;
 }> {
-  return {
-    connected: true,
-    tableFound: true,
-    message: 'Automatic database is active and syncing smoothly!',
-  };
+  if (!isSupabaseConfigured || !supabase) {
+    return {
+      connected: false,
+      tableFound: false,
+      needsRlsFix: false,
+      message: 'Supabase credentials are not configured in .env.local',
+    };
+  }
+
+  try {
+    // 1. Test read permissions
+    const { error: readError } = await supabase.from('workout_plan').select('id').limit(1);
+    if (readError) {
+      if (readError.code === 'PGRST205' || readError.message?.includes('schema cache')) {
+        return {
+          connected: true,
+          tableFound: false,
+          needsRlsFix: false,
+          message: "Connected to Supabase, but table 'workout_plan' not found. Run table creation script.",
+        };
+      }
+      return {
+        connected: false,
+        tableFound: false,
+        needsRlsFix: false,
+        message: readError.message,
+      };
+    }
+
+    // 2. Test write permissions (check for RLS policy 42501 error)
+    const { error: writeError } = await supabase.from('workout_plan').upsert(
+      {
+        id: 'test_connection_ping',
+        weeks: [],
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'id' }
+    );
+
+    if (writeError) {
+      if (writeError.code === '42501' || writeError.message?.includes('row-level security')) {
+        return {
+          connected: true,
+          tableFound: true,
+          needsRlsFix: true,
+          message: 'Row-Level Security (RLS) is blocking writes. Please run the 2-line SQL command in Supabase SQL Editor.',
+        };
+      }
+      return {
+        connected: true,
+        tableFound: true,
+        needsRlsFix: false,
+        message: `Connected, but write test failed: ${writeError.message}`,
+      };
+    }
+
+    // Clean up ping row if successful
+    await supabase.from('workout_plan').delete().eq('id', 'test_connection_ping');
+
+    return {
+      connected: true,
+      tableFound: true,
+      needsRlsFix: false,
+      message: '🟢 100% Connected! Supabase Cloud Database is fully synchronized with read/write access.',
+    };
+  } catch (err: any) {
+    return {
+      connected: false,
+      tableFound: false,
+      needsRlsFix: false,
+      message: err?.message || 'Connection test failed',
+    };
+  }
 }

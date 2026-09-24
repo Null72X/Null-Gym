@@ -377,8 +377,14 @@ export async function performContinuousCloudSync(force = false) {
       Array.isArray(localWeeks) &&
       localWeeks.some((w: any) => w.days.some((d: any) => d.exercises?.length > 0));
 
-    // Case 1: First-time seed - Server database is empty, but local has user workouts
-    if (!body.plan && localHasExercises) {
+    const serverHasExercises =
+      body.plan &&
+      Array.isArray(body.plan) &&
+      body.plan.some((w: any) => w.days.some((d: any) => d.exercises?.length > 0));
+
+    // Case 1: First-time seed / Upload to Server
+    // Local device has exercises, but server database is empty of exercises
+    if (localHasExercises && !serverHasExercises) {
       const active = getActiveSelection();
       const hist = getSavedHistory();
       await fetch('/api/sync', {
@@ -395,14 +401,38 @@ export async function performContinuousCloudSync(force = false) {
       return;
     }
 
-    // Case 2: Server has plan data -> sync smoothly to local device
-    if (body.plan && Array.isArray(body.plan) && body.plan.length > 0) {
+    // Case 2: Server has real exercises, but local device is empty (e.g. mobile opening for the first time)
+    // -> Pull server workouts to local device!
+    if (serverHasExercises && !localHasExercises) {
+      lastSyncedServerTimestamp = serverTime;
+      const validServerWeeks = ensureSixWeeks(body.plan);
+      const serverWeeksStr = JSON.stringify(validServerWeeks);
+      cachedWeeks = validServerWeeks;
+      localStorage.setItem(STORAGE_KEYS.WEEKS, serverWeeksStr);
+      planListeners.forEach((l) => l(validServerWeeks));
+
+      if (Array.isArray(body.history)) {
+        cachedHistory = body.history;
+        localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(body.history));
+        historyListeners.forEach((l) => l(body.history));
+      }
+
+      if (body.settings && typeof body.settings === 'object') {
+        cachedActive = body.settings;
+        localStorage.setItem(STORAGE_KEYS.ACTIVE, JSON.stringify(body.settings));
+        settingsListeners.forEach((l) => l(body.settings));
+      }
+
+      notifyCloudStatus('synced', 'Database Synced');
+      isAutoSyncRunning = false;
+      return;
+    }
+
+    // Case 3: Both have exercises -> sync if server has a newer timestamp or forced
+    if (serverHasExercises && localHasExercises) {
       if (force || serverTime !== lastSyncedServerTimestamp) {
         lastSyncedServerTimestamp = serverTime;
-
-        // Upgrade server plans to 6-week if needed
         const validServerWeeks = ensureSixWeeks(body.plan);
-
         const serverWeeksStr = JSON.stringify(validServerWeeks);
         if (localRawWeeks !== serverWeeksStr) {
           cachedWeeks = validServerWeeks;
@@ -410,7 +440,6 @@ export async function performContinuousCloudSync(force = false) {
           planListeners.forEach((l) => l(validServerWeeks));
         }
 
-        // Sync history
         if (Array.isArray(body.history)) {
           const localHistRaw = localStorage.getItem(STORAGE_KEYS.HISTORY);
           const serverHistStr = JSON.stringify(body.history);
@@ -421,7 +450,6 @@ export async function performContinuousCloudSync(force = false) {
           }
         }
 
-        // Sync settings
         if (body.settings && typeof body.settings === 'object') {
           const localActiveRaw = localStorage.getItem(STORAGE_KEYS.ACTIVE);
           const serverSettingsStr = JSON.stringify(body.settings);
@@ -522,13 +550,16 @@ export function exportAllData(): string {
 
 export function importAllData(jsonStr: string): boolean {
   try {
-    const parsed = JSON.parse(jsonStr);
+    const parsed = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
     if (!parsed || !Array.isArray(parsed.weeks)) {
       throw new Error('Invalid workout data format.');
     }
     if (typeof window !== 'undefined') {
-      cachedWeeks = parsed.weeks;
-      localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(parsed.weeks));
+      const validWeeks = ensureSixWeeks(parsed.weeks);
+      cachedWeeks = validWeeks;
+      localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(validWeeks));
+      planListeners.forEach((l) => l(validWeeks));
+
       if (Array.isArray(parsed.library)) {
         cachedLibrary = parsed.library;
         localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(parsed.library));
@@ -536,18 +567,71 @@ export function importAllData(jsonStr: string): boolean {
       if (Array.isArray(parsed.history)) {
         cachedHistory = parsed.history;
         localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(parsed.history));
+        historyListeners.forEach((l) => l(parsed.history));
       }
       if (parsed.activeSelection) {
         cachedActive = parsed.activeSelection;
         localStorage.setItem(STORAGE_KEYS.ACTIVE, JSON.stringify(parsed.activeSelection));
+        settingsListeners.forEach((l) => l(parsed.activeSelection));
       }
       emitSave('saved');
-      debouncedPushPlanToCloud(parsed.weeks);
+      debouncedPushPlanToCloud(validWeeks);
     }
     return true;
   } catch (err) {
     console.error('Import failed:', err);
     return false;
+  }
+}
+
+// -------------------------------------------------------------
+// INSTANT DEVICE SYNC ENGINE (PC -> Mobile QR Code & 6-Digit PIN)
+// -------------------------------------------------------------
+export async function createDeviceSyncCode(): Promise<{ success: boolean; code?: string; error?: string }> {
+  try {
+    const payload = {
+      weeks: getSavedWeeks(),
+      history: getSavedHistory(),
+      activeSelection: getActiveSelection(),
+    };
+    const res = await fetch('/api/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'create_sync_token',
+        data: payload,
+      }),
+    });
+    if (!res.ok) throw new Error(`Server returned status ${res.status}`);
+    const body = await res.json();
+    if (body.success && body.code) {
+      return { success: true, code: body.code };
+    }
+    return { success: false, error: body.error || 'Failed to generate code' };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Network request failed' };
+  }
+}
+
+export async function redeemDeviceSyncCode(code: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const cleanCode = code.trim().replace(/\s+/g, '');
+    const res = await fetch(`/api/sync?code=${encodeURIComponent(cleanCode)}`, { cache: 'no-store' });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error(body?.error || 'Invalid or expired sync code.');
+    }
+    const body = await res.json();
+    if (body.success && body.payload) {
+      const ok = importAllData(body.payload);
+      if (ok) {
+        notifyCloudStatus('synced', 'Device Synchronized');
+        return { success: true };
+      }
+    }
+    return { success: false, error: 'Could not import received workout payload.' };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Sync failed.' };
   }
 }
 

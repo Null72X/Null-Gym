@@ -20,8 +20,10 @@ import {
   saveProgressionConfig,
   applyAutoScaleToAllWeeks,
   advanceToNextCycle,
+  redeemDeviceSyncCode,
 } from '../../lib/storage';
-import { onCloudStatus, CloudSyncInfo } from '../../lib/supabaseSync';
+import { onCloudStatus, CloudSyncInfo, checkSupabaseConnection } from '../../lib/supabaseSync';
+import DeviceSyncModal from '../../components/DeviceSyncModal';
 import { WeightUnit, ProgressionConfig } from '../../types/workout';
 import { ALL_CATALOG_EXERCISES } from '../../lib/exerciseCatalog';
 import {
@@ -31,6 +33,7 @@ import {
   RefreshCw,
   Trash2,
   Check,
+  Copy,
   BookOpen,
   Calendar,
   Zap,
@@ -99,6 +102,19 @@ export default function SettingsPage() {
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Device sync & DB diagnostic states
+  const [isDeviceSyncModalOpen, setIsDeviceSyncModalOpen] = useState<boolean>(false);
+  const [syncCodeInput, setSyncCodeInput] = useState<string>('');
+  const [isSyncingCode, setIsSyncingCode] = useState<boolean>(false);
+  const [dbTestResult, setDbTestResult] = useState<{
+    tested: boolean;
+    connected: boolean;
+    needsRlsFix: boolean;
+    message: string;
+  } | null>(null);
+  const [isTestingDb, setIsTestingDb] = useState<boolean>(false);
+  const [isSqlCopied, setIsSqlCopied] = useState<boolean>(false);
 
   useEffect(() => {
     const unsubCloud = onCloudStatus((info) => {
@@ -218,6 +234,56 @@ export default function SettingsPage() {
     const newPlan = advanceToNextCycle();
     triggerToast('🚀 Cycle 2 Started! Week 1 baseline upgraded.');
     router.push('/');
+  };
+
+  // Redeem 6-digit sync code in settings
+  const handleRedeemSettingsCode = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const clean = syncCodeInput.trim().replace(/\s+/g, '');
+    if (!clean) return;
+    setIsSyncingCode(true);
+    try {
+      const res = await redeemDeviceSyncCode(clean);
+      if (res.success) {
+        triggerToast('🎉 Workouts successfully synced to this device!');
+        setSyncCodeInput('');
+        router.push('/');
+      } else {
+        alert(res.error || 'Invalid or expired code.');
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Sync failed.');
+    } finally {
+      setIsSyncingCode(false);
+    }
+  };
+
+  const handleTestSupabase = async () => {
+    setIsTestingDb(true);
+    try {
+      const result = await checkSupabaseConnection();
+      setDbTestResult({
+        tested: true,
+        connected: result.connected,
+        needsRlsFix: result.needsRlsFix,
+        message: result.message,
+      });
+    } finally {
+      setIsTestingDb(false);
+    }
+  };
+
+  const sqlFixCode = `-- Run once in Supabase SQL Editor (takes 5 seconds)
+ALTER TABLE public.workout_plan ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all on workout_plan" ON public.workout_plan FOR ALL TO anon USING (true) WITH CHECK (true);
+ALTER TABLE public.workout_history ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all on workout_history" ON public.workout_history FOR ALL TO anon USING (true) WITH CHECK (true);`;
+
+  const handleCopySql = () => {
+    navigator.clipboard.writeText(sqlFixCode);
+    setIsSqlCopied(true);
+    setTimeout(() => setIsSqlCopied(false), 2200);
+    triggerToast('SQL script copied to clipboard! 📋');
   };
 
   // Export JSON file
@@ -677,7 +743,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* 4. Multi-Device Cloud Sync */}
+        {/* 4. Multi-Device Cloud & Direct Sync */}
         <div className="clean-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <h3
@@ -690,50 +756,186 @@ export default function SettingsPage() {
                 gap: '6px',
               }}
             >
-              <Cloud size={16} color="var(--accent-green)" />
-              <span>Multi-Device Cloud Sync</span>
+              <Smartphone size={16} color="var(--accent-red)" />
+              <span>Multi-Device Sync (PC ⟷ Mobile)</span>
             </h3>
             <span
               className={`cloud-status-pill ${cloudInfo.status === 'offline' ? 'offline' : 'synced'}`}
               style={{ fontSize: '0.68rem', padding: '3px 8px' }}
             >
-              {cloudInfo.status === 'offline' ? '📶 Offline' : '🟢 100% Automatic'}
+              {cloudInfo.status === 'offline' ? '📶 Offline' : '🟢 Cloud Ready'}
             </span>
           </div>
 
           <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
-            Your workouts, 6-week program, history, and PRs automatically persist and sync across your phone, tablet, and PC in real time.
+            Seamlessly transfer or synchronize your entire 6-week program, exercises, weights, and workout history across your phone, tablet, and PC.
           </p>
+
+          {/* 1-Tap QR Code & Direct Transfer Button */}
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
+            <button
+              type="button"
+              className="btn-clean btn-primary btn-sm"
+              onClick={() => setIsDeviceSyncModalOpen(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', fontSize: '0.78rem' }}
+            >
+              <Smartphone size={14} />
+              <span>📱 Open QR Code &amp; Sync to Phone</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn-clean btn-sm"
+              onClick={handleTestSupabase}
+              disabled={isTestingDb}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem' }}
+            >
+              {isTestingDb ? <RefreshCw size={13} className="spin" /> : <Cloud size={13} />}
+              <span>{isTestingDb ? 'Testing Connection...' : 'Test Cloud Connection'}</span>
+            </button>
+          </div>
+
+          {/* Direct 6-Digit PIN Redemption Form */}
+          <form
+            onSubmit={handleRedeemSettingsCode}
+            style={{
+              background: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
+              padding: '10px 12px',
+              marginBottom: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <div>
+              <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#fff' }}>
+                Have a 6-digit Sync Code from another device?
+              </div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                Enter the code generated on your PC to load your plan instantly.
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <input
+                type="text"
+                maxLength={6}
+                value={syncCodeInput}
+                onChange={(e) => setSyncCodeInput(e.target.value.replace(/\D/g, ''))}
+                placeholder="6-digit code"
+                style={{
+                  width: '110px',
+                  padding: '6px 8px',
+                  fontSize: '0.85rem',
+                  fontFamily: 'var(--font-mono)',
+                  letterSpacing: '2px',
+                  textAlign: 'center',
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '6px',
+                  color: '#fff',
+                  outline: 'none',
+                }}
+              />
+              <button
+                type="submit"
+                disabled={isSyncingCode || syncCodeInput.length < 6}
+                className="btn-clean btn-sm btn-primary"
+                style={{ padding: '6px 12px', fontSize: '0.74rem' }}
+              >
+                {isSyncingCode ? 'Syncing...' : 'Sync Now'}
+              </button>
+            </div>
+          </form>
+
+          {/* Database Diagnostics Result Box */}
+          {dbTestResult && (
+            <div
+              style={{
+                background: dbTestResult.needsRlsFix
+                  ? 'rgba(239, 68, 68, 0.12)'
+                  : dbTestResult.connected
+                  ? 'rgba(34, 197, 94, 0.12)'
+                  : 'rgba(245, 158, 11, 0.12)',
+                border: `1px solid ${
+                  dbTestResult.needsRlsFix
+                    ? 'rgba(239, 68, 68, 0.35)'
+                    : dbTestResult.connected
+                    ? 'rgba(34, 197, 94, 0.35)'
+                    : 'rgba(245, 158, 11, 0.35)'
+                }`,
+                borderRadius: '8px',
+                padding: '10px 12px',
+                marginBottom: '10px',
+                fontSize: '0.72rem',
+                lineHeight: 1.5,
+              }}
+            >
+              <div style={{ fontWeight: 800, marginBottom: '4px', color: dbTestResult.needsRlsFix ? '#fca5a5' : dbTestResult.connected ? '#86efac' : '#fde047' }}>
+                {dbTestResult.message}
+              </div>
+
+              {dbTestResult.needsRlsFix && (
+                <div style={{ marginTop: '8px' }}>
+                  <div style={{ color: '#cbd5e1', marginBottom: '6px' }}>
+                    Copy and run this 2-line SQL command in your <strong>Supabase SQL Editor</strong> to enable public device sync:
+                  </div>
+                  <pre
+                    style={{
+                      background: 'rgba(0,0,0,0.4)',
+                      padding: '8px',
+                      borderRadius: '6px',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '0.66rem',
+                      overflowX: 'auto',
+                      marginBottom: '8px',
+                      color: '#93c5fd',
+                    }}
+                  >
+                    {sqlFixCode}
+                  </pre>
+                  <button
+                    type="button"
+                    className="btn-clean btn-sm"
+                    onClick={handleCopySql}
+                    style={{ fontSize: '0.68rem', padding: '4px 10px' }}
+                  >
+                    {isSqlCopied ? <Check size={12} color="var(--accent-green)" /> : <Copy size={12} />}
+                    <span>{isSqlCopied ? 'SQL Copied!' : 'Copy SQL Script'}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '10px',
-              background: 'rgba(34, 197, 94, 0.08)',
-              border: '1px solid rgba(34, 197, 94, 0.25)',
+              background: 'rgba(34, 197, 94, 0.06)',
+              border: '1px solid rgba(34, 197, 94, 0.2)',
               borderRadius: '8px',
-              padding: '10px 14px',
+              padding: '8px 12px',
             }}
           >
             <div
               style={{
-                width: '9px',
-                height: '9px',
+                width: '8px',
+                height: '8px',
                 borderRadius: '50%',
                 backgroundColor: '#22c55e',
-                boxShadow: '0 0 8px #22c55e',
+                boxShadow: '0 0 6px #22c55e',
                 flexShrink: 0,
               }}
             />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#4ade80' }}>
-                Always-On Continuous Cloud Sync Active
-              </span>
-              <span style={{ fontSize: '0.70rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                Zero buttons needed. Every set check, weight modification, and program edit syncs across all your devices automatically.
-              </span>
-            </div>
+            <span style={{ fontSize: '0.70rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+              <strong>Continuous Sync:</strong> Automatically saves workout changes and synchronizes when connected.
+            </span>
           </div>
         </div>
 
@@ -1056,6 +1258,16 @@ export default function SettingsPage() {
           <span style={{ fontFamily: 'var(--font-mono)' }}>Released under MIT License</span>
         </div>
       </div>
+
+      {/* Device Sync Modal (QR Code & PIN) */}
+      <DeviceSyncModal
+        isOpen={isDeviceSyncModalOpen}
+        onClose={() => setIsDeviceSyncModalOpen(false)}
+        onSyncComplete={(msg) => {
+          triggerToast(msg || 'Sync complete!');
+          router.push('/');
+        }}
+      />
 
       {/* Toast */}
       <div className={`clean-toast ${toastMessage ? 'show' : ''}`}>

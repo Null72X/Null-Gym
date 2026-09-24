@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { WeekPlan, WorkoutHistoryEntry, WeightUnit } from '@/types/workout';
+import { ensureSixWeeks } from '@/lib/planDefaults';
 
-// In-memory fallback if disk is read-only (e.g. serverless)
+// In-memory database store
 let inMemoryDatabase: {
   plan: WeekPlan[] | null;
   history: WorkoutHistoryEntry[];
@@ -16,79 +17,130 @@ let inMemoryDatabase: {
   updatedAt: new Date().toISOString(),
 };
 
+// In-memory 6-digit Device Sync Tokens (Valid for 2 hours)
+// Enables instant PC -> Mobile QR Code & PIN Transfer
+interface SyncTokenData {
+  payload: any;
+  createdAt: number;
+}
+const syncTokens = new Map<string, SyncTokenData>();
+
+// Cleanup expired tokens every 30 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [code, item] of syncTokens.entries()) {
+    if (now - item.createdAt > 2 * 60 * 60 * 1000) {
+      syncTokens.delete(code);
+    }
+  }
+}, 30 * 60 * 1000);
+
 // Data file path on server
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DATA_FILE = path.join(DATA_DIR, 'gym_database.json');
 
-// Ensure data folder and file exist once on startup
-let isLoadedFromDisk = false;
-
-function ensureLoaded() {
-  if (isLoadedFromDisk) return inMemoryDatabase;
+function loadDatabaseFromDisk() {
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-
     if (fs.existsSync(DATA_FILE)) {
       const content = fs.readFileSync(DATA_FILE, 'utf-8');
       const parsed = JSON.parse(content);
       inMemoryDatabase = { ...inMemoryDatabase, ...parsed };
-    } else {
-      fs.writeFileSync(DATA_FILE, JSON.stringify(inMemoryDatabase), 'utf-8');
     }
   } catch (err) {
-    // If running in a read-only container/serverless, fallback to inMemory
+    // Read failure or serverless ephemeral filesystem - fallback to in-memory
   }
-  isLoadedFromDisk = true;
   return inMemoryDatabase;
 }
 
-let savePromise: Promise<any> | null = null;
-let pendingSaveTimeout: any = null;
-
-function saveDatabaseAsync(data: Partial<typeof inMemoryDatabase>) {
+async function persistDatabase(data: Partial<typeof inMemoryDatabase>) {
   inMemoryDatabase = {
     ...inMemoryDatabase,
     ...data,
     updatedAt: new Date().toISOString(),
   };
 
-  // Debounced non-blocking async file write
-  if (pendingSaveTimeout) clearTimeout(pendingSaveTimeout);
-  pendingSaveTimeout = setTimeout(() => {
-    try {
-      const payload = JSON.stringify(inMemoryDatabase);
-      fs.promises.mkdir(DATA_DIR, { recursive: true })
-        .then(() => fs.promises.writeFile(DATA_FILE, payload, 'utf-8'))
-        .catch(() => {});
-    } catch {}
-  }, 100);
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      await fs.promises.mkdir(DATA_DIR, { recursive: true });
+    }
+    const payload = JSON.stringify(inMemoryDatabase, null, 2);
+    await fs.promises.writeFile(DATA_FILE, payload, 'utf-8');
+  } catch (err) {
+    // If running in a read-only container/serverless, in-memory state is preserved
+  }
 
   return inMemoryDatabase;
 }
 
-import { ensureSixWeeks } from '@/lib/planDefaults';
+// GET /api/sync
+// Supports normal database pull OR direct 6-digit sync token redemption (?code=XXXXXX)
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const code = searchParams.get('code') || searchParams.get('token');
 
-// GET /api/sync -> Returns current database snapshot
-export async function GET() {
-  const db = ensureLoaded();
-  const validPlan = db.plan ? ensureSixWeeks(db.plan) : null;
-  return NextResponse.json({
-    success: true,
-    plan: validPlan,
-    history: db.history || [],
-    settings: db.settings || { weekNumber: 1, dayIndex: 0, unit: 'kg' },
-    updatedAt: db.updatedAt,
-  });
+    // Case 1: Redeem a 6-digit device sync token from PC
+    if (code) {
+      const cleanCode = code.trim().replace(/\s+/g, '');
+      const tokenItem = syncTokens.get(cleanCode);
+
+      if (!tokenItem) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid or expired sync code. Please generate a new code on your PC.' },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        isTokenRedemption: true,
+        payload: tokenItem.payload,
+      });
+    }
+
+    // Case 2: Standard database pull
+    const db = loadDatabaseFromDisk();
+    const validPlan = db.plan ? ensureSixWeeks(db.plan) : null;
+
+    return NextResponse.json({
+      success: true,
+      plan: validPlan,
+      history: db.history || [],
+      settings: db.settings || { weekNumber: 1, dayIndex: 0, unit: 'kg' },
+      updatedAt: db.updatedAt,
+    });
+  } catch (err: any) {
+    return NextResponse.json(
+      { success: false, error: err?.message || 'Failed to fetch sync state' },
+      { status: 500 }
+    );
+  }
 }
 
-// POST /api/sync -> Persists updates automatically
+// POST /api/sync -> Persists updates or generates instant device sync tokens
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { action, data } = body;
-    const db = ensureLoaded();
+
+    // Case 1: Create a 6-digit Device Sync Token (PC -> Mobile QR Code)
+    if (action === 'create_sync_token' && data) {
+      // Generate a distinct 6-digit PIN
+      const tokenCode = Math.floor(100000 + Math.random() * 900000).toString();
+      syncTokens.set(tokenCode, {
+        payload: data,
+        createdAt: Date.now(),
+      });
+
+      return NextResponse.json({
+        success: true,
+        code: tokenCode,
+        expiresIn: '2 hours',
+      });
+    }
+
+    // Case 2: Persist database updates
+    const db = loadDatabaseFromDisk();
 
     if (action === 'save_plan' && Array.isArray(data)) {
       db.plan = ensureSixWeeks(data);
@@ -102,7 +154,7 @@ export async function POST(request: Request) {
       if (data.settings) db.settings = data.settings;
     }
 
-    saveDatabaseAsync(db);
+    await persistDatabase(db);
 
     return NextResponse.json({
       success: true,
