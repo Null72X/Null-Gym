@@ -990,9 +990,9 @@ body {
   font-family: var(--font-mono);
   font-size: 0.74rem;
   font-weight: 800;
-  width: 32px;
+  width: 37px;
   height: 32px;
-  min-width: 32px;
+  min-width: 37px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1027,7 +1027,7 @@ body {
   font-size: 0.8rem;
   color: #cbd5e1;
   font-family: var(--font-mono);
-  width: 50px;
+  width: 55px;
   height: 32px;
   text-align: center;
   flex-shrink: 0;
@@ -1046,7 +1046,7 @@ body {
   font-size: 0.76rem;
   color: var(--text-muted);
   font-family: var(--font-mono);
-  width: 50px;
+  width: 55px;
   text-align: center;
   flex-shrink: 0;
 }
@@ -1088,7 +1088,7 @@ body {
 }
 
 .clean-load-input {
-  width: 44px;
+  width: 49px;
   height: 28px;
   background: transparent;
   border: none;
@@ -1241,13 +1241,13 @@ body {
     gap: 4px;
   }
   .set-tag-badge {
-    width: 28px;
+    width: 33px;
     height: 28px;
-    min-width: 28px;
+    min-width: 33px;
     font-size: 0.70rem;
   }
   .set-reps-input {
-    width: 44px;
+    width: 49px;
     height: 30px;
     font-size: 0.76rem;
   }
@@ -1260,7 +1260,7 @@ body {
     font-size: 0.85rem;
   }
   .clean-load-input {
-    width: 38px;
+    width: 43px;
     height: 26px;
     font-size: 0.78rem;
   }
@@ -1282,14 +1282,14 @@ body {
     gap: 2px;
   }
   .set-tag-badge {
-    width: 24px;
+    width: 29px;
     height: 24px;
-    min-width: 24px;
+    min-width: 29px;
     font-size: 0.65rem;
     border-radius: 5px;
   }
   .set-reps-input {
-    width: 38px;
+    width: 43px;
     height: 28px;
     font-size: 0.72rem;
     padding: 2px 2px;
@@ -1304,7 +1304,7 @@ body {
     font-size: 0.80rem;
   }
   .clean-load-input {
-    width: 32px;
+    width: 37px;
     height: 24px;
     font-size: 0.72rem;
   }
