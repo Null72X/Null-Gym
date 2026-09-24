@@ -20,10 +20,8 @@ import {
   saveProgressionConfig,
   applyAutoScaleToAllWeeks,
   advanceToNextCycle,
-  redeemDeviceSyncCode,
 } from '../../lib/storage';
 import { onCloudStatus, CloudSyncInfo, checkSupabaseConnection } from '../../lib/supabaseSync';
-import DeviceSyncModal from '../../components/DeviceSyncModal';
 import { WeightUnit, ProgressionConfig } from '../../types/workout';
 import { ALL_CATALOG_EXERCISES } from '../../lib/exerciseCatalog';
 import {
@@ -103,10 +101,7 @@ export default function SettingsPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Device sync & DB diagnostic states
-  const [isDeviceSyncModalOpen, setIsDeviceSyncModalOpen] = useState<boolean>(false);
-  const [syncCodeInput, setSyncCodeInput] = useState<string>('');
-  const [isSyncingCode, setIsSyncingCode] = useState<boolean>(false);
+  // DB diagnostic states
   const [dbTestResult, setDbTestResult] = useState<{
     tested: boolean;
     connected: boolean;
@@ -234,28 +229,6 @@ export default function SettingsPage() {
     const newPlan = advanceToNextCycle();
     triggerToast('🚀 Cycle 2 Started! Week 1 baseline upgraded.');
     router.push('/');
-  };
-
-  // Redeem 6-digit sync code in settings
-  const handleRedeemSettingsCode = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const clean = syncCodeInput.trim().replace(/\s+/g, '');
-    if (!clean) return;
-    setIsSyncingCode(true);
-    try {
-      const res = await redeemDeviceSyncCode(clean);
-      if (res.success) {
-        triggerToast('🎉 Workouts successfully synced to this device!');
-        setSyncCodeInput('');
-        router.push('/');
-      } else {
-        alert(res.error || 'Invalid or expired code.');
-      }
-    } catch (err: any) {
-      alert(err?.message || 'Sync failed.');
-    } finally {
-      setIsSyncingCode(false);
-    }
   };
 
   const handleTestSupabase = async () => {
@@ -771,86 +744,38 @@ CREATE POLICY "Allow all on workout_history" ON public.workout_history FOR ALL T
             Seamlessly transfer or synchronize your entire 6-week program, exercises, weights, and workout history across your phone, tablet, and PC.
           </p>
 
-          {/* 1-Tap QR Code & Direct Transfer Button */}
+          {/* Automatic Cloud Sync Controls */}
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
             <button
               type="button"
               className="btn-clean btn-primary btn-sm"
-              onClick={() => setIsDeviceSyncModalOpen(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', fontSize: '0.78rem' }}
-            >
-              <Smartphone size={14} />
-              <span>📱 Open QR Code &amp; Sync to Phone</span>
-            </button>
-
-            <button
-              type="button"
-              className="btn-clean btn-sm"
               onClick={handleTestSupabase}
               disabled={isTestingDb}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', fontSize: '0.78rem' }}
             >
-              {isTestingDb ? <RefreshCw size={13} className="spin" /> : <Cloud size={13} />}
-              <span>{isTestingDb ? 'Testing Connection...' : 'Test Cloud Connection'}</span>
+              {isTestingDb ? <RefreshCw size={14} className="spin" /> : <Cloud size={14} />}
+              <span>{isTestingDb ? 'Synchronizing & Testing...' : '⚡ Test Connection & Force Sync Now'}</span>
             </button>
           </div>
 
-          {/* Direct 6-Digit PIN Redemption Form */}
-          <form
-            onSubmit={handleRedeemSettingsCode}
+          <div
             style={{
               background: 'rgba(255, 255, 255, 0.02)',
               border: '1px solid var(--border)',
               borderRadius: '8px',
-              padding: '10px 12px',
+              padding: '10px 14px',
               marginBottom: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '8px',
-              flexWrap: 'wrap',
+              fontSize: '0.72rem',
+              color: 'var(--text-muted)',
+              lineHeight: 1.6,
             }}
           >
-            <div>
-              <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#fff' }}>
-                Have a 6-digit Sync Code from another device?
-              </div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                Enter the code generated on your PC to load your plan instantly.
-              </div>
+            <div style={{ fontWeight: 800, color: '#fff', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>⚡ 100% Automatic Background Sync</span>
             </div>
-
-            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-              <input
-                type="text"
-                maxLength={6}
-                value={syncCodeInput}
-                onChange={(e) => setSyncCodeInput(e.target.value.replace(/\D/g, ''))}
-                placeholder="6-digit code"
-                style={{
-                  width: '110px',
-                  padding: '6px 8px',
-                  fontSize: '0.85rem',
-                  fontFamily: 'var(--font-mono)',
-                  letterSpacing: '2px',
-                  textAlign: 'center',
-                  background: 'rgba(0, 0, 0, 0.3)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '6px',
-                  color: '#fff',
-                  outline: 'none',
-                }}
-              />
-              <button
-                type="submit"
-                disabled={isSyncingCode || syncCodeInput.length < 6}
-                className="btn-clean btn-sm btn-primary"
-                style={{ padding: '6px 12px', fontSize: '0.74rem' }}
-              >
-                {isSyncingCode ? 'Syncing...' : 'Sync Now'}
-              </button>
-            </div>
-          </form>
+            Whenever you add exercises, update weights, or check off sets on PC, they are saved automatically to your cloud database.
+            When you open this website on your mobile phone, it automatically detects and downloads your latest workouts. No QR codes or PINs needed.
+          </div>
 
           {/* Database Diagnostics Result Box */}
           {dbTestResult && (
@@ -1258,16 +1183,6 @@ CREATE POLICY "Allow all on workout_history" ON public.workout_history FOR ALL T
           <span style={{ fontFamily: 'var(--font-mono)' }}>Released under MIT License</span>
         </div>
       </div>
-
-      {/* Device Sync Modal (QR Code & PIN) */}
-      <DeviceSyncModal
-        isOpen={isDeviceSyncModalOpen}
-        onClose={() => setIsDeviceSyncModalOpen(false)}
-        onSyncComplete={(msg) => {
-          triggerToast(msg || 'Sync complete!');
-          router.push('/');
-        }}
-      />
 
       {/* Toast */}
       <div className={`clean-toast ${toastMessage ? 'show' : ''}`}>

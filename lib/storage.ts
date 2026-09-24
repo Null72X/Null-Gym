@@ -357,19 +357,43 @@ export async function performContinuousCloudSync(force = false) {
   isAutoSyncRunning = true;
 
   try {
-    const res = await fetch('/api/sync', { cache: 'no-store' });
-    if (!res.ok) {
-      isAutoSyncRunning = false;
-      return;
+    let cloudPlan: WeekPlan[] | null = null;
+    let cloudHistory: WorkoutHistoryEntry[] | null = null;
+    let cloudSettings: any = null;
+    let serverTime: string = new Date().toISOString();
+
+    // 1. Direct Supabase Cloud Check
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data: supaPlan, error: supaErr } = await supabase
+          .from('workout_plan')
+          .select('weeks, updated_at')
+          .eq('id', 'default_plan')
+          .maybeSingle();
+
+        if (!supaErr && supaPlan && Array.isArray(supaPlan.weeks) && supaPlan.weeks.length > 0) {
+          cloudPlan = ensureSixWeeks(supaPlan.weeks);
+          serverTime = supaPlan.updated_at || serverTime;
+        }
+      } catch {}
     }
 
-    const body = await res.json();
-    if (!body || !body.success) {
-      isAutoSyncRunning = false;
-      return;
+    // 2. Fetch from /api/sync if Supabase didn't provide a plan or to get server state
+    if (!cloudPlan) {
+      try {
+        const res = await fetch('/api/sync', { cache: 'no-store' });
+        if (res.ok) {
+          const body = await res.json();
+          if (body && body.success && body.plan) {
+            cloudPlan = ensureSixWeeks(body.plan);
+            cloudHistory = body.history || null;
+            cloudSettings = body.settings || null;
+            serverTime = body.updatedAt || serverTime;
+          }
+        }
+      } catch {}
     }
 
-    const serverTime = body.updatedAt;
     const localRawWeeks = localStorage.getItem(STORAGE_KEYS.WEEKS);
     const localWeeks = localRawWeeks ? JSON.parse(localRawWeeks) : null;
     const localHasExercises =
@@ -378,12 +402,12 @@ export async function performContinuousCloudSync(force = false) {
       localWeeks.some((w: any) => w.days.some((d: any) => d.exercises?.length > 0));
 
     const serverHasExercises =
-      body.plan &&
-      Array.isArray(body.plan) &&
-      body.plan.some((w: any) => w.days.some((d: any) => d.exercises?.length > 0));
+      cloudPlan &&
+      Array.isArray(cloudPlan) &&
+      cloudPlan.some((w: any) => w.days.some((d: any) => d.exercises?.length > 0));
 
-    // Case 1: First-time seed / Upload to Server
-    // Local device has exercises, but server database is empty of exercises
+    // Case 1: First-time seed / Upload to Server & Supabase
+    // Local device has exercises, but cloud database is empty of exercises
     if (localHasExercises && !serverHasExercises) {
       const active = getActiveSelection();
       const hist = getSavedHistory();
@@ -394,33 +418,49 @@ export async function performContinuousCloudSync(force = false) {
           action: 'save_all',
           data: { plan: localWeeks, history: hist, settings: active },
         }),
-      });
+      }).catch(() => {});
+
+      if (isSupabaseConfigured && supabase) {
+        Promise.resolve(
+          supabase
+            .from('workout_plan')
+            .upsert(
+              {
+                id: 'default_plan',
+                weeks: ensureSixWeeks(localWeeks),
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'id' }
+            )
+        ).catch(() => {});
+      }
+
       lastSyncedServerTimestamp = new Date().toISOString();
       notifyCloudStatus('synced', 'Database Synced');
       isAutoSyncRunning = false;
       return;
     }
 
-    // Case 2: Server has real exercises, but local device is empty (e.g. mobile opening for the first time)
-    // -> Pull server workouts to local device!
+    // Case 2: Cloud has real exercises, but local device is empty (e.g. mobile opening for the first time)
+    // -> Pull cloud workouts to local device automatically!
     if (serverHasExercises && !localHasExercises) {
       lastSyncedServerTimestamp = serverTime;
-      const validServerWeeks = ensureSixWeeks(body.plan);
+      const validServerWeeks = ensureSixWeeks(cloudPlan!);
       const serverWeeksStr = JSON.stringify(validServerWeeks);
       cachedWeeks = validServerWeeks;
       localStorage.setItem(STORAGE_KEYS.WEEKS, serverWeeksStr);
       planListeners.forEach((l) => l(validServerWeeks));
 
-      if (Array.isArray(body.history)) {
-        cachedHistory = body.history;
-        localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(body.history));
-        historyListeners.forEach((l) => l(body.history));
+      if (Array.isArray(cloudHistory)) {
+        cachedHistory = cloudHistory;
+        localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(cloudHistory));
+        historyListeners.forEach((l) => l(cloudHistory!));
       }
 
-      if (body.settings && typeof body.settings === 'object') {
-        cachedActive = body.settings;
-        localStorage.setItem(STORAGE_KEYS.ACTIVE, JSON.stringify(body.settings));
-        settingsListeners.forEach((l) => l(body.settings));
+      if (cloudSettings && typeof cloudSettings === 'object') {
+        cachedActive = cloudSettings;
+        localStorage.setItem(STORAGE_KEYS.ACTIVE, JSON.stringify(cloudSettings));
+        settingsListeners.forEach((l) => l(cloudSettings));
       }
 
       notifyCloudStatus('synced', 'Database Synced');
@@ -428,11 +468,11 @@ export async function performContinuousCloudSync(force = false) {
       return;
     }
 
-    // Case 3: Both have exercises -> sync if server has a newer timestamp or forced
+    // Case 3: Both have exercises -> sync if cloud has a newer timestamp or forced
     if (serverHasExercises && localHasExercises) {
       if (force || serverTime !== lastSyncedServerTimestamp) {
         lastSyncedServerTimestamp = serverTime;
-        const validServerWeeks = ensureSixWeeks(body.plan);
+        const validServerWeeks = ensureSixWeeks(cloudPlan!);
         const serverWeeksStr = JSON.stringify(validServerWeeks);
         if (localRawWeeks !== serverWeeksStr) {
           cachedWeeks = validServerWeeks;
@@ -440,23 +480,23 @@ export async function performContinuousCloudSync(force = false) {
           planListeners.forEach((l) => l(validServerWeeks));
         }
 
-        if (Array.isArray(body.history)) {
+        if (Array.isArray(cloudHistory)) {
           const localHistRaw = localStorage.getItem(STORAGE_KEYS.HISTORY);
-          const serverHistStr = JSON.stringify(body.history);
+          const serverHistStr = JSON.stringify(cloudHistory);
           if (localHistRaw !== serverHistStr) {
-            cachedHistory = body.history;
+            cachedHistory = cloudHistory;
             localStorage.setItem(STORAGE_KEYS.HISTORY, serverHistStr);
-            historyListeners.forEach((l) => l(body.history));
+            historyListeners.forEach((l) => l(cloudHistory!));
           }
         }
 
-        if (body.settings && typeof body.settings === 'object') {
+        if (cloudSettings && typeof cloudSettings === 'object') {
           const localActiveRaw = localStorage.getItem(STORAGE_KEYS.ACTIVE);
-          const serverSettingsStr = JSON.stringify(body.settings);
+          const serverSettingsStr = JSON.stringify(cloudSettings);
           if (localActiveRaw !== serverSettingsStr) {
-            cachedActive = body.settings;
+            cachedActive = cloudSettings;
             localStorage.setItem(STORAGE_KEYS.ACTIVE, serverSettingsStr);
-            settingsListeners.forEach((l) => l(body.settings));
+            settingsListeners.forEach((l) => l(cloudSettings));
           }
         }
 
@@ -581,57 +621,6 @@ export function importAllData(jsonStr: string): boolean {
   } catch (err) {
     console.error('Import failed:', err);
     return false;
-  }
-}
-
-// -------------------------------------------------------------
-// INSTANT DEVICE SYNC ENGINE (PC -> Mobile QR Code & 6-Digit PIN)
-// -------------------------------------------------------------
-export async function createDeviceSyncCode(): Promise<{ success: boolean; code?: string; error?: string }> {
-  try {
-    const payload = {
-      weeks: getSavedWeeks(),
-      history: getSavedHistory(),
-      activeSelection: getActiveSelection(),
-    };
-    const res = await fetch('/api/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'create_sync_token',
-        data: payload,
-      }),
-    });
-    if (!res.ok) throw new Error(`Server returned status ${res.status}`);
-    const body = await res.json();
-    if (body.success && body.code) {
-      return { success: true, code: body.code };
-    }
-    return { success: false, error: body.error || 'Failed to generate code' };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Network request failed' };
-  }
-}
-
-export async function redeemDeviceSyncCode(code: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    const cleanCode = code.trim().replace(/\s+/g, '');
-    const res = await fetch(`/api/sync?code=${encodeURIComponent(cleanCode)}`, { cache: 'no-store' });
-    if (!res.ok) {
-      const body = await res.json().catch(() => null);
-      throw new Error(body?.error || 'Invalid or expired sync code.');
-    }
-    const body = await res.json();
-    if (body.success && body.payload) {
-      const ok = importAllData(body.payload);
-      if (ok) {
-        notifyCloudStatus('synced', 'Device Synchronized');
-        return { success: true };
-      }
-    }
-    return { success: false, error: 'Could not import received workout payload.' };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Sync failed.' };
   }
 }
 

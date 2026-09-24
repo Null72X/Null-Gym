@@ -23,7 +23,6 @@ import {
   onCloudPlanUpdated,
   onCloudHistoryUpdated,
   onCloudSettingsUpdated,
-  redeemDeviceSyncCode,
 } from '../lib/storage';
 import { getLastPerformance } from '../lib/history';
 import { getDayMuscleBreakdown } from '../lib/muscleMetadata';
@@ -89,22 +88,6 @@ export default function DashboardPage() {
     setUnit(active.unit || 'kg');
     setIsLoaded(true);
 
-    // Auto-detect QR sync code from URL parameters (?sync=XXXXXX)
-    if (typeof window !== 'undefined') {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const syncParam = params.get('sync');
-        if (syncParam) {
-          redeemDeviceSyncCode(syncParam).then((res) => {
-            if (res.success) {
-              triggerToast('🎉 Workouts successfully synced from PC!');
-              // Clean up query param from URL without reload
-              window.history.replaceState({}, '', window.location.pathname);
-            }
-          });
-        }
-      } catch {}
-    }
 
     const unsubPlan = onCloudPlanUpdated((newWeeks) => {
       setWeeks(newWeeks);

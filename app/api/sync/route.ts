@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { WeekPlan, WorkoutHistoryEntry, WeightUnit } from '@/types/workout';
 import { ensureSixWeeks } from '@/lib/planDefaults';
+import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 
 // In-memory database store
 let inMemoryDatabase: {
@@ -17,27 +18,10 @@ let inMemoryDatabase: {
   updatedAt: new Date().toISOString(),
 };
 
-// In-memory 6-digit Device Sync Tokens (Valid for 2 hours)
-// Enables instant PC -> Mobile QR Code & PIN Transfer
-interface SyncTokenData {
-  payload: any;
-  createdAt: number;
-}
-const syncTokens = new Map<string, SyncTokenData>();
-
-// Cleanup expired tokens every 30 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [code, item] of syncTokens.entries()) {
-    if (now - item.createdAt > 2 * 60 * 60 * 1000) {
-      syncTokens.delete(code);
-    }
-  }
-}, 30 * 60 * 1000);
-
-// Data file path on server
+// Data file paths: primary (project data dir) with /tmp fallback for serverless (Vercel)
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DATA_FILE = path.join(DATA_DIR, 'gym_database.json');
+const TMP_FILE = path.join('/tmp', 'gym_database.json');
 
 function loadDatabaseFromDisk() {
   try {
@@ -45,10 +29,19 @@ function loadDatabaseFromDisk() {
       const content = fs.readFileSync(DATA_FILE, 'utf-8');
       const parsed = JSON.parse(content);
       inMemoryDatabase = { ...inMemoryDatabase, ...parsed };
+      return inMemoryDatabase;
     }
-  } catch (err) {
-    // Read failure or serverless ephemeral filesystem - fallback to in-memory
-  }
+  } catch {}
+
+  try {
+    if (fs.existsSync(TMP_FILE)) {
+      const content = fs.readFileSync(TMP_FILE, 'utf-8');
+      const parsed = JSON.parse(content);
+      inMemoryDatabase = { ...inMemoryDatabase, ...parsed };
+      return inMemoryDatabase;
+    }
+  } catch {}
+
   return inMemoryDatabase;
 }
 
@@ -59,46 +52,51 @@ async function persistDatabase(data: Partial<typeof inMemoryDatabase>) {
     updatedAt: new Date().toISOString(),
   };
 
+  const payload = JSON.stringify(inMemoryDatabase, null, 2);
+
+  // Attempt 1: Write to process.cwd()/data
   try {
     if (!fs.existsSync(DATA_DIR)) {
       await fs.promises.mkdir(DATA_DIR, { recursive: true });
     }
-    const payload = JSON.stringify(inMemoryDatabase, null, 2);
     await fs.promises.writeFile(DATA_FILE, payload, 'utf-8');
-  } catch (err) {
-    // If running in a read-only container/serverless, in-memory state is preserved
+  } catch {
+    // Attempt 2: Write to /tmp for serverless environments (Vercel)
+    try {
+      await fs.promises.writeFile(TMP_FILE, payload, 'utf-8');
+    } catch {}
   }
 
   return inMemoryDatabase;
 }
 
-// GET /api/sync
-// Supports normal database pull OR direct 6-digit sync token redemption (?code=XXXXXX)
-export async function GET(request: Request) {
+// GET /api/sync -> 100% Automatic Cloud & Server Database Pull
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const code = searchParams.get('code') || searchParams.get('token');
+    // 1. If Supabase is configured, try querying the cloud database first
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('workout_plan')
+          .select('weeks, updated_at')
+          .eq('id', 'default_plan')
+          .maybeSingle();
 
-    // Case 1: Redeem a 6-digit device sync token from PC
-    if (code) {
-      const cleanCode = code.trim().replace(/\s+/g, '');
-      const tokenItem = syncTokens.get(cleanCode);
-
-      if (!tokenItem) {
-        return NextResponse.json(
-          { success: false, error: 'Invalid or expired sync code. Please generate a new code on your PC.' },
-          { status: 404 }
-        );
-      }
-
-      return NextResponse.json({
-        success: true,
-        isTokenRedemption: true,
-        payload: tokenItem.payload,
-      });
+        if (!error && data && Array.isArray(data.weeks) && data.weeks.length > 0) {
+          const validPlan = ensureSixWeeks(data.weeks);
+          return NextResponse.json({
+            success: true,
+            plan: validPlan,
+            history: inMemoryDatabase.history || [],
+            settings: inMemoryDatabase.settings || { weekNumber: 1, dayIndex: 0, unit: 'kg' },
+            updatedAt: data.updated_at || inMemoryDatabase.updatedAt,
+            source: 'supabase',
+          });
+        }
+      } catch {}
     }
 
-    // Case 2: Standard database pull
+    // 2. Fallback to server local/tmp database
     const db = loadDatabaseFromDisk();
     const validPlan = db.plan ? ensureSixWeeks(db.plan) : null;
 
@@ -108,6 +106,7 @@ export async function GET(request: Request) {
       history: db.history || [],
       settings: db.settings || { weekNumber: 1, dayIndex: 0, unit: 'kg' },
       updatedAt: db.updatedAt,
+      source: 'server_database',
     });
   } catch (err: any) {
     return NextResponse.json(
@@ -117,29 +116,12 @@ export async function GET(request: Request) {
   }
 }
 
-// POST /api/sync -> Persists updates or generates instant device sync tokens
+// POST /api/sync -> 100% Automatic Background Save
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { action, data } = body;
 
-    // Case 1: Create a 6-digit Device Sync Token (PC -> Mobile QR Code)
-    if (action === 'create_sync_token' && data) {
-      // Generate a distinct 6-digit PIN
-      const tokenCode = Math.floor(100000 + Math.random() * 900000).toString();
-      syncTokens.set(tokenCode, {
-        payload: data,
-        createdAt: Date.now(),
-      });
-
-      return NextResponse.json({
-        success: true,
-        code: tokenCode,
-        expiresIn: '2 hours',
-      });
-    }
-
-    // Case 2: Persist database updates
     const db = loadDatabaseFromDisk();
 
     if (action === 'save_plan' && Array.isArray(data)) {
@@ -155,6 +137,25 @@ export async function POST(request: Request) {
     }
 
     await persistDatabase(db);
+
+    // Also mirror to Supabase asynchronously from server if configured
+    if (isSupabaseConfigured && supabase) {
+      if (action === 'save_plan' || (action === 'save_all' && data?.plan)) {
+        const planToSave = action === 'save_plan' ? data : data.plan;
+        Promise.resolve(
+          supabase
+            .from('workout_plan')
+            .upsert(
+              {
+                id: 'default_plan',
+                weeks: ensureSixWeeks(planToSave),
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'id' }
+            )
+        ).catch(() => {});
+      }
+    }
 
     return NextResponse.json({
       success: true,
