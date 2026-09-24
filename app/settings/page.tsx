@@ -45,6 +45,9 @@ import {
   WifiOff,
   HardDrive,
   Rocket,
+  Heart,
+  ExternalLink,
+  Github,
 } from 'lucide-react';
 import {
   isAppOffline,
@@ -355,7 +358,7 @@ export default function SettingsPage() {
           </div>
 
           <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
-            Null Gym stores all <strong>1,320+ ExerciseDB exercises</strong>, plans, sets, and timers locally on your device. The app operates 100% offline in gym basements or airplane mode.
+            Null Gym stores all <strong>{ALL_CATALOG_EXERCISES.length} ExerciseDB exercises</strong>, plans, sets, and timers locally on your device. The app operates 100% offline in gym basements or airplane mode.
           </p>
 
           {/* Force Offline Mode Toggle */}
@@ -901,6 +904,164 @@ export default function SettingsPage() {
             <Zap size={13} style={{ flexShrink: 0 }} />
             <span>Restore Default App (Blank 6-Week Plan + {ALL_CATALOG_EXERCISES.length} Catalog)</span>
           </button>
+        </div>
+      </div>
+
+      {/* Credits & Acknowledgments Card */}
+      <div className="clean-card" style={{ marginTop: '14px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+          <h3
+            style={{
+              fontSize: '0.88rem',
+              fontWeight: 800,
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <Heart size={16} color="var(--accent-red)" />
+            <span>Credits &amp; Acknowledgments</span>
+          </h3>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            <span
+              style={{
+                fontSize: '0.66rem',
+                color: 'var(--accent-red)',
+                background: 'rgba(239, 68, 68, 0.12)',
+                padding: '3px 8px',
+                borderRadius: '6px',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 700,
+              }}
+            >
+              v2.0 Final Release
+            </span>
+            <span
+              style={{
+                fontSize: '0.66rem',
+                color: '#22c55e',
+                background: 'rgba(34, 197, 94, 0.12)',
+                padding: '3px 8px',
+                borderRadius: '6px',
+                border: '1px solid rgba(34, 197, 94, 0.25)',
+                fontWeight: 700,
+              }}
+            >
+              100% Offline Ready
+            </span>
+          </div>
+        </div>
+
+        <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.5 }}>
+          Null Gym is an open-source, offline-first personal training system designed for athletes and lifters who demand zero fluff, sub-millisecond execution, and total privacy.
+        </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px', marginBottom: '12px' }}>
+          {/* Creator Attribution */}
+          <div
+            style={{
+              background: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
+              padding: '12px',
+            }}
+          >
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px', fontWeight: 700 }}>
+              Lead Developer &amp; Architecture
+            </div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fff', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Github size={14} color="var(--accent-red)" />
+              <a
+                href="https://github.com/Null72X"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+              >
+                Null72X
+                <ExternalLink size={11} color="var(--text-muted)" />
+              </a>
+            </div>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+              Creator and maintainer of Null Gym. Repository: <a href="https://github.com/Null72X/Null-Gym" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-red)', textDecoration: 'none' }}>Null72X/Null-Gym</a>
+            </div>
+          </div>
+
+          {/* ExerciseDB Attribution */}
+          <div
+            style={{
+              background: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
+              padding: '12px',
+            }}
+          >
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px', fontWeight: 700 }}>
+              Exercise Database &amp; Instructions
+            </div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fff', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Dumbbell size={14} color="#38bdf8" />
+              <a
+                href="https://github.com/ExerciseDB/exercisedb-api"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+              >
+                ExerciseDB API
+                <ExternalLink size={11} color="var(--text-muted)" />
+              </a>
+            </div>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+              Provides {ALL_CATALOG_EXERCISES.length} indexed exercises with targets, equipment categories, and execution cues.
+            </div>
+          </div>
+
+          {/* Animation & Form GIFs Attribution */}
+          <div
+            style={{
+              background: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
+              padding: '12px',
+            }}
+          >
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px', fontWeight: 700 }}>
+              Form Visuals &amp; Demonstrations
+            </div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fff', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Sparkles size={14} color="#eab308" />
+              <a
+                href="https://github.com/JahelCuadrado/ExerciseGymGifsDB"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+              >
+                ExerciseGymGifsDB (Jahel Cuadrado)
+                <ExternalLink size={11} color="var(--text-muted)" />
+              </a>
+            </div>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+              High-resolution animated GIF demonstrations mapped to exercises with offline fallback.
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            fontSize: '0.68rem',
+            color: 'var(--text-dim)',
+            borderTop: '1px solid var(--border)',
+            paddingTop: '10px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '6px',
+          }}
+        >
+          <span>Crafted with Next.js 14, React 18, TypeScript &amp; Supabase</span>
+          <span style={{ fontFamily: 'var(--font-mono)' }}>Released under MIT License</span>
         </div>
       </div>
 
