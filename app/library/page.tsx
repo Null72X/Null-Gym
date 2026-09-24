@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { searchExercises } from '../../lib/searchEngine';
 import { HighlightedText } from '../../components/HighlightedText';
+import ExerciseVideoModal from '../../components/ExerciseVideoModal';
 
 const DAYS_OF_WEEK = [
   'Monday',
@@ -77,6 +78,7 @@ export default function LibraryPage() {
   const [sortBy, setSortBy] = useState<'name_asc' | 'name_desc' | 'muscle' | 'equipment'>('name_asc');
   const [displayCount, setDisplayCount] = useState<number>(48);
   const [isCreating, setIsCreating] = useState(false);
+  const [videoModalExercise, setVideoModalExercise] = useState<ExerciseLibraryItem | null>(null);
 
   // Smooth responsive debounce for search execution without blocking input
   useEffect(() => {
@@ -1039,19 +1041,16 @@ export default function LibraryPage() {
                   </div>
 
                   <div className="card-actions-group">
-                    {/* YouTube Video Search Link */}
-                    {item.videoUrl && (
-                      <a
-                        className="yt-link-btn"
-                        href={item.videoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title={`Watch tutorial: how to do ${item.name}`}
-                      >
-                        <Play size={10} fill="#ef4444" color="#ef4444" />
-                        <span>YT ↗</span>
-                      </a>
-                    )}
+                    {/* In-App Video & Animated Form Demo Button */}
+                    <button
+                      type="button"
+                      className="yt-link-btn"
+                      onClick={() => setVideoModalExercise(item)}
+                      title={`Watch tutorial & form demonstration for ${item.name}`}
+                    >
+                      <Play size={10} fill="#ef4444" color="#ef4444" />
+                      <span>Demo &amp; Video</span>
+                    </button>
 
                     {/* Direct Add to Plan Button */}
                     <button
@@ -1245,6 +1244,15 @@ export default function LibraryPage() {
             Show More Exercises ({totalMatches - displayCount} remaining)
           </button>
         </div>
+      )}
+
+      {/* In-App Exercise Form & Video Modal */}
+      {videoModalExercise && (
+        <ExerciseVideoModal
+          isOpen={!!videoModalExercise}
+          onClose={() => setVideoModalExercise(null)}
+          exercise={videoModalExercise}
+        />
       )}
 
       {/* Toast */}

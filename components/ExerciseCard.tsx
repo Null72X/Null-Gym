@@ -23,6 +23,7 @@ import {
   History,
 } from 'lucide-react';
 import HighlightedText from './HighlightedText';
+import ExerciseVideoModal from './ExerciseVideoModal';
 
 interface ExerciseCardProps {
   exercise: Exercise;
@@ -61,6 +62,7 @@ export default function ExerciseCard({
 }: ExerciseCardProps) {
   const [showNotesEdit, setShowNotesEdit] = useState(false);
   const [notesDraft, setNotesDraft] = useState(exercise.notes || '');
+  const [showVideoModal, setShowVideoModal] = useState(false);
 
   const muscleInfo = getExerciseMuscleInfo(exercise);
 
@@ -238,20 +240,16 @@ export default function ExerciseCard({
             </button>
           )}
 
-          {/* YouTube Search Link (Always accessible) */}
-          <a
+          {/* In-App Video & Biomechanics Tutorial Modal */}
+          <button
+            type="button"
             className="yt-link-btn"
-            href={
-              exercise.videoUrl ||
-              `https://www.youtube.com/results?search_query=how+to+do+${encodeURIComponent(exercise.name)}`
-            }
-            target="_blank"
-            rel="noopener noreferrer"
-            title={`Search how to do ${exercise.name} on YouTube`}
+            onClick={() => setShowVideoModal(true)}
+            title={`Watch video tutorial & form guide for ${exercise.name}`}
           >
             <Play size={10} fill="#ef4444" color="#ef4444" />
-            <span>YT ↗</span>
-          </a>
+            <span>Video &amp; Form</span>
+          </button>
 
           {/* Duplicate (Only in Planner) */}
           {mode === 'planner' && onDuplicate && (
@@ -437,32 +435,7 @@ export default function ExerciseCard({
         </button>
       ) : null}
 
-      {/* PREVIOUS PERFORMANCE ("LAST TIME") */}
-      {lastPerformance && lastPerformance.sets.length > 0 && (
-        <div className="last-time-box">
-          <div className="last-time-header">
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <History size={11} color="var(--accent-red)" />
-              <span>LAST TIME (Week {lastPerformance.weekNumber} · {lastPerformance.dayOfWeek})</span>
-            </span>
-            <span style={{ opacity: 0.7 }}>Actual Saved</span>
-          </div>
-          <div className="last-time-content">
-            {lastPerformance.sets.map((set, sIdx) => {
-              const label = set.type === 'warmup' ? `W${sIdx + 1}` : `S${sIdx + 1}`;
-              return (
-                <span key={sIdx} className="last-time-item">
-                  <strong style={{ color: set.type === 'warmup' ? '#fde68a' : '#fca5a5' }}>
-                    {label}:
-                  </strong>{' '}
-                  {set.load ? `${set.load} ${set.unit}` : 'BW'} × {set.reps}
-                  {set.rpe ? ` @ RPE ${set.rpe}` : ''}
-                </span>
-              );
-            })}
-          </div>
-        </div>
-      )}
+
 
       {/* Sets List */}
       <div className="set-rows-wrap">
@@ -555,6 +528,13 @@ export default function ExerciseCard({
           </button>
         )}
       </div>
+
+      {/* In-App Exercise Video & Form Modal */}
+      <ExerciseVideoModal
+        isOpen={showVideoModal}
+        onClose={() => setShowVideoModal(false)}
+        exercise={exercise}
+      />
     </div>
   );
 }

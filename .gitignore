@@ -31,3 +31,6 @@ next-env.d.ts
 
 # local database
 data/*.json
+
+# raw script dumps
+scripts/*.json

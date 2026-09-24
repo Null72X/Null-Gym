@@ -24,6 +24,7 @@ import { getExerciseMuscleInfo } from '../lib/muscleMetadata';
 import { X, Search, Plus, Play, ExternalLink } from 'lucide-react';
 import { searchExercises } from '../lib/searchEngine';
 import { HighlightedText } from './HighlightedText';
+import ExerciseVideoModal from './ExerciseVideoModal';
 
 interface ExerciseLibraryModalProps {
   isOpen: boolean;
@@ -51,6 +52,7 @@ export default function ExerciseLibraryModal({
   const [selectedLoadType, setSelectedLoadType] = useState('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState('All');
   const [sortBy, setSortBy] = useState<'name_asc' | 'name_desc' | 'muscle' | 'equipment'>('name_asc');
+  const [videoModalExercise, setVideoModalExercise] = useState<ExerciseLibraryItem | null>(null);
 
   // Fast responsive debounce without blocking input typing
   useEffect(() => {
@@ -796,31 +798,22 @@ export default function ExerciseLibraryModal({
                               {item.difficulty}
                             </span>
                           )}
-                          {item.videoUrl && (
-                            <a
-                              href={item.videoUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              title={`Watch tutorial: ${item.name}`}
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '3px',
-                                color: '#fca5a5',
-                                fontSize: '0.6rem',
-                                textDecoration: 'none',
-                                background: 'rgba(239, 68, 68, 0.12)',
-                                border: '1px solid rgba(239, 68, 68, 0.3)',
-                                borderRadius: '4px',
-                                padding: '1px 5px',
-                                fontFamily: 'var(--font-mono)',
-                              }}
-                            >
-                              <Play size={8} fill="#ef4444" color="#ef4444" />
-                              <span>YT ↗</span>
-                            </a>
-                          )}
+                          <button
+                            type="button"
+                            className="yt-link-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setVideoModalExercise(item);
+                            }}
+                            title={`Watch animated demo & tutorial for ${item.name}`}
+                            style={{
+                              fontSize: '0.62rem',
+                              padding: '2px 6px',
+                            }}
+                          >
+                            <Play size={8} fill="#ef4444" color="#ef4444" />
+                            <span>Demo &amp; Video</span>
+                          </button>
                         </div>
                       </div>
 
@@ -1011,6 +1004,15 @@ export default function ExerciseLibraryModal({
           </form>
         )}
       </div>
+
+      {/* In-App Exercise Video & Form Modal */}
+      {videoModalExercise && (
+        <ExerciseVideoModal
+          isOpen={!!videoModalExercise}
+          onClose={() => setVideoModalExercise(null)}
+          exercise={videoModalExercise}
+        />
+      )}
     </div>
   );
 }
