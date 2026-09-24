@@ -147,3 +147,73 @@ export function getProgressionBadge(
   }
   return null;
 }
+
+/**
+ * Promotes the final week (Week 6) peak performance weights to become the new Week 1 baseline,
+ * resets all completion checkmarks to false for a fresh cycle,
+ * and auto-programs Weeks 2 through 6 using bi-weekly progressive overload.
+ */
+export function startNextSixWeekCycle(
+  currentWeeks: WeekPlan[],
+  config: ProgressionConfig = DEFAULT_PROGRESSION_CONFIG,
+  unit: WeightUnit = 'kg'
+): WeekPlan[] {
+  if (!currentWeeks || currentWeeks.length === 0) return currentWeeks;
+
+  // Source week: prioritize Week 6 (index 5) or highest week with exercises
+  let sourceWeek = currentWeeks[5];
+  const hasExercises = (w?: WeekPlan) => w && w.days.some((d) => d.exercises.length > 0);
+
+  if (!hasExercises(sourceWeek)) {
+    for (let i = currentWeeks.length - 1; i >= 0; i--) {
+      if (hasExercises(currentWeeks[i])) {
+        sourceWeek = currentWeeks[i];
+        break;
+      }
+    }
+  }
+
+  if (!sourceWeek) {
+    sourceWeek = currentWeeks[0];
+  }
+
+  // Create new Week 1 from the source week's exercises, unchecking all sets
+  const newWeek1Days = sourceWeek.days.map((d, dIdx) => ({
+    ...d,
+    id: `w1_d${dIdx}`,
+    completed: false,
+    exercises: d.exercises.map((ex) => ({
+      ...ex,
+      id: `ex_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      completed: false,
+      sets: ex.sets.map((s, sIdx) => ({
+        ...s,
+        id: `set_${Date.now()}_${sIdx}`,
+        completed: false,
+      })),
+    })),
+  }));
+
+  const initialCyclePlan: WeekPlan[] = currentWeeks.map((w, wIdx) => {
+    if (wIdx === 0) {
+      return {
+        ...w,
+        weekNumber: 1,
+        days: newWeek1Days,
+      };
+    }
+    return {
+      ...w,
+      weekNumber: wIdx + 1,
+      days: w.days.map((d, dIdx) => ({
+        ...d,
+        completed: false,
+        exercises: [],
+      })),
+    };
+  });
+
+  // Automatically scale Weeks 2 through 6 from the new Week 1 baseline
+  return autoScaleWeek1ToAllWeeks(initialCyclePlan, config, unit);
+}
+

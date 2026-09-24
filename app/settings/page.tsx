@@ -19,6 +19,7 @@ import {
   getProgressionConfig,
   saveProgressionConfig,
   applyAutoScaleToAllWeeks,
+  advanceToNextCycle,
 } from '../../lib/storage';
 import { onCloudStatus, CloudSyncInfo } from '../../lib/supabaseSync';
 import { WeightUnit, ProgressionConfig } from '../../types/workout';
@@ -43,6 +44,7 @@ import {
   Wifi,
   WifiOff,
   HardDrive,
+  Rocket,
 } from 'lucide-react';
 import {
   isAppOffline,
@@ -194,6 +196,25 @@ export default function SettingsPage() {
   const handleTriggerAutoScale = () => {
     const scaled = applyAutoScaleToAllWeeks();
     triggerToast('⚡ Weeks 2 to 6 auto-programmed with progressive overload!');
+  };
+
+  // 1-Click Start Next 6-Week Cycle
+  const handleStartNextCycle = () => {
+    if (
+      !confirm(
+        'START NEXT 6-WEEK CYCLE?\n\n' +
+        '• Your peak Week 6 weights will become your new Week 1 baseline.\n' +
+        '• All completed checkmarks will be cleared for a fresh cycle.\n' +
+        '• Weeks 2 to 6 will be auto-programmed with progressive overload.\n' +
+        '• ALL your workout history, volume logs, and PRs will remain 100% intact!\n\n' +
+        'Ready to advance?'
+      )
+    )
+      return;
+
+    const newPlan = advanceToNextCycle();
+    triggerToast('🚀 Cycle 2 Started! Week 1 baseline upgraded.');
+    router.push('/');
   };
 
   // Export JSON file
@@ -595,6 +616,24 @@ export default function SettingsPage() {
             >
               <Sparkles size={13} />
               <span>Auto-Setup Weeks 2 to 6 Now ⚡</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn-clean btn-sm"
+              onClick={handleStartNextCycle}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.35))',
+                borderColor: 'var(--accent-red)',
+                color: '#fff',
+                fontWeight: 700,
+              }}
+            >
+              <Rocket size={13} color="var(--accent-red)" />
+              <span>Start Next 6-Week Cycle 🚀</span>
             </button>
 
             <Link

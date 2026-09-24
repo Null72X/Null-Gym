@@ -23,6 +23,7 @@ import {
   getActiveSelection,
   saveActiveSelection,
   applyAutoScaleToAllWeeks,
+  advanceToNextCycle,
   getProgressionConfig,
   onCloudPlanUpdated,
   onCloudHistoryUpdated,
@@ -42,6 +43,7 @@ import {
   Layers,
   Trash2,
   Zap,
+  Rocket,
 } from 'lucide-react';
 
 export default function PlannerPage() {
@@ -326,6 +328,27 @@ export default function PlannerPage() {
     triggerToast('⚡ Weeks 2 to 6 auto-scaled with progressive overload!');
   };
 
+  // 1-Click Start Next 6-Week Cycle
+  const handleStartNextCycle = () => {
+    if (
+      !confirm(
+        'START NEXT 6-WEEK CYCLE?\n\n' +
+        '• Your peak Week 6 weights will become your new Week 1 baseline.\n' +
+        '• All completed checkmarks will be cleared for a fresh cycle.\n' +
+        '• Weeks 2 to 6 will be auto-programmed with progressive overload.\n' +
+        '• ALL your workout history, volume logs, and PRs will remain 100% intact!\n\n' +
+        'Ready to advance?'
+      )
+    )
+      return;
+
+    const newPlan = advanceToNextCycle();
+    setWeeks(newPlan);
+    setCurrentWeek(1);
+    setCurrentDayIndex(0);
+    triggerToast('🚀 Cycle 2 Started! Week 1 baseline upgraded.');
+  };
+
   if (!isLoaded || weeks.length === 0) {
     return <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-dim)' }}>Loading Planner...</div>;
   }
@@ -377,6 +400,52 @@ export default function PlannerPage() {
           >
             <Sparkles size={12} />
             <span>Auto-Setup Weeks 2–6 ⚡</span>
+          </button>
+        </div>
+      )}
+
+      {/* Week 6 Peak Cycle Banner */}
+      {currentWeek === 6 && (
+        <div
+          style={{
+            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(20, 20, 29, 0.8) 100%)',
+            border: '1px solid rgba(239, 68, 68, 0.35)',
+            borderRadius: '10px',
+            padding: '10px 12px',
+            marginBottom: '10px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '10px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ flex: 1, minWidth: '200px' }}>
+            <div
+              style={{
+                fontSize: '0.8rem',
+                fontWeight: 800,
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <Rocket size={14} color="var(--accent-red)" />
+              <span>Week 6 · Peak Performance Cycle</span>
+            </div>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Finished your 6-week cycle? Advance peak weights to Week 1 and start Cycle 2!
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn-clean btn-primary btn-sm"
+            onClick={handleStartNextCycle}
+            style={{ fontSize: '0.72rem', padding: '6px 12px', whiteSpace: 'nowrap' }}
+          >
+            <Rocket size={12} />
+            <span>Start Next 6-Week Cycle 🚀</span>
           </button>
         </div>
       )}

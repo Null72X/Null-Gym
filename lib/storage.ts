@@ -9,7 +9,7 @@ import {
   ProgressionConfig,
 } from '../types/workout';
 import { ALL_CATALOG_EXERCISES } from './exerciseCatalog';
-import { DEFAULT_PROGRESSION_CONFIG, autoScaleWeek1ToAllWeeks } from './progressionEngine';
+import { DEFAULT_PROGRESSION_CONFIG, autoScaleWeek1ToAllWeeks, startNextSixWeekCycle } from './progressionEngine';
 import {
   debouncedPushPlanToCloud,
   pushPlanToCloud,
@@ -317,6 +317,16 @@ export function applyAutoScaleToAllWeeks(): WeekPlan[] {
   const scaled = autoScaleWeek1ToAllWeeks(currentWeeks, config, active.unit);
   saveWeeks(scaled);
   return scaled;
+}
+
+export function advanceToNextCycle(): WeekPlan[] {
+  const currentWeeks = getSavedWeeks();
+  const config = getProgressionConfig();
+  const active = getActiveSelection();
+  const newCyclePlan = startNextSixWeekCycle(currentWeeks, config, active.unit);
+  saveWeeks(newCyclePlan);
+  saveActiveSelection({ weekNumber: 1, dayIndex: 0, unit: active.unit });
+  return newCyclePlan;
 }
 
 // -------------------------------------------------------------
