@@ -10,43 +10,54 @@ import {
   RotateCcw,
   Volume2,
   VolumeX,
-  ChevronUp,
-  ChevronDown,
   Check,
   Zap,
   Dumbbell,
   Coffee,
   ArrowRight,
+  Clock,
+  Sparkles,
 } from 'lucide-react';
 
 export interface RestTimerBarProps {
   initialSeconds: number | null;
   mode?: 'rest' | 'exercise';
   exerciseName?: string;
+  setIndex?: number;
+  totalSets?: number;
+  autoFlow?: boolean;
   onDismiss: () => void;
   onCompleteExerciseSet?: () => void;
   onSwitchToRest?: (restSeconds?: number) => void;
+  onStartNextSet?: () => void;
 }
 
 export default function RestTimerBar({
   initialSeconds,
   mode = 'rest',
   exerciseName = '',
+  setIndex,
+  totalSets,
+  autoFlow = true,
   onDismiss,
   onCompleteExerciseSet,
   onSwitchToRest,
+  onStartNextSet,
 }: RestTimerBarProps) {
   const [currentMode, setCurrentMode] = useState<'rest' | 'exercise'>('rest');
   const [currentExerciseName, setCurrentExerciseName] = useState<string>('');
   const [totalSeconds, setTotalSeconds] = useState<number>(90);
-  const [seconds, setSeconds] = useState<number>(0);
+  const [seconds, setSeconds] = useState<number>(90);
   const [isRunning, setIsRunning] = useState<boolean>(true);
   const [isFinished, setIsFinished] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
+  const [isAutoFlow, setIsAutoFlow] = useState<boolean>(autoFlow);
+  const [transitionPrompt, setTransitionPrompt] = useState<string | null>(null);
 
   const intervalRef = useRef<any>(null);
   const audioCtxRef = useRef<any>(null);
+  const autoAdvanceTimeoutRef = useRef<any>(null);
 
   // Setup / Reset timer when initialSeconds or mode changes
   useEffect(() => {
@@ -58,10 +69,14 @@ export default function RestTimerBar({
       setIsRunning(true);
       setIsFinished(false);
       setIsExpanded(true);
+      setTransitionPrompt(null);
+      if (autoAdvanceTimeoutRef.current) {
+        clearTimeout(autoAdvanceTimeoutRef.current);
+      }
     }
   }, [initialSeconds, mode, exerciseName]);
 
-  // Screen Wake Lock API to keep phone screen awake during active workout/rest
+  // Keep phone screen awake during active exercise & rest intervals
   useEffect(() => {
     let wakeLock: any = null;
     const requestWakeLock = async () => {
@@ -70,7 +85,7 @@ export default function RestTimerBar({
           wakeLock = await (navigator as any).wakeLock.request('screen');
         }
       } catch {
-        // Ignored if unsupported or visibility hidden
+        // Ignored if unsupported or hidden
       }
     };
 
@@ -85,7 +100,7 @@ export default function RestTimerBar({
     };
   }, [isRunning, seconds]);
 
-  // Audio tone generator using Web Audio API
+  // Audio tone generator using native Web Audio API
   const getAudioContext = () => {
     if (typeof window === 'undefined') return null;
     if (!audioCtxRef.current) {
@@ -100,7 +115,7 @@ export default function RestTimerBar({
     return audioCtxRef.current;
   };
 
-  // Play short soft tick tone for 3, 2, 1
+  // Play countdown tick tone for 3, 2, 1 seconds
   const playTick = () => {
     if (isMuted) return;
     try {
@@ -110,7 +125,7 @@ export default function RestTimerBar({
       const gain = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(600, ctx.currentTime);
-      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -119,31 +134,74 @@ export default function RestTimerBar({
     } catch {}
   };
 
-  // Play celebration chime when timer finishes
+  // Halfway audio alert (e.g. 45 seconds of 90s)
+  const playHalfway = () => {
+    if (isMuted) return;
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      [700, 850].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + i * 0.12);
+        gain.gain.setValueAtTime(0.2, now + i * 0.12);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.12 + 0.22);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + i * 0.12);
+        osc.stop(now + i * 0.12 + 0.22);
+      });
+    } catch {}
+  };
+
+  // 10s warning alert tone
+  const playTenSecWarning = () => {
+    if (isMuted) return;
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      [640, 640].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + i * 0.14);
+        gain.gain.setValueAtTime(0.25, now + i * 0.14);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.14 + 0.15);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + i * 0.14);
+        osc.stop(now + i * 0.14 + 0.15);
+      });
+    } catch {}
+  };
+
+  // Play celebration fanfare when timer completes
   const playChime = (isExercise: boolean) => {
     if (isMuted) return;
     try {
       const ctx = getAudioContext();
       if (!ctx) return;
-
       const now = ctx.currentTime;
 
       if (isExercise) {
-        // High-energy 3-tone celebration for exercise set completion: D5 (587Hz) -> G5 (784Hz) -> B5 (987Hz)
+        // High-energy 3-tone celebration chord: D5 (587Hz) -> G5 (784Hz) -> B5 (987Hz)
         [587, 784, 987].forEach((freq, i) => {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
           osc.type = 'sine';
           osc.frequency.setValueAtTime(freq, now + i * 0.12);
-          gain.gain.setValueAtTime(0.32, now + i * 0.12);
-          gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.12 + 0.3);
+          gain.gain.setValueAtTime(0.35, now + i * 0.12);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.12 + 0.35);
           osc.connect(gain);
           gain.connect(ctx.destination);
           osc.start(now + i * 0.12);
-          osc.stop(now + i * 0.12 + 0.3);
+          osc.stop(now + i * 0.12 + 0.35);
         });
       } else {
-        // Double chime for rest completion: E5 (659Hz) -> A5 (880Hz)
+        // Double resonant chime for rest completion: E5 (659Hz) -> A5 (880Hz)
         const osc1 = ctx.createOscillator();
         const gain1 = ctx.createGain();
         osc1.type = 'triangle';
@@ -159,7 +217,7 @@ export default function RestTimerBar({
         const gain2 = ctx.createGain();
         osc2.type = 'triangle';
         osc2.frequency.setValueAtTime(880, now + 0.18);
-        gain2.gain.setValueAtTime(0.4, now + 0.18);
+        gain2.gain.setValueAtTime(0.42, now + 0.18);
         gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.65);
         osc2.connect(gain2);
         gain2.connect(ctx.destination);
@@ -169,7 +227,7 @@ export default function RestTimerBar({
     } catch {}
   };
 
-  // Main timer tick effect
+  // Main countdown timer loop with automatic progression
   useEffect(() => {
     if (!isRunning || seconds <= 0) {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -183,21 +241,51 @@ export default function RestTimerBar({
           setIsFinished(true);
           setIsRunning(false);
           playChime(currentMode === 'exercise');
+
           if (typeof window !== 'undefined' && 'vibrate' in navigator) {
             navigator.vibrate([100, 60, 100, 60, 250]);
           }
 
-          // If exercise finished, trigger set complete
-          if (currentMode === 'exercise' && onCompleteExerciseSet) {
-            onCompleteExerciseSet();
+          // AUTOMATION 1: Exercise work timer finished
+          if (currentMode === 'exercise') {
+            if (onCompleteExerciseSet) {
+              onCompleteExerciseSet();
+            }
+            if (isAutoFlow) {
+              setTransitionPrompt('⚡ Set Finished! Starting 90s Rest...');
+              autoAdvanceTimeoutRef.current = setTimeout(() => {
+                handleTransitionToRest(90);
+              }, 1200);
+            }
+          }
+
+          // AUTOMATION 2: Rest timer finished
+          if (currentMode === 'rest' && isAutoFlow && onStartNextSet) {
+            setTransitionPrompt('🚀 Rest Over! Auto-Starting Next Set in 2s...');
+            autoAdvanceTimeoutRef.current = setTimeout(() => {
+              onStartNextSet();
+            }, 2000);
           }
 
           return 0;
         }
 
-        // Countdown tick sounds on 3, 2, 1
+        // Halfway tone cue (at 45s for a 90s duration)
+        if (prev === Math.floor(totalSeconds / 2) + 1 && totalSeconds >= 40) {
+          playHalfway();
+        }
+
+        // 10-second intensity alert
+        if (prev === 11) {
+          playTenSecWarning();
+        }
+
+        // 3, 2, 1 second countdown beeps
         if (prev === 4 || prev === 3 || prev === 2) {
           playTick();
+          if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+            navigator.vibrate(25);
+          }
         }
 
         return prev - 1;
@@ -207,9 +295,9 @@ export default function RestTimerBar({
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isRunning, seconds, isMuted, currentMode]);
+  }, [isRunning, seconds, isMuted, currentMode, isAutoFlow, totalSeconds]);
 
-  // Actions
+  // Adjust seconds (+ / -)
   const adjustSeconds = (delta: number) => {
     setSeconds((prev) => {
       const next = Math.max(5, prev + delta);
@@ -217,26 +305,31 @@ export default function RestTimerBar({
       return next;
     });
     setIsFinished(false);
+    setTransitionPrompt(null);
   };
 
+  // 1-Tap preset selection (e.g. 90s default)
   const setPreset = (presetSecs: number) => {
     setTotalSeconds(presetSecs);
     setSeconds(presetSecs);
     setIsRunning(true);
     setIsFinished(false);
+    setTransitionPrompt(null);
   };
 
+  // Restart current timer
   const restartTimer = () => {
     setSeconds(totalSeconds);
     setIsRunning(true);
     setIsFinished(false);
+    setTransitionPrompt(null);
   };
 
   const togglePause = () => {
     setIsRunning((prev) => !prev);
   };
 
-  // Finish Exercise early and transition to rest
+  // Finish Exercise early and immediately transition to 90s Rest
   const handleFinishExerciseNow = () => {
     setSeconds(0);
     setIsFinished(true);
@@ -245,10 +338,14 @@ export default function RestTimerBar({
     if (onCompleteExerciseSet) {
       onCompleteExerciseSet();
     }
+    if (isAutoFlow) {
+      handleTransitionToRest(90);
+    }
   };
 
-  // Transition to Rest Timer
+  // Transition to Rest Timer (Default: 90s)
   const handleTransitionToRest = (restSecs = 90) => {
+    setTransitionPrompt(null);
     if (onSwitchToRest) {
       onSwitchToRest(restSecs);
     } else {
@@ -263,11 +360,11 @@ export default function RestTimerBar({
   // Switch mode directly
   const handleSwitchMode = (targetMode: 'rest' | 'exercise') => {
     setCurrentMode(targetMode);
-    const defaultSecs = targetMode === 'exercise' ? 45 : 90;
-    setTotalSeconds(defaultSecs);
-    setSeconds(defaultSecs);
+    setTotalSeconds(90);
+    setSeconds(90);
     setIsRunning(true);
     setIsFinished(false);
+    setTransitionPrompt(null);
   };
 
   if (initialSeconds === null) return null;
@@ -294,9 +391,7 @@ export default function RestTimerBar({
     return '#38bdf8'; // Cyan for rest
   };
 
-  const exercisePresets = [20, 30, 45, 60, 90];
-  const restPresets = [30, 60, 90, 120, 180];
-  const activePresets = isExerciseMode ? exercisePresets : restPresets;
+  const presets = [30, 45, 60, 90, 120, 180];
 
   return (
     <div
@@ -306,49 +401,73 @@ export default function RestTimerBar({
         bottom: 'calc(64px + var(--safe-bottom) + 8px)',
         left: '50%',
         transform: 'translateX(-50%)',
-        width: 'min(480px, calc(100% - 16px))',
+        width: 'min(500px, calc(100% - 16px))',
         background: 'rgba(14, 14, 20, 0.96)',
-        backdropFilter: 'blur(16px)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
         border: `1px solid ${
           isFinished
-            ? 'rgba(34, 197, 94, 0.5)'
+            ? 'rgba(34, 197, 94, 0.55)'
             : isExerciseMode
-            ? 'rgba(239, 68, 68, 0.45)'
-            : 'rgba(56, 189, 248, 0.4)'
+            ? 'rgba(239, 68, 68, 0.5)'
+            : 'rgba(56, 189, 248, 0.45)'
         }`,
         boxShadow: isFinished
-          ? '0 8px 30px rgba(34, 197, 94, 0.25)'
+          ? '0 8px 32px rgba(34, 197, 94, 0.28)'
           : isExerciseMode
-          ? '0 8px 30px rgba(239, 68, 68, 0.3)'
-          : '0 8px 30px rgba(0, 0, 0, 0.7)',
-        borderRadius: '14px',
+          ? '0 8px 32px rgba(239, 68, 68, 0.35)'
+          : '0 8px 32px rgba(0, 0, 0, 0.8)',
+        borderRadius: '16px',
         zIndex: 900,
         transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+        padding: '10px 14px',
       }}
     >
+      {/* Auto-Flow Transition Banner */}
+      {transitionPrompt && (
+        <div
+          style={{
+            background: isExerciseMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)',
+            border: `1px solid ${isExerciseMode ? 'rgba(239, 68, 68, 0.4)' : 'rgba(34, 197, 94, 0.4)'}`,
+            borderRadius: '8px',
+            padding: '4px 10px',
+            marginBottom: '8px',
+            fontSize: '0.70rem',
+            fontWeight: 800,
+            color: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            animation: 'pulse 1.5s infinite',
+          }}
+        >
+          <Sparkles size={12} color={isExerciseMode ? '#fca5a5' : '#86efac'} />
+          <span>{transitionPrompt}</span>
+        </div>
+      )}
+
       {/* Top Main Row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-        {/* Left Side: Circular Ring + Time */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '10px' }}>
+        {/* Left Side: Circular Ring + Time + Info */}
         <div
           style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', minWidth: 0, flex: 1 }}
           onClick={() => setIsExpanded((prev) => !prev)}
         >
           {/* Animated SVG Progress Ring */}
-          <div style={{ position: 'relative', width: '46px', height: '46px', flexShrink: 0 }}>
-            <svg width="46" height="46" style={{ transform: 'rotate(-90deg)' }}>
-              {/* Background Track */}
+          <div style={{ position: 'relative', width: '48px', height: '48px', flexShrink: 0 }}>
+            <svg width="48" height="48" style={{ transform: 'rotate(-90deg)' }}>
               <circle
-                cx="23"
-                cy="23"
+                cx="24"
+                cy="24"
                 r={radius}
                 fill="none"
                 stroke="rgba(255, 255, 255, 0.08)"
                 strokeWidth="4"
               />
-              {/* Animated Progress Ring */}
               <circle
-                cx="23"
-                cy="23"
+                cx="24"
+                cy="24"
                 r={radius}
                 fill="none"
                 stroke={getRingColor()}
@@ -375,7 +494,7 @@ export default function RestTimerBar({
               {isFinished ? (
                 <Check size={16} color="var(--accent-green)" />
               ) : isRunning ? (
-                <Zap size={14} color={getRingColor()} />
+                <Zap size={15} color={getRingColor()} />
               ) : (
                 <Pause size={13} color="var(--accent-amber)" />
               )}
@@ -408,82 +527,106 @@ export default function RestTimerBar({
                 {isFinished
                   ? isExerciseMode
                     ? '🎉 SET COMPLETE!'
-                    : '🎉 READY TO LIFT!'
+                    : '🎉 REST COMPLETE · READY!'
                   : isRunning
                   ? isExerciseMode
-                    ? '⚡ Active Exercise'
-                    : '💤 Rest Timer'
-                  : 'Paused'}
+                    ? '⚡ 90s WORK INTERVAL'
+                    : '☕ 90s REST RECOVERY'
+                  : '⏸ PAUSED'}
               </span>
-              {currentExerciseName && isExerciseMode && (
+
+              {setIndex !== undefined && totalSets !== undefined && (
                 <span
                   style={{
-                    color: '#e2e8f0',
-                    fontWeight: 700,
-                    textTransform: 'none',
+                    background: isExerciseMode ? 'rgba(239, 68, 68, 0.25)' : 'rgba(56, 189, 248, 0.25)',
+                    padding: '1px 5px',
+                    borderRadius: '4px',
+                    fontSize: '0.60rem',
+                    color: '#fff',
+                    fontFamily: 'var(--font-mono)',
+                  }}
+                >
+                  Set {setIndex + 1}/{totalSets}
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+              <div
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '1.30rem',
+                  fontWeight: 900,
+                  lineHeight: 1.1,
+                  color: isFinished ? 'var(--accent-green)' : '#ffffff',
+                  letterSpacing: '-0.5px',
+                }}
+              >
+                {isFinished ? '00:00' : timeFormatted}
+              </div>
+
+              {currentExerciseName && (
+                <span
+                  style={{
+                    fontSize: '0.68rem',
+                    color: 'var(--text-muted)',
+                    whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
-                    maxWidth: '140px',
+                    maxWidth: '160px',
                   }}
                 >
                   · {currentExerciseName}
                 </span>
               )}
             </div>
-            <div
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '1.25rem',
-                fontWeight: 800,
-                lineHeight: 1.1,
-                color: isFinished ? 'var(--accent-green)' : '#ffffff',
-                letterSpacing: '-0.5px',
-              }}
-            >
-              {isFinished ? '00:00' : timeFormatted}
-            </div>
           </div>
         </div>
 
-        {/* Right Side: Quick Actions */}
+        {/* Right Side: Quick Action Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+          {/* Finish Set early button in Exercise mode */}
           {isExerciseMode && !isFinished && (
             <button
               type="button"
               className="btn-clean btn-sm"
               onClick={handleFinishExerciseNow}
-              title="Finish Set & Start Rest"
+              title="Finish set early and start 90s rest"
               style={{
                 background: 'rgba(34, 197, 94, 0.2)',
                 borderColor: 'rgba(34, 197, 94, 0.4)',
                 color: '#86efac',
                 fontSize: '0.68rem',
-                padding: '3px 8px',
-                fontWeight: 700,
-              }}
-            >
-              <Check size={12} />
-              <span>Done</span>
-            </button>
-          )}
-
-          {isFinished && isExerciseMode && (
-            <button
-              type="button"
-              className="btn-clean btn-sm btn-primary"
-              onClick={() => handleTransitionToRest(90)}
-              title="Start Rest Timer"
-              style={{
-                fontSize: '0.68rem',
-                padding: '3px 8px',
-                fontWeight: 700,
-                display: 'flex',
+                padding: '4px 8px',
+                fontWeight: 800,
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: '3px',
               }}
             >
-              <span>Rest (90s)</span>
-              <ArrowRight size={11} />
+              <Check size={12} />
+              <span>Done Set</span>
+            </button>
+          )}
+
+          {/* Quick Start Next Set in Rest Mode */}
+          {!isExerciseMode && onStartNextSet && (
+            <button
+              type="button"
+              className="btn-clean btn-sm btn-primary"
+              onClick={() => onStartNextSet()}
+              title="Skip rest and start 90s Work Timer for next set"
+              style={{
+                fontSize: '0.68rem',
+                padding: '4px 8px',
+                fontWeight: 800,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '3px',
+              }}
+            >
+              <Zap size={11} />
+              <span>Next Set</span>
             </button>
           )}
 
@@ -512,7 +655,8 @@ export default function RestTimerBar({
               background: isRunning ? 'rgba(239, 68, 68, 0.15)' : 'rgba(34, 197, 94, 0.15)',
               borderColor: isRunning ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)',
               color: isRunning ? '#fca5a5' : '#86efac',
-              minWidth: '28px',
+              minWidth: '30px',
+              height: '30px',
             }}
             onClick={togglePause}
             title={isRunning ? 'Pause' : 'Resume'}
@@ -525,14 +669,14 @@ export default function RestTimerBar({
             className="timer-action-btn"
             onClick={onDismiss}
             title="Close timer"
-            style={{ color: 'var(--text-dim)', minWidth: '28px' }}
+            style={{ color: 'var(--text-dim)', minWidth: '30px', height: '30px' }}
           >
             <X size={13} />
           </button>
         </div>
       </div>
 
-      {/* Expanded Quick Presets & Mode Toggle Bar */}
+      {/* Expanded Quick Presets, Auto-Flow & Mode Controls */}
       {isExpanded && (
         <div
           style={{
@@ -546,8 +690,8 @@ export default function RestTimerBar({
             flexWrap: 'wrap',
           }}
         >
-          {/* Mode Switcher */}
-          <div style={{ display: 'flex', gap: '3px' }}>
+          {/* Mode Switcher & Auto-Flow Badge */}
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
             <button
               type="button"
               onClick={() => handleSwitchMode('exercise')}
@@ -555,9 +699,9 @@ export default function RestTimerBar({
                 background: isExerciseMode ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.04)',
                 border: `1px solid ${isExerciseMode ? 'var(--accent-red)' : 'var(--border)'}`,
                 color: isExerciseMode ? '#ffffff' : 'var(--text-muted)',
-                fontSize: '0.63rem',
+                fontSize: '0.64rem',
                 fontWeight: isExerciseMode ? 800 : 600,
-                padding: '2px 6px',
+                padding: '3px 7px',
                 borderRadius: '5px',
                 cursor: 'pointer',
                 display: 'flex',
@@ -568,6 +712,7 @@ export default function RestTimerBar({
               <Zap size={10} color={isExerciseMode ? 'var(--accent-red)' : 'currentColor'} />
               <span>Work</span>
             </button>
+
             <button
               type="button"
               onClick={() => handleSwitchMode('rest')}
@@ -575,9 +720,9 @@ export default function RestTimerBar({
                 background: !isExerciseMode ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255, 255, 255, 0.04)',
                 border: `1px solid ${!isExerciseMode ? '#38bdf8' : 'var(--border)'}`,
                 color: !isExerciseMode ? '#ffffff' : 'var(--text-muted)',
-                fontSize: '0.63rem',
+                fontSize: '0.64rem',
                 fontWeight: !isExerciseMode ? 800 : 600,
-                padding: '2px 6px',
+                padding: '3px 7px',
                 borderRadius: '5px',
                 cursor: 'pointer',
                 display: 'flex',
@@ -588,19 +733,44 @@ export default function RestTimerBar({
               <Coffee size={10} color={!isExerciseMode ? '#38bdf8' : 'currentColor'} />
               <span>Rest</span>
             </button>
+
+            {/* Auto-Flow Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setIsAutoFlow((prev) => !prev)}
+              style={{
+                background: isAutoFlow ? 'rgba(34, 197, 94, 0.18)' : 'rgba(255, 255, 255, 0.04)',
+                border: `1px solid ${isAutoFlow ? 'rgba(34, 197, 94, 0.45)' : 'var(--border)'}`,
+                color: isAutoFlow ? '#86efac' : 'var(--text-dim)',
+                fontSize: '0.62rem',
+                fontWeight: 800,
+                padding: '3px 7px',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+                fontFamily: 'var(--font-mono)',
+              }}
+              title="Automatically advance from Set (90s) -> Rest (90s) -> Next Set"
+            >
+              <Sparkles size={10} />
+              <span>Auto-Flow: {isAutoFlow ? 'ON' : 'OFF'}</span>
+            </button>
           </div>
 
-          {/* Quick Presets */}
-          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-            {activePresets.map((preset) => {
+          {/* Quick Presets with 90s Highlighted */}
+          <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
+            {presets.map((preset) => {
               const isSelected = totalSeconds === preset;
+              const isDefault90 = preset === 90;
               const label =
                 preset < 60
                   ? `${preset}s`
                   : preset === 60
                   ? '1m'
                   : preset === 90
-                  ? '90s'
+                  ? '90s ⭐'
                   : `${preset / 60}m`;
               return (
                 <button
@@ -610,25 +780,30 @@ export default function RestTimerBar({
                   style={{
                     background: isSelected
                       ? isExerciseMode
-                        ? 'rgba(239, 68, 68, 0.25)'
-                        : 'rgba(56, 189, 248, 0.25)'
+                        ? 'rgba(239, 68, 68, 0.35)'
+                        : 'rgba(56, 189, 248, 0.35)'
+                      : isDefault90
+                      ? 'rgba(239, 68, 68, 0.12)'
                       : 'rgba(255, 255, 255, 0.04)',
                     border: `1px solid ${
                       isSelected
                         ? isExerciseMode
                           ? 'var(--accent-red)'
                           : '#38bdf8'
+                        : isDefault90
+                        ? 'rgba(239, 68, 68, 0.35)'
                         : 'var(--border)'
                     }`,
-                    color: isSelected ? '#ffffff' : 'var(--text-muted)',
-                    fontSize: '0.64rem',
-                    fontWeight: isSelected ? 800 : 600,
-                    padding: '2px 6px',
+                    color: isSelected ? '#ffffff' : isDefault90 ? '#fca5a5' : 'var(--text-muted)',
+                    fontSize: '0.62rem',
+                    fontWeight: isSelected || isDefault90 ? 800 : 600,
+                    padding: '2px 5px',
                     borderRadius: '5px',
                     cursor: 'pointer',
                     fontFamily: 'var(--font-mono)',
                     transition: 'all 0.15s ease',
                   }}
+                  title={isDefault90 ? 'Recommended Standard 90s' : undefined}
                 >
                   {label}
                 </button>
@@ -642,7 +817,7 @@ export default function RestTimerBar({
               type="button"
               className="timer-action-btn"
               onClick={restartTimer}
-              title="Restart timer"
+              title="Restart 90s timer"
               style={{ padding: '2px 6px', fontSize: '0.64rem' }}
             >
               <RotateCcw size={11} />
@@ -667,6 +842,8 @@ export default function RestTimerBar({
                 playChime(isExerciseMode);
                 if (isExerciseMode && onCompleteExerciseSet) {
                   onCompleteExerciseSet();
+                } else if (!isExerciseMode && onStartNextSet) {
+                  onStartNextSet();
                 }
               }}
               style={{

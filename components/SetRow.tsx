@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { WorkoutSet, SetType, TrackingType } from '../types/workout';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Clock, Zap } from 'lucide-react';
 
 interface SetRowProps {
   set: WorkoutSet;
@@ -15,6 +15,8 @@ interface SetRowProps {
   onUpdate: (updated: WorkoutSet) => void;
   onDelete: () => void;
   onStartRest?: (restStr: string) => void;
+  onStartTimer?: (durationSecs?: number) => void;
+  isActiveTimerSet?: boolean;
 }
 
 export default function SetRow({
@@ -28,6 +30,8 @@ export default function SetRow({
   onUpdate,
   onDelete,
   onStartRest,
+  onStartTimer,
+  isActiveTimerSet = false,
 }: SetRowProps) {
   // Stepper adjustment for load
   const handleStep = (delta: number) => {
@@ -302,6 +306,26 @@ export default function SetRow({
           onClick={onDelete}
         >
           <Trash2 size={13} />
+        </button>
+      )}
+
+      {/* 1-Tap 90s Work Timer Button for this set (Tracker Mode) */}
+      {mode === 'tracker' && !set.completed && onStartTimer && (
+        <button
+          type="button"
+          className={`set-timer-trigger-btn ${isActiveTimerSet ? 'active-pulse' : ''}`}
+          onClick={() => {
+            let duration = 90;
+            if (set.duration) {
+              const match = String(set.duration).match(/\d+/);
+              if (match) duration = parseInt(match[0], 10) || 90;
+            }
+            onStartTimer(duration);
+          }}
+          title={isActiveTimerSet ? '90s Set Timer is running' : 'Start 90s Work Timer for this set'}
+        >
+          {isActiveTimerSet ? <Zap size={11} color="var(--accent-red)" /> : <Clock size={11} />}
+          <span>90s</span>
         </button>
       )}
 

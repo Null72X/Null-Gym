@@ -1162,6 +1162,43 @@ body {
   box-shadow: 0 0 12px var(--accent-green-glow);
 }
 
+.set-timer-trigger-btn {
+  height: 32px;
+  padding: 0 7px;
+  border-radius: 6px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  touch-action: manipulation;
+  user-select: none;
+}
+.set-timer-trigger-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: var(--accent-red);
+  color: #fff;
+}
+.set-timer-trigger-btn.active-pulse {
+  background: rgba(239, 68, 68, 0.35);
+  border-color: var(--accent-red);
+  color: #fff;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+  animation: timerPulse 1.2s infinite ease-in-out;
+}
+@keyframes timerPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); box-shadow: 0 0 14px rgba(239, 68, 68, 0.8); }
+  100% { transform: scale(1); }
+}
+
 .set-delete-btn {
   background: transparent;
   border: none;

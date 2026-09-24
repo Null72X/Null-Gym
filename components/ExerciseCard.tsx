@@ -41,6 +41,7 @@ interface ExerciseCardProps {
   onMoveDown?: () => void;
   onStartRest: (restStr: string) => void;
   onStartExerciseTimer?: (exerciseName: string, durationSecs: number, setIdx: number) => void;
+  activeTimerSetIndex?: number | null;
 }
 
 export default function ExerciseCard({
@@ -59,6 +60,7 @@ export default function ExerciseCard({
   onMoveDown,
   onStartRest,
   onStartExerciseTimer,
+  activeTimerSetIndex = null,
 }: ExerciseCardProps) {
   const [showNotesEdit, setShowNotesEdit] = useState(false);
   const [notesDraft, setNotesDraft] = useState(exercise.notes || '');
@@ -146,7 +148,7 @@ export default function ExerciseCard({
     const targetIdx = incompleteIdx >= 0 ? incompleteIdx : 0;
     const targetSet = exercise.sets[targetIdx];
 
-    let duration = 45;
+    let duration = 90;
     if (targetSet?.duration) {
       const match = String(targetSet.duration).match(/\d+/);
       if (match) {
@@ -154,7 +156,7 @@ export default function ExerciseCard({
         if (parsed > 0) duration = parsed;
       }
     } else if (exercise.trackingType === 'time_only') {
-      duration = 45;
+      duration = 90;
     }
 
     onStartExerciseTimer(exercise.name, duration, targetIdx);
@@ -193,13 +195,13 @@ export default function ExerciseCard({
         </div>
 
         <div className="card-actions-group">
-          {/* Start Exercise Work Timer Button */}
+          {/* Start Exercise Work Timer Button (90s default) */}
           {onStartExerciseTimer && (
             <button
               type="button"
               className="btn-clean btn-sm"
               onClick={handleStartTimer}
-              title={`Start work timer for ${exercise.name}`}
+              title={`Start 90s work timer for ${exercise.name}`}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -214,7 +216,7 @@ export default function ExerciseCard({
               }}
             >
               <Clock size={11} color="var(--accent-red)" />
-              <span>Start Timer</span>
+              <span>Start 90s Timer</span>
             </button>
           )}
 
@@ -468,6 +470,8 @@ export default function ExerciseCard({
               onUpdate={(updated) => handleUpdateSet(sIdx, updated)}
               onDelete={() => handleDeleteSet(sIdx)}
               onStartRest={onStartRest}
+              onStartTimer={(secs) => onStartExerciseTimer && onStartExerciseTimer(exercise.name, secs || 90, sIdx)}
+              isActiveTimerSet={activeTimerSetIndex === sIdx}
             />
           );
         })}

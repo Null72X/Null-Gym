@@ -67,6 +67,8 @@ export default function DashboardPage() {
     exerciseName?: string;
     exerciseIndex?: number;
     setIndex?: number;
+    totalSets?: number;
+    autoFlow?: boolean;
   } | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState<boolean>(() => {
@@ -131,7 +133,7 @@ export default function DashboardPage() {
     triggerToast(`Unit set to ${nextUnit.toUpperCase()}`);
   };
 
-  // Start rest timer from string e.g. "90s", "~2-3 min", "60s"
+  // Start rest timer (Defaults to 90 seconds)
   const handleStartRest = (restStr: string) => {
     let sec = 90;
     const str = restStr.toLowerCase();
@@ -140,31 +142,39 @@ export default function DashboardPage() {
     else if (str.includes('1-2')) sec = 90;
     else if (str.includes('15 sec') || str.includes('15s')) sec = 15;
     else if (str.includes('30s') || str.includes('30 sec')) sec = 30;
+    else if (str.includes('45s') || str.includes('45 sec')) sec = 45;
     else if (str.includes('60s') || str.includes('1 min')) sec = 60;
+    else if (str.includes('90s') || str.includes('1.5 min') || str.includes('1:30')) sec = 90;
     else if (str.includes('120s') || str.includes('2 min')) sec = 120;
     else if (str.includes('180s') || str.includes('3 min')) sec = 180;
     else {
       const match = str.match(/\d+/);
       if (match) sec = parseInt(match[0], 10);
     }
-    setActiveTimer({ seconds: sec, mode: 'rest' });
+    setActiveTimer({ seconds: sec || 90, mode: 'rest', autoFlow: true });
   };
 
-  // Start active work timer for exercise
+  // Start active work timer for exercise (Default: 90 seconds)
   const handleStartExerciseTimer = (
     exerciseName: string,
-    durationSecs: number,
+    durationSecs = 90,
     exerciseIndex: number,
     setIndex: number
   ) => {
+    const targetDay = weeks[currentWeek - 1]?.days[currentDayIndex];
+    const targetEx = targetDay?.exercises[exerciseIndex];
+    const totalSets = targetEx?.sets.length || 3;
+
     setActiveTimer({
-      seconds: durationSecs,
+      seconds: durationSecs || 90,
       mode: 'exercise',
       exerciseName,
       exerciseIndex,
       setIndex,
+      totalSets,
+      autoFlow: true,
     });
-    triggerToast(`⏱ Started timer: ${exerciseName} (${durationSecs}s)`);
+    triggerToast(`⏱ Started 90s timer: ${exerciseName} (Set ${setIndex + 1}/${totalSets})`);
   };
 
   // Automatically check off set when exercise timer completes or user clicks finish set
@@ -183,18 +193,65 @@ export default function DashboardPage() {
     setWeeks(updatedWeeks);
     saveWeeks(updatedWeeks);
 
-    // Switch directly to Rest timer with the set's rest configuration
+    // Switch directly to Rest timer with 90s default (or set custom rest)
     const restStr = targetEx.sets[setIndex].rest || '90s';
     let restSec = 90;
     const match = restStr.match(/\d+/);
-    if (match) restSec = parseInt(match[0], 10);
+    if (match) restSec = parseInt(match[0], 10) || 90;
 
     setActiveTimer({
-      seconds: restSec,
+      seconds: restSec || 90,
       mode: 'rest',
       exerciseName: targetEx.name,
+      exerciseIndex,
+      setIndex,
+      totalSets: targetEx.sets.length,
+      autoFlow: activeTimer.autoFlow ?? true,
     });
-    triggerToast(`Set ${setIndex + 1} complete! Rest timer started.`);
+    triggerToast(`✓ Set ${setIndex + 1} complete! 90s Rest timer started.`);
+  };
+
+  // Auto-advance or manual next set trigger after rest finishes
+  const handleStartNextSetFromRest = () => {
+    if (!activeTimer || activeTimer.exerciseIndex === undefined || activeTimer.setIndex === undefined) {
+      setActiveTimer(null);
+      return;
+    }
+    const { exerciseIndex, setIndex } = activeTimer;
+    const targetDay = weeks[currentWeek - 1]?.days[currentDayIndex];
+    if (!targetDay) return;
+    const targetEx = targetDay.exercises[exerciseIndex];
+    if (!targetEx) return;
+
+    const nextSetIdx = setIndex + 1;
+    if (nextSetIdx < targetEx.sets.length) {
+      // Start next set in the same exercise!
+      const targetSet = targetEx.sets[nextSetIdx];
+      let duration = 90;
+      if (targetSet?.duration) {
+        const match = String(targetSet.duration).match(/\d+/);
+        if (match) duration = parseInt(match[0], 10) || 90;
+      }
+      setActiveTimer({
+        seconds: duration || 90,
+        mode: 'exercise',
+        exerciseName: targetEx.name,
+        exerciseIndex,
+        setIndex: nextSetIdx,
+        totalSets: targetEx.sets.length,
+        autoFlow: activeTimer.autoFlow ?? true,
+      });
+      triggerToast(`⚡ Starting Set ${nextSetIdx + 1}/${targetEx.sets.length}: ${targetEx.name} (90s)`);
+    } else {
+      // All sets done for this exercise!
+      triggerToast(`🎉 All sets complete for ${targetEx.name}!`);
+      const nextExIdx = exerciseIndex + 1;
+      if (nextExIdx < targetDay.exercises.length) {
+        const nextEx = targetDay.exercises[nextExIdx];
+        triggerToast(`Next up: ${nextEx.name}`);
+      }
+      setActiveTimer(null);
+    }
   };
 
   // Update current day's exercise (weights / reps / completion tracking in tracker mode)
@@ -601,7 +658,13 @@ export default function DashboardPage() {
       ) : (
         <div className="ex-card-list">
           {filteredExercises.map((ex, exIdx) => {
+            const originalExIdx = currentDayData?.exercises.indexOf(ex) ?? exIdx;
+            const targetExIdx = originalExIdx !== -1 ? originalExIdx : exIdx;
             const lastPerf = lastPerformanceMap.get(ex.name.toLowerCase()) || null;
+            const isActiveTimerExercise =
+              activeTimer &&
+              activeTimer.exerciseIndex === targetExIdx &&
+              activeTimer.mode === 'exercise';
             return (
               <ExerciseCard
                 key={ex.id || exIdx}
@@ -613,11 +676,12 @@ export default function DashboardPage() {
                 mode="tracker"
                 weekNumber={currentWeek}
                 highlightQuery={searchQuery}
-                onUpdate={(updated) => handleUpdateExercise(exIdx, updated)}
+                onUpdate={(updated) => handleUpdateExercise(targetExIdx, updated)}
                 onStartRest={handleStartRest}
                 onStartExerciseTimer={(name, duration, setIdx) =>
-                  handleStartExerciseTimer(name, duration, exIdx, setIdx)
+                  handleStartExerciseTimer(name, duration, targetExIdx, setIdx)
                 }
+                activeTimerSetIndex={isActiveTimerExercise ? activeTimer.setIndex : null}
               />
             );
           })}
@@ -654,6 +718,9 @@ export default function DashboardPage() {
         initialSeconds={activeTimer ? activeTimer.seconds : null}
         mode={activeTimer?.mode || 'rest'}
         exerciseName={activeTimer?.exerciseName || ''}
+        setIndex={activeTimer?.setIndex}
+        totalSets={activeTimer?.totalSets}
+        autoFlow={activeTimer?.autoFlow ?? true}
         onDismiss={() => setActiveTimer(null)}
         onCompleteExerciseSet={handleCompleteActiveSet}
         onSwitchToRest={(restSecs) =>
@@ -661,8 +728,13 @@ export default function DashboardPage() {
             seconds: restSecs || 90,
             mode: 'rest',
             exerciseName: activeTimer?.exerciseName,
+            exerciseIndex: activeTimer?.exerciseIndex,
+            setIndex: activeTimer?.setIndex,
+            totalSets: activeTimer?.totalSets,
+            autoFlow: activeTimer?.autoFlow ?? true,
           })
         }
+        onStartNextSet={handleStartNextSetFromRest}
       />
 
       {/* Toast Notification */}
