@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   ExerciseLibraryItem,
   Exercise,
@@ -15,6 +15,10 @@ import {
   matchCatalogCategory,
   SEVEN_MASTER_PILLARS,
   MusclePillar,
+  deduplicateExercises,
+  matchEquipment,
+  matchDifficulty,
+  matchLoadType,
 } from '../lib/exerciseCatalog';
 import { getExerciseMuscleInfo } from '../lib/muscleMetadata';
 import { X, Search, Plus, Play, ExternalLink } from 'lucide-react';
@@ -40,12 +44,26 @@ export default function ExerciseLibraryModal({
 }: ExerciseLibraryModalProps) {
   const [tab, setTab] = useState<'browse' | 'create'>('browse');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedSubCategory, setSelectedSubCategory] = useState('all');
   const [selectedEquipment, setSelectedEquipment] = useState('All');
   const [selectedLoadType, setSelectedLoadType] = useState('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState('All');
   const [sortBy, setSortBy] = useState<'name_asc' | 'name_desc' | 'muscle' | 'equipment'>('name_asc');
+
+  // Fast responsive debounce without blocking input typing
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 150);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    setDebouncedSearchTerm('');
+  };
 
   // Custom exercise form state
   const [name, setName] = useState('');
@@ -62,6 +80,7 @@ export default function ExerciseLibraryModal({
 
   const resetAllFilters = () => {
     setSearchTerm('');
+    setDebouncedSearchTerm('');
     setSelectedCategory('All');
     setSelectedSubCategory('all');
     setSelectedEquipment('All');
@@ -79,39 +98,27 @@ export default function ExerciseLibraryModal({
     selectedDifficulty !== 'All' ||
     sortBy !== 'name_asc';
 
-  // Advanced multi-token, typo-tolerant search, multi-faceted filtering & smart sorting
-  const filtered = useMemo(() => {
-    // 1. Base filter by category, equipment, load type, and difficulty
-    const baseMatches = library.filter((item) => {
+  // 1. Master Deduplicated Library
+  const cleanLibrary = useMemo(() => {
+    return deduplicateExercises(library);
+  }, [library]);
+
+  // 2. Conjunction Filter (Muscle + Equipment + Load + Difficulty)
+  const baseFiltered = useMemo(() => {
+    return cleanLibrary.filter((item) => {
       const matchesCat = matchCatalogCategory(item, selectedCategory, selectedSubCategory);
-
-      const matchesEq =
-        selectedEquipment === 'All' ||
-        (item.equipment && item.equipment.toLowerCase() === selectedEquipment.toLowerCase());
-
-      const matchesLoad =
-        selectedLoadType === 'All' ||
-        (selectedLoadType === 'weighted' &&
-          item.requiresLoad !== false &&
-          item.trackingType !== 'bodyweight_reps') ||
-        (selectedLoadType === 'bodyweight' &&
-          (item.requiresLoad === false || item.trackingType === 'bodyweight_reps')) ||
-        (selectedLoadType === 'timed' && item.trackingType === 'time_only') ||
-        (selectedLoadType === 'cardio' &&
-          (item.trackingType === 'cardio_metrics' ||
-            item.muscleGroup.toLowerCase().includes('cardio')));
-
-      const matchesDiff =
-        selectedDifficulty === 'All' ||
-        (item.difficulty &&
-          item.difficulty.toLowerCase() === selectedDifficulty.toLowerCase());
-
+      const matchesEq = matchEquipment(item.equipment, selectedEquipment);
+      const matchesLoad = matchLoadType(item, selectedLoadType);
+      const matchesDiff = matchDifficulty(item.difficulty, selectedDifficulty);
       return matchesCat && matchesEq && matchesLoad && matchesDiff;
     });
+  }, [cleanLibrary, selectedCategory, selectedSubCategory, selectedEquipment, selectedLoadType, selectedDifficulty]);
 
-    // 2. If no search term, sort according to selected sort option
-    if (!searchTerm.trim()) {
-      return [...baseMatches].sort((a, b) => {
+  // 3. Search Matching & Relevance Scoring (Single Source of Truth)
+  const renderedExercises = useMemo(() => {
+    const trimmed = debouncedSearchTerm.trim();
+    if (!trimmed) {
+      return [...baseFiltered].sort((a, b) => {
         if (sortBy === 'name_asc') return a.name.localeCompare(b.name);
         if (sortBy === 'name_desc') return b.name.localeCompare(a.name);
         if (sortBy === 'muscle')
@@ -122,15 +129,12 @@ export default function ExerciseLibraryModal({
       });
     }
 
-    // 3. Search with high-precision weighted engine (fuzzy, typos, synonyms, multi-field)
-    const searchResults = searchExercises(baseMatches, searchTerm);
+    const searchResults = searchExercises(baseFiltered, trimmed);
 
-    // If default sort (name_asc), preserve the intelligent relevance ranking order
     if (sortBy === 'name_asc') {
       return searchResults.map((r) => r.item);
     }
 
-    // Otherwise apply user's explicit sort choice with relevance score as tiebreaker
     return [...searchResults]
       .sort((a, b) => {
         if (sortBy === 'name_desc') return b.item.name.localeCompare(a.item.name);
@@ -149,16 +153,7 @@ export default function ExerciseLibraryModal({
         return b.score - a.score;
       })
       .map((r) => r.item);
-  }, [
-    library,
-    searchTerm,
-    selectedCategory,
-    selectedSubCategory,
-    selectedEquipment,
-    selectedLoadType,
-    selectedDifficulty,
-    sortBy,
-  ]);
+  }, [baseFiltered, debouncedSearchTerm, sortBy]);
 
   if (!isOpen) return null;
 
@@ -273,8 +268,8 @@ export default function ExerciseLibraryModal({
               style={{ fontSize: '0.74rem', padding: '6px 10px', flex: '1 1 auto', textAlign: 'center', whiteSpace: 'nowrap' }}
               onClick={() => setTab('browse')}
             >
-              <span className="tab-full">Browse Library ({library.length})</span>
-              <span className="tab-short">Library ({library.length})</span>
+              <span className="tab-full">Browse Library ({renderedExercises.length})</span>
+              <span className="tab-short">Library ({renderedExercises.length})</span>
             </button>
             <button
               type="button"
@@ -298,7 +293,7 @@ export default function ExerciseLibraryModal({
               <input
                 type="text"
                 className="clean-input"
-                placeholder={`Search ${library.length || 710} exercises by name, muscle, equipment, pattern...`}
+                placeholder={`Search ${cleanLibrary.length || 710} exercises by name, muscle, equipment, pattern...`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{ paddingLeft: '32px', fontSize: '0.8rem' }}
@@ -312,7 +307,7 @@ export default function ExerciseLibraryModal({
               {searchTerm && (
                 <button
                   type="button"
-                  onClick={() => setSearchTerm('')}
+                  onClick={handleClearSearch}
                   style={{
                     position: 'absolute',
                     right: '10px',
@@ -425,7 +420,7 @@ export default function ExerciseLibraryModal({
                     style={{ fontSize: '0.62rem', padding: '1px 6px', background: 'rgba(239, 68, 68, 0.15)', color: '#fca5a5' }}
                   >
                     &ldquo;{searchTerm}&rdquo;
-                    <X size={9} style={{ cursor: 'pointer', marginLeft: '3px' }} onClick={() => setSearchTerm('')} />
+                    <X size={9} style={{ cursor: 'pointer', marginLeft: '3px' }} onClick={handleClearSearch} />
                   </span>
                 )}
                 {selectedCategory !== 'All' && (
@@ -621,9 +616,9 @@ export default function ExerciseLibraryModal({
               }}
             >
               <span>
-                Showing {filtered.length} exercise{filtered.length === 1 ? '' : 's'}
+                Showing {renderedExercises.length} exercise{renderedExercises.length === 1 ? '' : 's'}
               </span>
-              {filtered.length === 0 && (
+              {renderedExercises.length === 0 && (
                 <button
                   type="button"
                   onClick={resetAllFilters}
@@ -651,7 +646,7 @@ export default function ExerciseLibraryModal({
                 paddingRight: '4px',
               }}
             >
-              {filtered.length === 0 ? (
+              {renderedExercises.length === 0 ? (
                 <div
                   style={{
                     textAlign: 'center',
@@ -671,14 +666,14 @@ export default function ExerciseLibraryModal({
                       type="button"
                       className="clean-btn primary"
                       style={{ padding: '4px 12px', fontSize: '0.72rem' }}
-                      onClick={() => setSearchTerm('')}
+                      onClick={handleClearSearch}
                     >
                       Clear Search
                     </button>
                   )}
                 </div>
               ) : (
-                filtered.map((item) => {
+                renderedExercises.map((item) => {
                   const noLoad = item.requiresLoad === false;
                   const muscleInfo = getExerciseMuscleInfo(item);
                   return (

@@ -14432,7 +14432,22 @@ export function matchCatalogCategory(
 
   // 8. FUNCTIONAL PILLAR
   if (pillar === 'functional' || pillar === 'functional & conditioning') {
-    const isFunc = mg.startsWith('cardio') || mg === 'hiit' || mg === 'liss' || mg === 'calisthenics' || mg === 'kettlebell' || mg === 'olympic lifts' || mg === 'plyometrics' || mg === 'carries & sled' || mg === 'mobility' || mg === 'stretching';
+    const isFunc =
+      mg.startsWith('cardio') ||
+      mg === 'hiit' ||
+      mg === 'liss' ||
+      mg === 'calisthenics' ||
+      mg === 'kettlebell' ||
+      mg === 'olympic lifts' ||
+      mg === 'plyometrics' ||
+      mg === 'carries & sled' ||
+      mg === 'mobility' ||
+      mg === 'stretching' ||
+      mg.includes('combat') ||
+      mg.includes('boxing') ||
+      mg.includes('agility') ||
+      mg.includes('medicine ball') ||
+      cat.includes('functional');
     if (!isFunc) return false;
     if (subFilter === 'all') return true;
     if (subFilter === 'cardio') return mg.startsWith('cardio') || mg === 'hiit' || mg === 'liss';
@@ -14453,3 +14468,85 @@ export function matchCatalogCategory(
 
   return mg.includes(pillar) || sub.includes(pillar) || cat.includes(pillar);
 }
+
+/**
+ * Deduplicates exercises strictly by unique ID to preserve single source of truth
+ */
+export function deduplicateExercises(exercises: ExerciseLibraryItem[]): ExerciseLibraryItem[] {
+  if (!exercises || exercises.length === 0) return [];
+  const seen = new Set<string>();
+  const result: ExerciseLibraryItem[] = [];
+  for (const ex of exercises) {
+    if (!ex || !ex.id) continue;
+    if (!seen.has(ex.id)) {
+      seen.add(ex.id);
+      result.push(ex);
+    }
+  }
+  return result;
+}
+
+/**
+ * Robust equipment matching with plural/singular and alias tolerance
+ */
+export function matchEquipment(exerciseEquipment: string | undefined | null, selected: string): boolean {
+  if (!selected || selected === 'All') return true;
+  if (!exerciseEquipment) return false;
+
+  const eqNorm = exerciseEquipment.toLowerCase().trim();
+  const selNorm = selected.toLowerCase().trim();
+
+  if (eqNorm === selNorm) return true;
+
+  // Plural/singular normalization
+  const singular = (s: string) => (s.endsWith('s') ? s.slice(0, -1) : s);
+  if (singular(eqNorm) === singular(selNorm)) return true;
+
+  // Plate normalization
+  if (selNorm.includes('plate') && eqNorm.includes('plate')) return true;
+
+  // Cable normalization
+  if (selNorm.startsWith('cable') && eqNorm.startsWith('cable')) return true;
+
+  // Dumbbell normalization (db / dumbbell / dumbbells)
+  if ((selNorm === 'db' || selNorm.startsWith('dumbbell')) && eqNorm.startsWith('dumbbell')) return true;
+
+  // Barbell normalization (bb / barbell / barbells)
+  if ((selNorm === 'bb' || selNorm.startsWith('barbell')) && eqNorm.startsWith('barbell')) return true;
+
+  // Kettlebell normalization
+  if ((selNorm === 'kb' || selNorm.startsWith('kettlebell')) && eqNorm.startsWith('kettlebell')) return true;
+
+  return false;
+}
+
+/**
+ * Normalized difficulty matching
+ */
+export function matchDifficulty(exerciseDiff: string | undefined | null, selected: string): boolean {
+  if (!selected || selected === 'All') return true;
+  if (!exerciseDiff) return false;
+  return exerciseDiff.toLowerCase().trim() === selected.toLowerCase().trim();
+}
+
+/**
+ * Normalized load/tracking type matching
+ */
+export function matchLoadType(item: ExerciseLibraryItem, selectedLoadType: string): boolean {
+  if (!selectedLoadType || selectedLoadType === 'All') return true;
+
+  if (selectedLoadType === 'weighted') {
+    return item.requiresLoad !== false && item.trackingType !== 'bodyweight_reps';
+  }
+  if (selectedLoadType === 'bodyweight') {
+    return item.requiresLoad === false || item.trackingType === 'bodyweight_reps';
+  }
+  if (selectedLoadType === 'timed') {
+    return item.trackingType === 'time_only';
+  }
+  if (selectedLoadType === 'cardio') {
+    return item.trackingType === 'cardio_metrics' || (item.muscleGroup || '').toLowerCase().includes('cardio');
+  }
+  return true;
+}
+

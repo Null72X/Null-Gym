@@ -23,6 +23,10 @@ import {
   matchCatalogCategory,
   SEVEN_MASTER_PILLARS,
   MusclePillar,
+  deduplicateExercises,
+  matchEquipment,
+  matchDifficulty,
+  matchLoadType,
 } from '../../lib/exerciseCatalog';
 import { getExerciseMuscleInfo, DEFAULT_DAY_SCHEDULE } from '../../lib/muscleMetadata';
 import {
@@ -64,14 +68,28 @@ export default function LibraryPage() {
     return 'kg';
   });
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedSubCategory, setSelectedSubCategory] = useState('all');
   const [selectedEquipment, setSelectedEquipment] = useState('All');
   const [selectedLoadType, setSelectedLoadType] = useState('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState('All');
   const [sortBy, setSortBy] = useState<'name_asc' | 'name_desc' | 'muscle' | 'equipment'>('name_asc');
-  const [displayCount, setDisplayCount] = useState<number>(36);
+  const [displayCount, setDisplayCount] = useState<number>(48);
   const [isCreating, setIsCreating] = useState(false);
+
+  // Smooth responsive debounce for search execution without blocking input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 150);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    setDebouncedSearchTerm('');
+  };
 
   // Target picker for direct Add to Plan
   const [addingExerciseId, setAddingExerciseId] = useState<string | null>(null);
@@ -109,13 +127,14 @@ export default function LibraryPage() {
 
   const resetAllFilters = () => {
     setSearchTerm('');
+    setDebouncedSearchTerm('');
     setSelectedCategory('All');
     setSelectedSubCategory('all');
     setSelectedEquipment('All');
     setSelectedLoadType('All');
     setSelectedDifficulty('All');
     setSortBy('name_asc');
-    setDisplayCount(36);
+    setDisplayCount(48);
   };
 
   const hasActiveFilters =
@@ -257,39 +276,27 @@ export default function LibraryPage() {
     triggerToast(`Added "${item.name}" to Week ${targetWeek} · ${targetDay}!`);
   };
 
-  // Advanced multi-token, typo-tolerant search, multi-faceted filtering & smart sorting
-  const filtered = useMemo(() => {
-    // 1. Base filter by category, equipment, load type, and difficulty
-    const baseMatches = library.filter((item) => {
+  // 1. Master Deduplicated Library (Unique by exercise ID)
+  const cleanLibrary = useMemo(() => {
+    return deduplicateExercises(library);
+  }, [library]);
+
+  // 2. Conjunction Filter (Muscle + Equipment + Load + Difficulty)
+  const baseFiltered = useMemo(() => {
+    return cleanLibrary.filter((item) => {
       const matchesCat = matchCatalogCategory(item, selectedCategory, selectedSubCategory);
-
-      const matchesEq =
-        selectedEquipment === 'All' ||
-        (item.equipment && item.equipment.toLowerCase() === selectedEquipment.toLowerCase());
-
-      const matchesLoad =
-        selectedLoadType === 'All' ||
-        (selectedLoadType === 'weighted' &&
-          item.requiresLoad !== false &&
-          item.trackingType !== 'bodyweight_reps') ||
-        (selectedLoadType === 'bodyweight' &&
-          (item.requiresLoad === false || item.trackingType === 'bodyweight_reps')) ||
-        (selectedLoadType === 'timed' && item.trackingType === 'time_only') ||
-        (selectedLoadType === 'cardio' &&
-          (item.trackingType === 'cardio_metrics' ||
-            item.muscleGroup.toLowerCase().includes('cardio')));
-
-      const matchesDiff =
-        selectedDifficulty === 'All' ||
-        (item.difficulty &&
-          item.difficulty.toLowerCase() === selectedDifficulty.toLowerCase());
-
+      const matchesEq = matchEquipment(item.equipment, selectedEquipment);
+      const matchesLoad = matchLoadType(item, selectedLoadType);
+      const matchesDiff = matchDifficulty(item.difficulty, selectedDifficulty);
       return matchesCat && matchesEq && matchesLoad && matchesDiff;
     });
+  }, [cleanLibrary, selectedCategory, selectedSubCategory, selectedEquipment, selectedLoadType, selectedDifficulty]);
 
-    // 2. If no search term, sort according to selected sort option
-    if (!searchTerm.trim()) {
-      return [...baseMatches].sort((a, b) => {
+  // 3. Search Matching & Relevance Scoring
+  const searchFiltered = useMemo(() => {
+    const trimmed = debouncedSearchTerm.trim();
+    if (!trimmed) {
+      return [...baseFiltered].sort((a, b) => {
         if (sortBy === 'name_asc') return a.name.localeCompare(b.name);
         if (sortBy === 'name_desc') return b.name.localeCompare(a.name);
         if (sortBy === 'muscle')
@@ -300,15 +307,12 @@ export default function LibraryPage() {
       });
     }
 
-    // 3. Search with high-precision weighted engine (fuzzy, typos, synonyms, multi-field)
-    const searchResults = searchExercises(baseMatches, searchTerm);
+    const searchResults = searchExercises(baseFiltered, trimmed);
 
-    // If default sort (name_asc), preserve the intelligent relevance ranking order
     if (sortBy === 'name_asc') {
       return searchResults.map((r) => r.item);
     }
 
-    // Otherwise apply user's explicit sort choice with relevance score as tiebreaker
     return [...searchResults]
       .sort((a, b) => {
         if (sortBy === 'name_desc') return b.item.name.localeCompare(a.item.name);
@@ -327,20 +331,20 @@ export default function LibraryPage() {
         return b.score - a.score;
       })
       .map((r) => r.item);
-  }, [
-    library,
-    searchTerm,
-    selectedCategory,
-    selectedSubCategory,
-    selectedEquipment,
-    selectedLoadType,
-    selectedDifficulty,
-    sortBy,
-  ]);
+  }, [baseFiltered, debouncedSearchTerm, sortBy]);
 
+  // 4. Reset pagination / displayCount on any criteria transition
   useEffect(() => {
-    setDisplayCount(36);
-  }, [searchTerm, selectedCategory, selectedSubCategory, selectedEquipment, selectedLoadType, selectedDifficulty, sortBy]);
+    setDisplayCount(48);
+  }, [debouncedSearchTerm, selectedCategory, selectedSubCategory, selectedEquipment, selectedLoadType, selectedDifficulty, sortBy]);
+
+  // 5. Final Rendered List (Single Source of Truth)
+  const renderedExercises = useMemo(() => {
+    return searchFiltered.slice(0, displayCount);
+  }, [searchFiltered, displayCount]);
+
+  const renderedCount = renderedExercises.length;
+  const totalMatches = searchFiltered.length;
 
   return (
     <div>
@@ -358,9 +362,9 @@ export default function LibraryPage() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div className="progress-pill">
-            <div className="progress-num">{filtered.length}</div>
+            <div className="progress-num">{renderedCount}</div>
             <div className="progress-label">
-              {filtered.length === library.length ? 'Total Exercises' : 'Filtered'}
+              {hasActiveFilters ? 'Matching' : (renderedCount === cleanLibrary.length ? 'Total Exercises' : 'Visible')}
             </div>
           </div>
 
@@ -583,7 +587,7 @@ export default function LibraryPage() {
           {searchTerm && (
             <button
               type="button"
-              onClick={() => setSearchTerm('')}
+              onClick={handleClearSearch}
               style={{
                 background: 'transparent',
                 border: 'none',
@@ -698,7 +702,7 @@ export default function LibraryPage() {
                 }}
               >
                 &ldquo;{searchTerm}&rdquo;
-                <X size={10} style={{ cursor: 'pointer' }} onClick={() => setSearchTerm('')} />
+                <X size={10} style={{ cursor: 'pointer' }} onClick={handleClearSearch} />
               </span>
             )}
 
@@ -931,9 +935,42 @@ export default function LibraryPage() {
         );
       })()}
 
+      {/* Search & Filter Result Status Bar (100% synchronized with rendered cards) */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '4px 2px',
+          marginBottom: '10px',
+          fontSize: '0.78rem',
+          color: 'var(--text-muted)',
+          fontFamily: 'var(--font-mono)',
+        }}
+      >
+        <span>
+          Showing <strong style={{ color: '#fff' }}>{renderedCount}</strong> exercise{renderedCount === 1 ? '' : 's'}
+          {totalMatches > renderedCount && (
+            <span style={{ color: 'var(--text-dim)', marginLeft: '4px' }}>
+              (of {totalMatches} total)
+            </span>
+          )}
+        </span>
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={resetAllFilters}
+            className="btn-clean btn-sm"
+            style={{ fontSize: '0.68rem', padding: '2px 8px', color: 'var(--accent-red)' }}
+          >
+            Reset All Filters
+          </button>
+        )}
+      </div>
+
       {/* Exercise Cards List (Responsive 1-col on mobile, 2-col on desktop) */}
       <div className="responsive-grid-2">
-        {filtered.length === 0 ? (
+        {renderedExercises.length === 0 ? (
           <div className="empty-state" style={{ gridColumn: '1 / -1', padding: '40px 16px' }}>
             <div className="empty-state-title" style={{ fontSize: '1.05rem', color: '#fff' }}>
               No exercises match {searchTerm ? `"${searchTerm}"` : 'selected filters'}
@@ -949,7 +986,7 @@ export default function LibraryPage() {
                   type="button"
                   className="clean-btn primary"
                   style={{ padding: '6px 14px', fontSize: '0.75rem' }}
-                  onClick={() => setSearchTerm('')}
+                  onClick={handleClearSearch}
                 >
                   Clear Search
                 </button>
@@ -957,20 +994,14 @@ export default function LibraryPage() {
               <button
                 type="button"
                 className="btn-clean btn-sm"
-                onClick={() => {
-                  setSelectedCategory('All');
-                  setSelectedEquipment('All');
-                  setSelectedLoadType('All');
-                  setSelectedDifficulty('All');
-                  setSearchTerm('');
-                }}
+                onClick={resetAllFilters}
               >
                 Reset All Filters
               </button>
             </div>
           </div>
         ) : (
-          filtered.slice(0, displayCount).map((item, idx) => {
+          renderedExercises.map((item, idx) => {
             const isAddingThis = addingExerciseId === item.id;
             const noLoad = item.requiresLoad === false;
             const muscleInfo = getExerciseMuscleInfo(item);
@@ -1203,7 +1234,7 @@ export default function LibraryPage() {
       </div>
 
       {/* Show More / Pagination */}
-      {displayCount < filtered.length && (
+      {displayCount < totalMatches && (
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', marginBottom: '28px' }}>
           <button
             type="button"
@@ -1211,7 +1242,7 @@ export default function LibraryPage() {
             style={{ padding: '10px 24px', fontSize: '0.85rem', fontWeight: 600 }}
             onClick={() => setDisplayCount((prev) => prev + 48)}
           >
-            Show More Exercises ({filtered.length - displayCount} remaining)
+            Show More Exercises ({totalMatches - displayCount} remaining)
           </button>
         </div>
       )}

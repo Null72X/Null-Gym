@@ -328,9 +328,11 @@ export default function DashboardPage() {
 
     const fields = [
       { name: 'name', weight: 10, isPrimary: true, getter: (ex: Exercise) => ex.name },
-      { name: 'muscleGroup', weight: 6, getter: (ex: Exercise) => ex.muscleGroup },
+      { name: 'muscleGroup', weight: 8, getter: (ex: Exercise) => ex.muscleGroup },
+      { name: 'category', weight: 6, getter: (ex: Exercise) => ex.category },
+      { name: 'subMuscle', weight: 5, getter: (ex: Exercise) => ex.subMuscle },
       { name: 'movementPattern', weight: 4, getter: (ex: Exercise) => ex.movementPattern },
-      { name: 'notes', weight: 3, getter: (ex: Exercise) => ex.notes },
+      { name: 'equipment', weight: 4, getter: (ex: Exercise) => ex.equipment },
     ];
 
     const results = searchItems(list, searchQuery, fields);

@@ -11,61 +11,72 @@
  */
 
 import { ExerciseLibraryItem } from '../types/workout';
+import { matchCatalogCategory } from './exerciseCatalog';
 
 // -------------------------------------------------------------
 // FITNESS SYNONYMS & TYPO CORRECTIONS
 // -------------------------------------------------------------
 export const FITNESS_SYNONYMS: Record<string, string[]> = {
   // Equipment
-  db: ['dumbbell'],
-  dumbell: ['dumbbell'],
-  dumbel: ['dumbbell'],
-  bb: ['barbell'],
+  db: ['dumbbell', 'dumbbells'],
+  dumbbell: ['db', 'dumbbells'],
+  dumbbells: ['dumbbell', 'db'],
+  dumbell: ['dumbbell', 'dumbbells'],
+  dumbel: ['dumbbell', 'dumbbells'],
+  bb: ['barbell', 'barbells'],
+  barbell: ['bb', 'barbells'],
   barbel: ['barbell'],
-  kb: ['kettlebell'],
+  kb: ['kettlebell', 'kettlebells'],
+  kettlebell: ['kb', 'kettlebells'],
   cable: ['cables', 'pulley'],
+  cables: ['cable', 'pulley'],
 
   // Movements & Exercises
   benc: ['bench'],
-  bench: ['benc', 'press'],
+  bench: ['benc'],
   sqat: ['squat'],
   sqaut: ['squat'],
   squat: ['sqat', 'squats'],
+  squats: ['squat'],
   dl: ['deadlift'],
   deadlift: ['dl'],
-  rdl: ['romanian deadlift', 'deadlift'],
+  rdl: ['romanian deadlift'],
   ohp: ['overhead press', 'shoulder press'],
-  press: ['benc', 'bench'],
   pullup: ['pull-up', 'pull up', 'chinup', 'chin-up'],
   pullups: ['pull-ups', 'pull ups'],
   pushup: ['push-up', 'push up'],
   pushups: ['push-ups', 'push ups'],
   row: ['rows', 'rowing'],
+  rows: ['row'],
 
   // Muscles
   lat: ['lats', 'latissimus'],
-  lats: ['lat', 'latissimus', 'back'],
-  bicp: ['bicep', 'biceps', 'arms'],
-  bicep: ['biceps', 'arms'],
-  biceps: ['bicep', 'arms'],
-  tricep: ['triceps', 'arms'],
-  triceps: ['tricep', 'arms'],
+  lats: ['lat', 'latissimus'],
+  bicp: ['bicep', 'biceps'],
+  bicep: ['biceps'],
+  biceps: ['bicep'],
+  tricep: ['triceps'],
+  triceps: ['tricep'],
   delt: ['deltoid', 'delts', 'shoulder', 'shoulders'],
   delts: ['delt', 'deltoid', 'shoulder', 'shoulders'],
+  deltoid: ['delts', 'shoulder', 'shoulders'],
+  shoulder: ['shoulders', 'delts', 'deltoid'],
+  shoulders: ['shoulder', 'delts', 'deltoid'],
   pec: ['pecs', 'chest'],
   pecs: ['pec', 'chest'],
+  chest: ['pec', 'pecs'],
   abs: ['abdominals', 'core', 'abdominal'],
   core: ['abs', 'abdominals'],
-  glute: ['glutes', 'butt'],
+  glute: ['glutes'],
   glutes: ['glute'],
   quad: ['quads', 'quadriceps'],
   quads: ['quad', 'quadriceps'],
-  ham: ['hams', 'hamstrings', 'hamstring'],
+  quadriceps: ['quad', 'quads'],
+  ham: ['hamstrings', 'hamstring'],
   hamstring: ['hamstrings', 'ham'],
   hamstrings: ['hamstring', 'ham'],
   calf: ['calves'],
   calves: ['calf', 'calfs'],
-  calfs: ['calves', 'calf'],
   trap: ['traps', 'trapezius'],
   traps: ['trap', 'trapezius'],
 };
@@ -205,15 +216,17 @@ function scoreTokenAgainstText(
     }
   }
 
-  // 4. Substring contains token
-  const subIdx = targetLower.indexOf(token);
-  if (subIdx !== -1) {
-    return { score: 250 * fieldWeight, matched: true };
+  // 4. Substring contains token (only for tokens >= 3 characters to prevent 2-letter acronyms like 'bb' or 'db' matching inside words like 'dumbbell')
+  if (tokenLen >= 3) {
+    const subIdx = targetLower.indexOf(token);
+    if (subIdx !== -1) {
+      return { score: 250 * fieldWeight, matched: true };
+    }
   }
 
-  // 5. Fuzzy / Typo match on individual words (only for tokens >= 4 characters to avoid false positives)
-  if (tokenLen >= 4) {
-    const maxAllowedDistance = tokenLen >= 7 ? 2 : 1;
+  // 5. Fuzzy / Typo match on individual words (only for tokens >= 5 characters to avoid false positives on 4-letter words like hack/rack vs back)
+  if (tokenLen >= 5) {
+    const maxAllowedDistance = tokenLen >= 8 ? 2 : 1;
     for (const word of targetWords) {
       // Don't compare words with vast length difference
       if (Math.abs(word.length - tokenLen) <= maxAllowedDistance) {
@@ -356,6 +369,45 @@ export function searchItems<T>(
 // -------------------------------------------------------------
 // EXERCISE CATALOG SEARCH SPECIALIZATION
 // -------------------------------------------------------------
+export const CANONICAL_MUSCLE_MAPPINGS: Record<string, { pillar: string; sub?: string }> = {
+  chest: { pillar: 'Chest' },
+  pecs: { pillar: 'Chest' },
+  pec: { pillar: 'Chest' },
+  pectorals: { pillar: 'Chest' },
+  shoulders: { pillar: 'Shoulders' },
+  shoulder: { pillar: 'Shoulders' },
+  delts: { pillar: 'Shoulders' },
+  delt: { pillar: 'Shoulders' },
+  deltoid: { pillar: 'Shoulders' },
+  deltoids: { pillar: 'Shoulders' },
+  back: { pillar: 'Back' },
+  lats: { pillar: 'Back', sub: 'lats' },
+  lat: { pillar: 'Back', sub: 'lats' },
+  traps: { pillar: 'Back', sub: 'traps' },
+  trap: { pillar: 'Back', sub: 'traps' },
+  biceps: { pillar: 'Arms', sub: 'biceps' },
+  bicep: { pillar: 'Arms', sub: 'biceps' },
+  triceps: { pillar: 'Arms', sub: 'triceps' },
+  tricep: { pillar: 'Arms', sub: 'triceps' },
+  arms: { pillar: 'Arms' },
+  arm: { pillar: 'Arms' },
+  legs: { pillar: 'Legs' },
+  leg: { pillar: 'Legs' },
+  quads: { pillar: 'Legs', sub: 'quads' },
+  quad: { pillar: 'Legs', sub: 'quads' },
+  quadriceps: { pillar: 'Legs', sub: 'quads' },
+  hamstrings: { pillar: 'Legs', sub: 'hamstrings' },
+  hamstring: { pillar: 'Legs', sub: 'hamstrings' },
+  glutes: { pillar: 'Legs', sub: 'glutes' },
+  glute: { pillar: 'Legs', sub: 'glutes' },
+  calves: { pillar: 'Legs', sub: 'calves' },
+  calf: { pillar: 'Legs', sub: 'calves' },
+  abs: { pillar: 'Core', sub: 'abs_upper_lower' },
+  ab: { pillar: 'Core', sub: 'abs_upper_lower' },
+  core: { pillar: 'Core' },
+  neck: { pillar: 'Neck' },
+};
+
 const EXERCISE_SEARCH_FIELDS: FieldConfig<ExerciseLibraryItem>[] = [
   {
     name: 'name',
@@ -365,23 +417,23 @@ const EXERCISE_SEARCH_FIELDS: FieldConfig<ExerciseLibraryItem>[] = [
   },
   {
     name: 'muscleGroup',
-    weight: 6,
+    weight: 8,
     getter: (ex) => ex.muscleGroup,
   },
   {
     name: 'subMuscle',
-    weight: 5,
+    weight: 7,
     getter: (ex) => ex.subMuscle,
   },
   {
-    name: 'equipment',
-    weight: 4,
-    getter: (ex) => ex.equipment,
+    name: 'category',
+    weight: 6,
+    getter: (ex) => ex.category,
   },
   {
-    name: 'category',
-    weight: 4,
-    getter: (ex) => ex.category,
+    name: 'equipment',
+    weight: 5,
+    getter: (ex) => ex.equipment,
   },
   {
     name: 'movementPattern',
@@ -389,13 +441,8 @@ const EXERCISE_SEARCH_FIELDS: FieldConfig<ExerciseLibraryItem>[] = [
     getter: (ex) => ex.movementPattern,
   },
   {
-    name: 'notes',
-    weight: 2,
-    getter: (ex) => ex.notes,
-  },
-  {
     name: 'difficulty',
-    weight: 2,
+    weight: 1,
     getter: (ex) => ex.difficulty,
   },
 ];
@@ -408,7 +455,53 @@ export function searchExercises(
   query: string,
   options?: { limit?: number; threshold?: number }
 ): SearchMatchResult<ExerciseLibraryItem>[] {
-  return searchItems(exercises, query, EXERCISE_SEARCH_FIELDS, options);
+  const trimmed = query.trim().toLowerCase();
+  if (!trimmed) {
+    return exercises.map((item) => ({
+      item,
+      score: 1,
+      matchedTokens: [],
+      matchedFields: [],
+    }));
+  }
+
+  // 1. Direct muscle query intent routing (guarantees 100% isolation for muscle searches)
+  const muscleMapping = CANONICAL_MUSCLE_MAPPINGS[trimmed];
+  if (muscleMapping) {
+    const matches = exercises.filter((ex) =>
+      matchCatalogCategory(ex, muscleMapping.pillar, muscleMapping.sub || 'all')
+    );
+    // Deduplicate matches by item ID
+    const seen = new Set<string>();
+    const deduplicatedMatches: ExerciseLibraryItem[] = [];
+    for (const m of matches) {
+      if (!seen.has(m.id)) {
+        seen.add(m.id);
+        deduplicatedMatches.push(m);
+      }
+    }
+    return deduplicatedMatches.map((item) => ({
+      item,
+      score: 10000,
+      matchedTokens: [trimmed],
+      matchedFields: ['muscleGroup', 'category'],
+    }));
+  }
+
+  // 2. High-precision weighted multi-field search
+  const rawResults = searchItems(exercises, query, EXERCISE_SEARCH_FIELDS, options);
+
+  // Deduplicate results by ID
+  const seen = new Set<string>();
+  const deduplicated: SearchMatchResult<ExerciseLibraryItem>[] = [];
+  for (const r of rawResults) {
+    if (!seen.has(r.item.id)) {
+      seen.add(r.item.id);
+      deduplicated.push(r);
+    }
+  }
+
+  return deduplicated;
 }
 
 // -------------------------------------------------------------
