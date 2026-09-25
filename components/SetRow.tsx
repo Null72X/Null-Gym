@@ -95,7 +95,7 @@ export default function SetRow({
   };
 
   return (
-    <div className={`clean-set-row ${set.completed ? 'done' : ''}`}>
+    <div className={`clean-set-row ${mode === 'tracker' && set.completed ? 'done' : ''}`}>
       {/* Badge / Type toggle */}
       <button
         type="button"
@@ -329,15 +329,17 @@ export default function SetRow({
         </button>
       )}
 
-      {/* Checkmark Button */}
-      <button
-        type="button"
-        className={`clean-check-btn ${set.completed ? 'checked' : ''}`}
-        onClick={handleToggleCheck}
-        title={set.completed ? 'Completed' : 'Mark Complete'}
-      >
-        {set.completed ? '✓' : '○'}
-      </button>
+      {/* Checkmark Button (Tracker Mode Only) */}
+      {mode === 'tracker' && (
+        <button
+          type="button"
+          className={`clean-check-btn ${set.completed ? 'checked' : ''}`}
+          onClick={handleToggleCheck}
+          title={set.completed ? 'Completed' : 'Mark Complete'}
+        >
+          {set.completed ? '✓' : '○'}
+        </button>
+      )}
     </div>
   );
 }

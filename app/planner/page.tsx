@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import WeekSelector from '../../components/WeekSelector';
 import DayGrid from '../../components/DayGrid';
 import ExerciseCard from '../../components/ExerciseCard';
-import RestTimerBar from '../../components/RestTimerBar';
 import CopyModal from '../../components/CopyModal';
 import ExerciseLibraryModal from '../../components/ExerciseLibraryModal';
 import {
@@ -76,7 +75,6 @@ export default function PlannerPage() {
     isOpen: false,
     mode: 'day',
   });
-  const [activeRestSeconds, setActiveRestSeconds] = useState<number | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isEditingHeader, setIsEditingHeader] = useState<boolean>(false);
   const [titleDraft, setTitleDraft] = useState<string>('');
@@ -687,7 +685,7 @@ export default function PlannerPage() {
                 onDuplicate={() => handleDuplicateExercise(exIdx)}
                 onMoveUp={() => handleMoveExercise(exIdx, exIdx - 1)}
                 onMoveDown={() => handleMoveExercise(exIdx, exIdx + 1)}
-                onStartRest={(restStr) => setActiveRestSeconds(90)}
+                onStartRest={() => {}}
               />
             );
           })}
@@ -707,14 +705,6 @@ export default function PlannerPage() {
             <span>Add Exercise to {currentDayData.title}</span>
           </button>
         </div>
-      )}
-
-      {/* Floating Rest Bar */}
-      {activeRestSeconds !== null && activeRestSeconds > 0 && (
-        <RestTimerBar
-          initialSeconds={activeRestSeconds}
-          onDismiss={() => setActiveRestSeconds(null)}
-        />
       )}
 
       {/* Exercise Library Modal */}

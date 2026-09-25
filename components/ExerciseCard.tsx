@@ -163,7 +163,7 @@ export default function ExerciseCard({
   };
 
   return (
-    <div className={`clean-card ${allSetsCompleted ? 'exercise-done' : ''}`}>
+    <div className={`clean-card ${mode === 'tracker' && allSetsCompleted ? 'exercise-done' : ''}`}>
       {/* Header */}
       <div className="clean-card-header">
         <div className="clean-ex-title" style={{ flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
@@ -345,36 +345,47 @@ export default function ExerciseCard({
         {exercise.sets.length > 0 && exercise.sets[exercise.sets.length - 1].rest && (
           <span
             className="clean-badge"
-            style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
-            onClick={() => onStartRest(exercise.sets[exercise.sets.length - 1].rest)}
-            title="Start Rest Timer"
+            style={{
+              cursor: mode === 'tracker' ? 'pointer' : 'default',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '3px',
+            }}
+            onClick={() => {
+              if (mode === 'tracker' && onStartRest) {
+                onStartRest(exercise.sets[exercise.sets.length - 1].rest);
+              }
+            }}
+            title={mode === 'tracker' ? 'Start Rest Timer' : 'Planned Rest Period'}
           >
             <Clock size={11} />
             <span>{exercise.sets[exercise.sets.length - 1].rest.replace('~', '')}</span>
           </span>
         )}
-        <button
-          type="button"
-          onClick={handleToggleAllSets}
-          title={allSetsCompleted ? 'Mark all incomplete' : 'Mark all sets complete'}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '2px 4px',
-            color: allSetsCompleted ? 'var(--accent-green)' : 'var(--text-dim)',
-            marginLeft: 'auto',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            fontSize: '0.68rem',
-            fontFamily: 'var(--font-mono)',
-            fontWeight: 700,
-          }}
-        >
-          <CheckCircle2 size={13} />
-          <span>{allSetsCompleted ? 'ALL DONE' : 'FINISH'}</span>
-        </button>
+        {mode === 'tracker' && (
+          <button
+            type="button"
+            onClick={handleToggleAllSets}
+            title={allSetsCompleted ? 'Mark all incomplete' : 'Mark all sets complete'}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '2px 4px',
+              color: allSetsCompleted ? 'var(--accent-green)' : 'var(--text-dim)',
+              marginLeft: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '0.68rem',
+              fontFamily: 'var(--font-mono)',
+              fontWeight: 700,
+            }}
+          >
+            <CheckCircle2 size={13} />
+            <span>{allSetsCompleted ? 'ALL DONE' : 'FINISH'}</span>
+          </button>
+        )}
       </div>
 
       {/* Form Cues / Notes */}
