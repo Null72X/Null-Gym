@@ -495,33 +495,6 @@ export default function ExerciseVideoModal({
                 </div>
               )}
 
-              {/* Animation Demo: Direct Open on YouTube Link */}
-              <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '2px' }}>
-                <a
-                  href={externalYtUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-clean btn-sm"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 12px',
-                    fontSize: '0.72rem',
-                    color: '#fca5a5',
-                    background: 'rgba(239, 68, 68, 0.12)',
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                    borderRadius: '8px',
-                    textDecoration: 'none',
-                    fontWeight: 700,
-                  }}
-                  title="Open video tutorial on YouTube"
-                >
-                  <Play size={10} fill="#ef4444" color="#ef4444" />
-                  <span>Open YouTube Video</span>
-                  <ExternalLink size={10} style={{ opacity: 0.7 }} />
-                </a>
-              </div>
             </div>
           )}
 
