@@ -120,7 +120,6 @@ raw.exercises.forEach((item, index) => {
     defaultWarmupSets: 1,
     defaultWorkingSets: 3,
     defaultReps: trackingType === 'time_only' ? '45s' : '10-12',
-    defaultRpe: '8-9',
     defaultRest: '90s',
     gifUrl: item.gifUrl,
     thumbUrl: item.thumbUrl,

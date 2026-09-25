@@ -1113,24 +1113,6 @@ body {
   user-select: none;
 }
 
-.set-rpe-input {
-  width: 36px;
-  height: 32px;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  text-align: center;
-  font-size: 0.74rem;
-  font-family: var(--font-mono);
-  color: #fde68a;
-  outline: none;
-  flex-shrink: 0;
-  transition: border-color 0.15s ease;
-}
-.set-rpe-input:focus {
-  border-color: var(--accent-red);
-}
-
 .clean-check-btn {
   width: 34px;
   height: 34px;
@@ -1264,11 +1246,6 @@ body {
     height: 26px;
     font-size: 0.78rem;
   }
-  .set-rpe-input {
-    width: 32px;
-    height: 30px;
-    font-size: 0.70rem;
-  }
   .clean-check-btn {
     width: 32px;
     height: 32px;
@@ -1310,12 +1287,6 @@ body {
   }
   .clean-load-unit {
     display: none;
-  }
-  .set-rpe-input {
-    width: 28px;
-    height: 28px;
-    font-size: 0.68rem;
-    padding: 0 1px;
   }
   .clean-check-btn {
     width: 28px;

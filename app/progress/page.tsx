@@ -795,7 +795,6 @@ export default function ProgressPage() {
                                   }}
                                 >
                                   <strong>{label}:</strong> {metricStr}
-                                  {s.rpe ? ` @ RPE ${s.rpe}` : ''}
                                 </span>
                               );
                             })}

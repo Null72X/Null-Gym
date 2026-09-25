@@ -59,7 +59,6 @@ export function getLastPerformance(
               load: s.load,
               unit: s.unit,
               reps: s.reps,
-              rpe: s.rpe,
               completed: s.completed
             }));
 
@@ -118,7 +117,6 @@ export interface ProgressionPoint {
   maxWeight: number;
   totalVolume: number;
   bestReps: number | string;
-  rpe: number | string;
 }
 
 /**
@@ -144,7 +142,6 @@ export function getExerciseProgression(
     let maxWeight = 0;
     let totalVolume = 0;
     let bestReps: number | string = '-';
-    let maxRpe: number | string = '-';
 
     found.sets.forEach(s => {
       const load = typeof s.load === 'number' ? s.load : 0;
@@ -153,7 +150,6 @@ export function getExerciseProgression(
         if (load > maxWeight) {
           maxWeight = load;
           bestReps = s.reps;
-          maxRpe = s.rpe;
         }
         totalVolume += load * repsNum;
       }
@@ -167,7 +163,6 @@ export function getExerciseProgression(
         maxWeight,
         totalVolume,
         bestReps,
-        rpe: maxRpe
       });
     }
   });

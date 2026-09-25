@@ -425,7 +425,6 @@ export default function DashboardPage() {
           load: s.load,
           unit: s.unit || unit,
           reps: s.reps,
-          rpe: s.rpe,
           completed: true,
         };
       }),

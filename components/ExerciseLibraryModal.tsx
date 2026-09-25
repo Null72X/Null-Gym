@@ -77,7 +77,6 @@ export default function ExerciseLibraryModal({
   const [warmupSets, setWarmupSets] = useState(1);
   const [workingSets, setWorkingSets] = useState(3);
   const [reps, setReps] = useState('10-12');
-  const [rpe, setRpe] = useState('9');
   const [rest, setRest] = useState('90s');
   const [requiresLoad, setRequiresLoad] = useState(true);
 
@@ -175,7 +174,6 @@ export default function ExerciseLibraryModal({
     const wu = item.defaultWarmupSets !== undefined ? item.defaultWarmupSets : 1;
     const wk = item.defaultWorkingSets !== undefined ? item.defaultWorkingSets : 3;
     const itemReps = item.defaultReps || (item.trackingType === 'time_only' ? '45s' : '10');
-    const itemRpe = item.defaultRpe || '9';
     const itemRest = item.defaultRest || '90s';
     const hasLoad = item.requiresLoad !== undefined ? item.requiresLoad : true;
     const trackingType: TrackingType =
@@ -188,7 +186,6 @@ export default function ExerciseLibraryModal({
         load: '',
         unit: defaultUnit,
         reps: itemReps,
-        rpe: '6',
         rest: '60s',
         completed: false,
       });
@@ -200,7 +197,6 @@ export default function ExerciseLibraryModal({
         load: '',
         unit: defaultUnit,
         reps: itemReps,
-        rpe: itemRpe,
         rest: itemRest,
         completed: false,
       });
@@ -244,7 +240,6 @@ export default function ExerciseLibraryModal({
       defaultWarmupSets: warmupSets,
       defaultWorkingSets: workingSets,
       defaultReps: reps.trim() || '10',
-      defaultRpe: rpe.trim() || '9',
       defaultRest: rest.trim() || '90s',
     };
 

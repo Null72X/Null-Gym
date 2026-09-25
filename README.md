@@ -57,7 +57,7 @@ Modern fitness apps have become bloated subscription-traps burdened with heavy a
 | 🚀 **1-Click Cycle 2 Rollover** | Instantly advances to the next 6-week cycle, promoting Week 6 peak loads to new baselines while clearing checkmarks. |
 | ⏱️ **Floating Audio Rest Timer** | Persistent countdown timer with $+30\text{s}/-30\text{s}$ controls, Web Audio beep synthesis, and device vibration. |
 | 🎯 **Precision Set HUD** | Supports Warmup (`W`), Straight (`S`), Drop (`D`), and Failure (`F`) sets with weight steppers ($0.5\text{kg}$ micro-plates). |
-| 📊 **Historical Ghost Performance** | "LAST TIME" card shows previous loads, reps, and RPE for each movement so you know exactly what to beat. |
+| 📊 **Historical Ghost Performance** | "LAST TIME" card shows previous loads and reps for each movement so you know exactly what to beat. |
 | 📶 **Offline PWA Engine** | Service Worker with Cache-First storage strategy and installable manifest for iOS, Android, and Desktop. |
 | ☁️ **Dual Cloud Sync** | Operates standalone offline via LocalStorage; seamlessly pairs with Supabase when credentials are provided. |
 
@@ -129,7 +129,7 @@ Null Gym is built from the ground up to never depend on an active internet conne
   - Adjust on the fly with $+30\text{s}$ or $-30\text{s}$ buttons.
   - Generates crisp 880Hz audio beeps via the Web Audio API and triggers haptic device vibration when rest time expires.
 - **Ghost Data ("LAST TIME")**:
-  - Displays the exact weight, reps, and RPE logged in your previous session for that specific exercise so you never have to remember your numbers.
+  - Displays the exact weight and reps logged in your previous session for that specific exercise so you never have to remember your numbers.
 
 ---
 

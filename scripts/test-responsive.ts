@@ -41,10 +41,9 @@ function runVerification() {
   const repsInputWidth = 38;
   const stepperBtnWidth = 22 * 2;
   const loadInputWidth = 32;
-  const rpeInputWidth = 28;
   const checkBtnWidth = 28;
-  const gaps = 2 * 6; // 6 gaps of 2px
-  const totalRowWidth320 = badgeWidth + repsInputWidth + stepperBtnWidth + loadInputWidth + rpeInputWidth + checkBtnWidth + gaps;
+  const gaps = 2 * 5; // 5 gaps of 2px
+  const totalRowWidth320 = badgeWidth + repsInputWidth + stepperBtnWidth + loadInputWidth + checkBtnWidth + gaps;
 
   console.log(`Computed 320px set row width: ${totalRowWidth320}px (Max available: 288px)`);
   if (totalRowWidth320 <= 288) {

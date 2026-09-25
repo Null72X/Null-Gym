@@ -84,7 +84,6 @@ export default function ExerciseCard({
       load: lastSet ? lastSet.load : '',
       unit: (lastSet?.unit as WeightUnit) || defaultUnit,
       reps: lastSet ? lastSet.reps : '10',
-      rpe: lastSet ? lastSet.rpe : '9',
       rest: lastSet ? lastSet.rest : '90s',
       completed: false,
     };
@@ -338,11 +337,6 @@ export default function ExerciseCard({
         {exercise.sets.length > 0 && (
           <span className="clean-badge">
             {exercise.sets[exercise.sets.length - 1].reps} Reps
-          </span>
-        )}
-        {exercise.sets.length > 0 && exercise.sets[exercise.sets.length - 1].rpe && (
-          <span className="clean-badge amber">
-            RPE {exercise.sets[exercise.sets.length - 1].rpe}
           </span>
         )}
         {exercise.sets.length > 0 && exercise.sets[exercise.sets.length - 1].rest && (

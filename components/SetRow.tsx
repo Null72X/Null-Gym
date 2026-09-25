@@ -286,17 +286,6 @@ export default function SetRow({
         </>
       )}
 
-      {/* RPE input */}
-      <input
-        type="text"
-        inputMode="decimal"
-        className="set-rpe-input"
-        title="RPE (Rate of Perceived Exertion: 1-10)"
-        placeholder="@"
-        value={set.rpe}
-        onChange={(e) => onUpdate({ ...set, rpe: e.target.value })}
-      />
-
       {/* Delete Set Button (Only in planner mode) */}
       {mode === 'planner' && (
         <button

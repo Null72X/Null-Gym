@@ -18,7 +18,7 @@ export interface WorkoutSet {
   load: number | '';
   unit: WeightUnit;
   reps: string | number;
-  rpe: string | number;
+  rpe?: string | number;
   rest: string;
   completed: boolean;
   // Advanced tracking fields
@@ -91,7 +91,7 @@ export interface SavedPerformanceSet {
   load: number | '';
   unit: WeightUnit;
   reps: string | number;
-  rpe: string | number;
+  rpe?: string | number;
   completed: boolean;
   duration?: string | number;
   distance?: string | number;
