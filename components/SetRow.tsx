@@ -14,7 +14,7 @@ interface SetRowProps {
   trackingType?: TrackingType;
   onUpdate: (updated: WorkoutSet) => void;
   onDelete: () => void;
-  onStartRest?: (restStr: string) => void;
+  onStartRest?: (restStr: string, setIndex?: number) => void;
   onStartTimer?: (durationSecs?: number) => void;
   isActiveTimerSet?: boolean;
 }
@@ -66,7 +66,7 @@ export default function SetRow({
         navigator.vibrate(35);
       }
       if (onStartRest) {
-        onStartRest(set.rest || '90s');
+        onStartRest(set.rest || '90s', index);
       }
     }
   };

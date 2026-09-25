@@ -39,7 +39,7 @@ interface ExerciseCardProps {
   onDuplicate?: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
-  onStartRest: (restStr: string) => void;
+  onStartRest: (restStr: string, setIndex?: number) => void;
   onStartExerciseTimer?: (exerciseName: string, durationSecs: number, setIdx: number) => void;
   activeTimerSetIndex?: number | null;
 }
@@ -163,7 +163,10 @@ export default function ExerciseCard({
   };
 
   return (
-    <div className={`clean-card ${mode === 'tracker' && allSetsCompleted ? 'exercise-done' : ''}`}>
+    <div
+      id={`exercise-card-${index}`}
+      className={`clean-card ${mode === 'tracker' && allSetsCompleted ? 'exercise-done' : ''}`}
+    >
       {/* Header */}
       <div className="clean-card-header">
         <div className="clean-ex-title" style={{ flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
@@ -353,7 +356,9 @@ export default function ExerciseCard({
             }}
             onClick={() => {
               if (mode === 'tracker' && onStartRest) {
-                onStartRest(exercise.sets[exercise.sets.length - 1].rest);
+                const incompleteIdx = exercise.sets.findIndex((s) => !s.completed);
+                const targetIdx = incompleteIdx >= 0 ? incompleteIdx : Math.max(0, exercise.sets.length - 1);
+                onStartRest(exercise.sets[targetIdx]?.rest || '90s', targetIdx);
               }
             }}
             title={mode === 'tracker' ? 'Start Rest Timer' : 'Planned Rest Period'}
@@ -480,7 +485,7 @@ export default function ExerciseCard({
               trackingType={exercise.trackingType || (exercise.requiresLoad === false ? 'bodyweight_reps' : 'weight_reps')}
               onUpdate={(updated) => handleUpdateSet(sIdx, updated)}
               onDelete={() => handleDeleteSet(sIdx)}
-              onStartRest={onStartRest}
+              onStartRest={(restStr) => onStartRest(restStr, sIdx)}
               onStartTimer={(secs) => onStartExerciseTimer && onStartExerciseTimer(exercise.name, secs || 90, sIdx)}
               isActiveTimerSet={activeTimerSetIndex === sIdx}
             />

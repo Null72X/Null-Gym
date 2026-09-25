@@ -24,11 +24,15 @@ export interface RestTimerBarProps {
   exerciseName?: string;
   setIndex?: number;
   totalSets?: number;
+  isFinalSet?: boolean;
+  isFinalExercise?: boolean;
   autoFlow?: boolean;
   onDismiss: () => void;
   onCompleteExerciseSet?: () => void;
   onSwitchToRest?: (restSeconds?: number) => void;
   onStartNextSet?: () => void;
+  onGoToNextExercise?: () => void;
+  onFinishWorkout?: () => void;
 }
 
 export default function RestTimerBar({
@@ -37,12 +41,20 @@ export default function RestTimerBar({
   exerciseName = '',
   setIndex,
   totalSets,
+  isFinalSet,
+  isFinalExercise,
   autoFlow = true,
   onDismiss,
   onCompleteExerciseSet,
   onSwitchToRest,
   onStartNextSet,
+  onGoToNextExercise,
+  onFinishWorkout,
 }: RestTimerBarProps) {
+  const isFinalSetCalculated =
+    isFinalSet ?? (setIndex !== undefined && totalSets !== undefined && (setIndex + 1) >= totalSets);
+  const isFinalExerciseCalculated = isFinalExercise ?? false;
+
   const [currentMode, setCurrentMode] = useState<'rest' | 'exercise'>('rest');
   const [currentExerciseName, setCurrentExerciseName] = useState<string>('');
   const [totalSeconds, setTotalSeconds] = useState<number>(90);
@@ -353,21 +365,36 @@ export default function RestTimerBar({
             setCompletedTickSet(currentFinishedSet);
             if (onCompleteExerciseSet) {
               onCompleteExerciseSet();
-            }
-            if (isAutoFlow) {
-              setTransitionPrompt(`⚡ Set ${currentFinishedSet} Ticked Complete! Starting 90s Rest`);
+            } else if (isAutoFlow) {
+              setTransitionPrompt(`⚡ Set ${currentFinishedSet} Ticked Complete! Starting Rest`);
               autoAdvanceTimeoutRef.current = setTimeout(() => {
-                handleTransitionToRest(90);
+                handleTransitionToRest(initialSeconds || 90);
               }, 1200);
             }
           }
 
           // AUTOMATION 2: Rest timer finished
-          if (currentMode === 'rest' && isAutoFlow && onStartNextSet) {
-            setTransitionPrompt('🚀 Rest Complete! Starting Next Set');
-            autoAdvanceTimeoutRef.current = setTimeout(() => {
-              onStartNextSet();
-            }, 1800);
+          if (currentMode === 'rest' && isAutoFlow) {
+            if (isFinalSetCalculated) {
+              if (isFinalExerciseCalculated) {
+                setTransitionPrompt('🎉 Workout Complete! Finishing Workout');
+                autoAdvanceTimeoutRef.current = setTimeout(() => {
+                  if (onFinishWorkout) onFinishWorkout();
+                  else if (onStartNextSet) onStartNextSet();
+                }, 1800);
+              } else {
+                setTransitionPrompt('🚀 Rest Complete! Advancing to Next Exercise');
+                autoAdvanceTimeoutRef.current = setTimeout(() => {
+                  if (onGoToNextExercise) onGoToNextExercise();
+                  else if (onStartNextSet) onStartNextSet();
+                }, 1800);
+              }
+            } else {
+              setTransitionPrompt('🚀 Rest Complete! Starting Next Set');
+              autoAdvanceTimeoutRef.current = setTimeout(() => {
+                if (onStartNextSet) onStartNextSet();
+              }, 1800);
+            }
           }
 
           return 0;
@@ -398,7 +425,22 @@ export default function RestTimerBar({
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isRunning, seconds, isMuted, currentMode, isAutoFlow, totalSeconds, setIndex]);
+  }, [
+    isRunning,
+    seconds,
+    isMuted,
+    currentMode,
+    isAutoFlow,
+    totalSeconds,
+    setIndex,
+    isFinalSetCalculated,
+    isFinalExerciseCalculated,
+    onStartNextSet,
+    onGoToNextExercise,
+    onFinishWorkout,
+    onCompleteExerciseSet,
+    initialSeconds,
+  ]);
 
   // Adjust seconds (+ / -)
   const adjustSeconds = (delta: number) => {
@@ -432,7 +474,7 @@ export default function RestTimerBar({
     setIsRunning((prev) => !prev);
   };
 
-  // Finish Exercise early, tick the set as completed, and start 90s Rest
+  // Finish Exercise early, tick the set as completed, and start Rest
   const handleFinishExerciseNow = () => {
     setSeconds(0);
     setIsFinished(true);
@@ -442,9 +484,8 @@ export default function RestTimerBar({
     setCompletedTickSet(finishedSetNum);
     if (onCompleteExerciseSet) {
       onCompleteExerciseSet();
-    }
-    if (isAutoFlow) {
-      handleTransitionToRest(90);
+    } else if (isAutoFlow) {
+      handleTransitionToRest(initialSeconds || 90);
     }
   };
 
@@ -633,10 +674,18 @@ export default function RestTimerBar({
                 {isFinished
                   ? isExerciseMode
                     ? '🎉 SET COMPLETE ✓'
+                    : isFinalSetCalculated
+                    ? isFinalExerciseCalculated
+                      ? '🎉 WORKOUT READY TO FINISH'
+                      : '🎉 READY FOR NEXT EXERCISE'
                     : '🎉 REST OVER · READY'
                   : isExerciseMode
-                  ? '⚡ 90s WORK INTERVAL'
-                  : '☕ 90s REST RECOVERY'}
+                  ? '⚡ WORK INTERVAL'
+                  : isFinalSetCalculated
+                  ? isFinalExerciseCalculated
+                    ? '☕ FINAL REST · FINISH WORKOUT'
+                    : '☕ REST BEFORE NEXT EXERCISE'
+                  : '☕ REST RECOVERY'}
               </span>
 
               {setIndex !== undefined && totalSets !== undefined && (
@@ -717,13 +766,31 @@ export default function RestTimerBar({
             </button>
           )}
 
-          {/* Rest Mode: Next Set Button */}
-          {!isExerciseMode && onStartNextSet && (
+          {/* Rest Mode: Next Action Button */}
+          {!isExerciseMode && (
             <button
               type="button"
               className="btn-clean btn-sm btn-primary"
-              onClick={() => onStartNextSet()}
-              title="Skip remaining rest and start 90s Work Timer for next set"
+              onClick={() => {
+                if (isFinalSetCalculated) {
+                  if (isFinalExerciseCalculated) {
+                    if (onFinishWorkout) onFinishWorkout();
+                    else if (onStartNextSet) onStartNextSet();
+                  } else {
+                    if (onGoToNextExercise) onGoToNextExercise();
+                    else if (onStartNextSet) onStartNextSet();
+                  }
+                } else {
+                  if (onStartNextSet) onStartNextSet();
+                }
+              }}
+              title={
+                isFinalSetCalculated
+                  ? isFinalExerciseCalculated
+                    ? 'Finish workout and log to history'
+                    : 'Advance to next exercise'
+                  : 'Skip remaining rest and start Work Timer for next set'
+              }
               style={{
                 fontSize: '0.70rem',
                 padding: '5px 10px',
@@ -732,10 +799,37 @@ export default function RestTimerBar({
                 alignItems: 'center',
                 gap: '4px',
                 borderRadius: '8px',
+                background: isFinalSetCalculated
+                  ? isFinalExerciseCalculated
+                    ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.3) 0%, rgba(16, 185, 129, 0.35) 100%)'
+                    : 'linear-gradient(135deg, rgba(56, 189, 248, 0.3) 0%, rgba(14, 165, 233, 0.35) 100%)'
+                  : undefined,
+                borderColor: isFinalSetCalculated
+                  ? isFinalExerciseCalculated
+                    ? 'rgba(34, 197, 94, 0.5)'
+                    : 'rgba(56, 189, 248, 0.5)'
+                  : undefined,
+                color: isFinalSetCalculated ? '#ffffff' : undefined,
               }}
             >
-              <Zap size={12} />
-              <span>Next Set</span>
+              {isFinalSetCalculated ? (
+                isFinalExerciseCalculated ? (
+                  <>
+                    <Check size={12} color="var(--accent-green)" />
+                    <span>Finish Workout</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap size={12} color="#38bdf8" />
+                    <span>Go to Next Exercise</span>
+                  </>
+                )
+              ) : (
+                <>
+                  <Zap size={12} />
+                  <span>Next Set</span>
+                </>
+              )}
             </button>
           )}
 

@@ -42,9 +42,8 @@ export default function ExerciseVideoModal({
   onClose,
   exercise,
 }: ExerciseVideoModalProps) {
-  const [activeTab, setActiveTab] = useState<'demo' | 'youtube' | 'cues'>('demo');
+  const [activeTab, setActiveTab] = useState<'demo' | 'cues'>('demo');
   const [imgLoaded, setImgLoaded] = useState(false);
-  const [iframeLoaded, setIframeLoaded] = useState(false);
   const [isOffline, setIsOffline] = useState<boolean>(() => isAppOffline());
 
   // Listen to offline state changes
@@ -82,10 +81,9 @@ export default function ExerciseVideoModal({
       if (media?.gifUrl) {
         setActiveTab('demo');
       } else {
-        setActiveTab('youtube');
+        setActiveTab('cues');
       }
       setImgLoaded(false);
-      setIframeLoaded(false);
     }
   }, [isOpen, exercise?.name, media?.gifUrl]);
 
@@ -93,11 +91,6 @@ export default function ExerciseVideoModal({
 
   const muscleInfo = getExerciseMuscleInfo(exercise as any);
   const cleanName = exercise.name.trim();
-
-  // YouTube embed URL for tutorial
-  const embedUrl = `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(
-    'how to do ' + cleanName
-  )}&autoplay=0`;
 
   const externalYtUrl =
     exercise.videoUrl ||
@@ -244,28 +237,6 @@ export default function ExerciseVideoModal({
               <span>Animated Demo</span>
             </button>
           )}
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('youtube')}
-            style={{
-              padding: '6px 12px',
-              fontSize: '0.74rem',
-              fontWeight: 700,
-              background: 'none',
-              border: 'none',
-              color: activeTab === 'youtube' ? '#fff' : 'var(--text-dim)',
-              borderBottom: `2px solid ${activeTab === 'youtube' ? 'var(--accent-red)' : 'transparent'}`,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <Play size={11} fill={activeTab === 'youtube' ? 'var(--accent-red)' : 'currentColor'} />
-            <span>YouTube Tutorial</span>
-          </button>
 
           <button
             type="button"
@@ -523,121 +494,38 @@ export default function ExerciseVideoModal({
                   </ol>
                 </div>
               )}
-            </div>
-          )}
 
-          {/* TAB 2: YOUTUBE VIDEO TUTORIAL */}
-          {activeTab === 'youtube' && (
-            <div>
-              {isOffline && (
-                <div
+              {/* Animation Demo: Direct Open on YouTube Link */}
+              <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '2px' }}>
+                <a
+                  href={externalYtUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-clean btn-sm"
                   style={{
-                    background: 'rgba(245, 158, 11, 0.1)',
-                    border: '1px solid rgba(245, 158, 11, 0.3)',
-                    borderRadius: '8px',
-                    padding: '8px 12px',
-                    fontSize: '0.74rem',
-                    color: '#fef3c7',
-                    marginBottom: '12px',
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
+                    padding: '6px 12px',
+                    fontSize: '0.72rem',
+                    color: '#fca5a5',
+                    background: 'rgba(239, 68, 68, 0.12)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    borderRadius: '8px',
+                    textDecoration: 'none',
+                    fontWeight: 700,
                   }}
+                  title="Open video tutorial on YouTube"
                 >
-                  <WifiOff size={14} color="#fbbf24" style={{ flexShrink: 0 }} />
-                  <span>
-                    Offline Mode Active: Form cues &amp; animated demos are available offline. YouTube video requires active internet.
-                  </span>
-                </div>
-              )}
-
-              {/* Responsive 16:9 Video Embed Player */}
-              <div
-                style={{
-                  position: 'relative',
-                  width: '100%',
-                  paddingBottom: '56.25%',
-                  height: 0,
-                  borderRadius: '12px',
-                  overflow: 'hidden',
-                  background: '#000',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
-                  marginBottom: '14px',
-                }}
-              >
-                {!iframeLoaded && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      color: 'var(--text-dim)',
-                      fontSize: '0.75rem',
-                      background: 'rgba(0, 0, 0, 0.8)',
-                    }}
-                  >
-                    <Play size={24} color="var(--accent-red)" style={{ opacity: 0.8 }} />
-                    <span>Loading tutorial for {cleanName}...</span>
-                  </div>
-                )}
-                <iframe
-                  src={embedUrl}
-                  title={`Form tutorial for ${cleanName}`}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  onLoad={() => setIframeLoaded(true)}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    border: 'none',
-                  }}
-                />
+                  <Play size={10} fill="#ef4444" color="#ef4444" />
+                  <span>Open YouTube Video</span>
+                  <ExternalLink size={10} style={{ opacity: 0.7 }} />
+                </a>
               </div>
-
-              {/* Form Overview Callout */}
-              {formNotes && (
-                <div
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '10px',
-                    padding: '10px 12px',
-                    fontSize: '0.75rem',
-                    color: '#e2e8f0',
-                    lineHeight: '1.45',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      color: 'var(--accent-red)',
-                      fontWeight: 700,
-                      marginBottom: '4px',
-                      fontSize: '0.72rem',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                    }}
-                  >
-                    <CheckCircle2 size={12} />
-                    <span>Coaching Cues</span>
-                  </div>
-                  <div>{formNotes}</div>
-                </div>
-              )}
             </div>
           )}
 
-          {/* TAB 3: BIOMECHANICS & CUES */}
+          {/* TAB 2: BIOMECHANICS & CUES */}
           {activeTab === 'cues' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {/* Step by Step Breakdown */}

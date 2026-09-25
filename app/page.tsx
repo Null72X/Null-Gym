@@ -26,6 +26,7 @@ import {
 } from '../lib/storage';
 import { getLastPerformance } from '../lib/history';
 import { getDayMuscleBreakdown } from '../lib/muscleMetadata';
+import { getRestDuration, getSetWorkDuration } from '../lib/timerUtils';
 import {
   CheckCircle2,
   RotateCcw,
@@ -134,40 +135,55 @@ export default function DashboardPage() {
     triggerToast(`Unit set to ${nextUnit.toUpperCase()}`);
   };
 
-  // Start rest timer (Defaults to 90 seconds)
-  const handleStartRest = (restStr: string) => {
-    let sec = 90;
-    const str = restStr.toLowerCase();
-    if (str.includes('3-4')) sec = 210;
-    else if (str.includes('2-3')) sec = 150;
-    else if (str.includes('1-2')) sec = 90;
-    else if (str.includes('15 sec') || str.includes('15s')) sec = 15;
-    else if (str.includes('30s') || str.includes('30 sec')) sec = 30;
-    else if (str.includes('45s') || str.includes('45 sec')) sec = 45;
-    else if (str.includes('60s') || str.includes('1 min')) sec = 60;
-    else if (str.includes('90s') || str.includes('1.5 min') || str.includes('1:30')) sec = 90;
-    else if (str.includes('120s') || str.includes('2 min')) sec = 120;
-    else if (str.includes('180s') || str.includes('3 min')) sec = 180;
-    else {
-      const match = str.match(/\d+/);
-      if (match) sec = parseInt(match[0], 10);
+  // Start rest timer (Defaults to set rest or 90s, using single source of truth getRestDuration)
+  const handleStartRest = (
+    arg1?: number | string,
+    arg2?: number,
+    arg3?: string
+  ) => {
+    let exerciseIndex: number | undefined;
+    let setIndex: number | undefined;
+    let restStr: string | undefined;
+
+    if (typeof arg1 === 'string') {
+      restStr = arg1;
+    } else {
+      exerciseIndex = arg1;
+      setIndex = arg2;
+      restStr = arg3;
     }
-    setActiveTimer({ seconds: sec || 90, mode: 'rest', autoFlow: true });
+
+    const targetDay = weeks[currentWeek - 1]?.days[currentDayIndex];
+    const targetEx = exerciseIndex !== undefined ? targetDay?.exercises[exerciseIndex] : undefined;
+    const targetSet = targetEx && setIndex !== undefined ? targetEx.sets[setIndex] : undefined;
+
+    const sec = getRestDuration(restStr || targetSet?.rest);
+
+    setActiveTimer({
+      seconds: sec,
+      mode: 'rest',
+      exerciseName: targetEx?.name,
+      exerciseIndex,
+      setIndex,
+      totalSets: targetEx?.sets.length,
+      autoFlow: true,
+    });
   };
 
-  // Start active work timer for exercise (Default: 90 seconds)
+  // Start active work timer for exercise
   const handleStartExerciseTimer = (
     exerciseName: string,
     durationSecs = 90,
-    exerciseIndex: number,
-    setIndex: number
+    exerciseIndex?: number,
+    setIndex = 0
   ) => {
     const targetDay = weeks[currentWeek - 1]?.days[currentDayIndex];
-    const targetEx = targetDay?.exercises[exerciseIndex];
+    const targetEx = exerciseIndex !== undefined ? targetDay?.exercises[exerciseIndex] : undefined;
     const totalSets = targetEx?.sets.length || 3;
+    const duration = getSetWorkDuration(durationSecs || targetEx?.sets[setIndex]?.duration);
 
     setActiveTimer({
-      seconds: durationSecs || 90,
+      seconds: duration,
       mode: 'exercise',
       exerciseName,
       exerciseIndex,
@@ -175,7 +191,7 @@ export default function DashboardPage() {
       totalSets,
       autoFlow: true,
     });
-    triggerToast(`⏱ Started 90s timer: ${exerciseName} (Set ${setIndex + 1}/${totalSets})`);
+    triggerToast(`⏱ Started ${duration}s timer: ${exerciseName} (Set ${setIndex + 1}/${totalSets})`);
   };
 
   // Automatically check off set when exercise timer completes or user clicks finish set
@@ -217,14 +233,11 @@ export default function DashboardPage() {
     setWeeks(updatedWeeks);
     saveWeeks(updatedWeeks);
 
-    // Switch directly to Rest timer with 90s default (or set custom rest)
-    const restStr = targetEx.sets[setIndex].rest || '90s';
-    let restSec = 90;
-    const match = restStr.match(/\d+/);
-    if (match) restSec = parseInt(match[0], 10) || 90;
+    // Switch directly to Rest timer using the single source of truth: getRestDuration!
+    const restSec = getRestDuration(targetEx.sets[setIndex]);
 
     setActiveTimer({
-      seconds: restSec || 90,
+      seconds: restSec,
       mode: 'rest',
       exerciseName: targetEx.name,
       exerciseIndex,
@@ -232,7 +245,19 @@ export default function DashboardPage() {
       totalSets: targetEx.sets.length,
       autoFlow: activeTimer.autoFlow ?? true,
     });
-    triggerToast(`✓ Set ${setIndex + 1} completed! 90s Rest timer started.`);
+
+    const isFinalSet = (setIndex + 1) >= targetEx.sets.length;
+    if (isFinalSet) {
+      const isFinalEx = (exerciseIndex + 1) >= targetDay.exercises.length;
+      if (isFinalEx) {
+        triggerToast(`🎉 Set ${setIndex + 1}/${targetEx.sets.length} Done! All exercises complete! (${restSec}s Rest)`);
+      } else {
+        const nextExName = targetDay.exercises[exerciseIndex + 1]?.name || 'Next Exercise';
+        triggerToast(`🎉 Set ${setIndex + 1}/${targetEx.sets.length} Done! Next: ${nextExName} (${restSec}s Rest)`);
+      }
+    } else {
+      triggerToast(`✓ Set ${setIndex + 1}/${targetEx.sets.length} completed! ${restSec}s Rest timer started.`);
+    }
   };
 
   // Auto-advance or manual next set trigger after rest finishes
@@ -251,13 +276,10 @@ export default function DashboardPage() {
     if (nextSetIdx < targetEx.sets.length) {
       // Start next set in the same exercise!
       const targetSet = targetEx.sets[nextSetIdx];
-      let duration = 90;
-      if (targetSet?.duration) {
-        const match = String(targetSet.duration).match(/\d+/);
-        if (match) duration = parseInt(match[0], 10) || 90;
-      }
+      const duration = getSetWorkDuration(targetSet?.duration);
+
       setActiveTimer({
-        seconds: duration || 90,
+        seconds: duration,
         mode: 'exercise',
         exerciseName: targetEx.name,
         exerciseIndex,
@@ -265,16 +287,55 @@ export default function DashboardPage() {
         totalSets: targetEx.sets.length,
         autoFlow: activeTimer.autoFlow ?? true,
       });
-      triggerToast(`⚡ Starting Set ${nextSetIdx + 1}/${targetEx.sets.length}: ${targetEx.name} (90s)`);
+      triggerToast(`⚡ Starting Set ${nextSetIdx + 1}/${targetEx.sets.length}: ${targetEx.name} (${duration}s)`);
     } else {
-      // All sets done for this exercise!
-      triggerToast(`🎉 All sets complete for ${targetEx.name}!`);
-      const nextExIdx = exerciseIndex + 1;
-      if (nextExIdx < targetDay.exercises.length) {
-        const nextEx = targetDay.exercises[nextExIdx];
-        triggerToast(`Next up: ${nextEx.name}`);
-      }
+      // All sets done for this exercise! Advance directly to next exercise or finish workout
+      handleGoToNextExercise();
+    }
+  };
+
+  // Advance directly to the next exercise from rest mode
+  const handleGoToNextExercise = () => {
+    if (!activeTimer || activeTimer.exerciseIndex === undefined) {
       setActiveTimer(null);
+      return;
+    }
+    const currentExIdx = activeTimer.exerciseIndex;
+    const targetDay = weeks[currentWeek - 1]?.days[currentDayIndex];
+    if (!targetDay) return;
+
+    const nextExIdx = currentExIdx + 1;
+    if (nextExIdx >= targetDay.exercises.length) {
+      // All exercises completed -> Trigger workout-completion flow
+      handleFinishWorkout();
+      return;
+    }
+
+    const nextEx = targetDay.exercises[nextExIdx];
+    const firstSet = nextEx.sets[0];
+    const duration = getSetWorkDuration(firstSet?.duration);
+
+    // 1. Advance to next exercise, select first set (0), start work timer
+    setActiveTimer({
+      seconds: duration,
+      mode: 'exercise',
+      exerciseName: nextEx.name,
+      exerciseIndex: nextExIdx,
+      setIndex: 0,
+      totalSets: nextEx.sets.length,
+      autoFlow: true,
+    });
+
+    triggerToast(`🚀 Next Exercise: ${nextEx.name} (Set 1/${nextEx.sets.length})`);
+
+    // 2. Smoothly scroll to the next exercise card so user sees it front and center
+    if (typeof document !== 'undefined') {
+      requestAnimationFrame(() => {
+        const el = document.getElementById(`exercise-card-${nextExIdx}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
     }
   };
 
@@ -702,7 +763,7 @@ export default function DashboardPage() {
                 weekNumber={currentWeek}
                 highlightQuery={searchQuery}
                 onUpdate={(updated) => handleUpdateExercise(targetExIdx, updated)}
-                onStartRest={handleStartRest}
+                onStartRest={(restStr, setIndex) => handleStartRest(targetExIdx, setIndex, restStr)}
                 onStartExerciseTimer={(name, duration, setIdx) =>
                   handleStartExerciseTimer(name, duration, targetExIdx, setIdx)
                 }
@@ -747,12 +808,21 @@ export default function DashboardPage() {
           exerciseName={activeTimer.exerciseName || ''}
           setIndex={activeTimer.setIndex}
           totalSets={activeTimer.totalSets}
+          isFinalSet={
+            activeTimer.setIndex !== undefined &&
+            activeTimer.totalSets !== undefined &&
+            (activeTimer.setIndex + 1) >= activeTimer.totalSets
+          }
+          isFinalExercise={
+            activeTimer.exerciseIndex !== undefined &&
+            (activeTimer.exerciseIndex + 1) >= (currentDayData?.exercises.length || 0)
+          }
           autoFlow={activeTimer.autoFlow ?? true}
           onDismiss={() => setActiveTimer(null)}
           onCompleteExerciseSet={handleCompleteActiveSet}
           onSwitchToRest={(restSecs) =>
             setActiveTimer({
-              seconds: restSecs || 90,
+              seconds: restSecs || getRestDuration(null),
               mode: 'rest',
               exerciseName: activeTimer?.exerciseName,
               exerciseIndex: activeTimer?.exerciseIndex,
@@ -762,6 +832,8 @@ export default function DashboardPage() {
             })
           }
           onStartNextSet={handleStartNextSetFromRest}
+          onGoToNextExercise={handleGoToNextExercise}
+          onFinishWorkout={handleFinishWorkout}
         />
       )}
 
