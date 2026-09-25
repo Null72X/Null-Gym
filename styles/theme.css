@@ -125,14 +125,27 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
-  padding: 2px 2px 8px;
+  margin-bottom: 14px;
+  padding: 7px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   position: sticky;
-  top: 0;
+  top: 8px;
   z-index: 80;
-  background: rgba(7, 7, 9, 0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(11, 13, 19, 0.88);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  transition: all 0.2s ease;
+}
+
+@media (max-width: 480px) {
+  .top-bar {
+    padding: 6px 10px;
+    border-radius: 14px;
+    margin-bottom: 12px;
+    top: 6px;
+  }
 }
 
 .app-title-group {
