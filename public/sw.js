@@ -44,8 +44,9 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // 1. Skip non-GET requests and Supabase auth/sync endpoints
+  // 1. Skip non-GET requests, API routes, and Supabase endpoints
   if (request.method !== 'GET') return;
+  if (url.pathname.startsWith('/api/')) return;
   if (url.hostname.includes('supabase.co')) return;
 
   // 2. Exercise media (GIFs, thumbnails, CDN assets) -> Cache First

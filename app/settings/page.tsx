@@ -20,6 +20,8 @@ import {
   saveProgressionConfig,
   applyAutoScaleToAllWeeks,
   advanceToNextCycle,
+  forcePullAllFromCloud,
+  forcePushAllToCloud,
 } from '../../lib/storage';
 import { onCloudStatus, CloudSyncInfo, checkSupabaseConnection } from '../../lib/supabaseSync';
 import { WeightUnit, ProgressionConfig } from '../../types/workout';
@@ -145,6 +147,16 @@ export default function SettingsPage() {
       setIsIOS(true);
     }
 
+    // Auto-check connection diagnostics on mount
+    checkSupabaseConnection().then((result) => {
+      setDbTestResult({
+        tested: true,
+        connected: result.connected,
+        needsRlsFix: result.needsRlsFix,
+        message: result.message,
+      });
+    });
+
     return () => {
       unsubCloud();
       unsubOffline();
@@ -241,16 +253,19 @@ export default function SettingsPage() {
         needsRlsFix: result.needsRlsFix,
         message: result.message,
       });
+      if (result.connected && !result.needsRlsFix) {
+        await forcePullAllFromCloud();
+        triggerToast('🟢 Cloud Database Synced & Ready!');
+      }
     } finally {
       setIsTestingDb(false);
     }
   };
 
-  const sqlFixCode = `-- Run once in Supabase SQL Editor (takes 5 seconds)
-ALTER TABLE public.workout_plan ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all on workout_plan" ON public.workout_plan FOR ALL TO anon USING (true) WITH CHECK (true);
-ALTER TABLE public.workout_history ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all on workout_history" ON public.workout_history FOR ALL TO anon USING (true) WITH CHECK (true);`;
+  const sqlFixCode = `-- 1-Click Fix: Disable RLS on all 3 tables for 100% seamless device sync
+ALTER TABLE public.workout_plan DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.workout_history DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
 
   const handleCopySql = () => {
     navigator.clipboard.writeText(sqlFixCode);
@@ -805,33 +820,65 @@ CREATE POLICY "Allow all on workout_history" ON public.workout_history FOR ALL T
               </div>
 
               {dbTestResult.needsRlsFix && (
-                <div style={{ marginTop: '8px' }}>
+                <div style={{ marginTop: '10px' }}>
                   <div style={{ color: '#cbd5e1', marginBottom: '6px' }}>
-                    Copy and run this 2-line SQL command in your <strong>Supabase SQL Editor</strong> to enable public device sync:
+                    Copy this 3-line SQL command and run it in your <strong>Supabase SQL Editor</strong> to enable instant multi-device cloud sync:
                   </div>
                   <pre
                     style={{
-                      background: 'rgba(0,0,0,0.4)',
-                      padding: '8px',
+                      background: 'rgba(0,0,0,0.5)',
+                      padding: '10px',
                       borderRadius: '6px',
                       fontFamily: 'var(--font-mono)',
-                      fontSize: '0.66rem',
+                      fontSize: '0.68rem',
                       overflowX: 'auto',
-                      marginBottom: '8px',
+                      marginBottom: '10px',
                       color: '#93c5fd',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
                     }}
                   >
                     {sqlFixCode}
                   </pre>
-                  <button
-                    type="button"
-                    className="btn-clean btn-sm"
-                    onClick={handleCopySql}
-                    style={{ fontSize: '0.68rem', padding: '4px 10px' }}
-                  >
-                    {isSqlCopied ? <Check size={12} color="var(--accent-green)" /> : <Copy size={12} />}
-                    <span>{isSqlCopied ? 'SQL Copied!' : 'Copy SQL Script'}</span>
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="btn-clean btn-primary btn-sm"
+                      onClick={handleCopySql}
+                      style={{ fontSize: '0.72rem', padding: '6px 12px' }}
+                    >
+                      {isSqlCopied ? <Check size={13} color="#fff" /> : <Copy size={13} />}
+                      <span>{isSqlCopied ? 'SQL Copied to Clipboard!' : '1. Copy SQL Script'}</span>
+                    </button>
+                    <a
+                      href="https://supabase.com/dashboard/project/ftssrejkpjyrzkgkkfnz/sql/new"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-clean btn-sm"
+                      style={{
+                        fontSize: '0.72rem',
+                        padding: '6px 12px',
+                        background: 'rgba(56, 189, 248, 0.15)',
+                        border: '1px solid rgba(56, 189, 248, 0.35)',
+                        color: '#7dd3fc',
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <span>2. Open Supabase SQL Editor ↗</span>
+                    </a>
+                    <button
+                      type="button"
+                      className="btn-clean btn-sm"
+                      onClick={handleTestSupabase}
+                      disabled={isTestingDb}
+                      style={{ fontSize: '0.72rem', padding: '6px 12px' }}
+                    >
+                      <RefreshCw size={13} className={isTestingDb ? 'spin' : ''} />
+                      <span>3. Re-test Now</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

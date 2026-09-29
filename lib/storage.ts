@@ -19,6 +19,8 @@ import {
   debouncedPushSettingsToCloud,
   pushSettingsToCloud,
   pullSettingsFromCloud,
+  pushAllToCloud,
+  pullAllFromCloud,
   notifyCloudStatus,
 } from './supabaseSync';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
@@ -340,6 +342,36 @@ export function advanceToNextCycle(): WeekPlan[] {
 }
 
 // -------------------------------------------------------------
+// ATOMIC SAVE ALL (Instant multi-device persistence)
+// -------------------------------------------------------------
+export function saveAll(
+  weeks: WeekPlan[],
+  history: WorkoutHistoryEntry[],
+  active: { weekNumber: number; dayIndex: number; unit: WeightUnit }
+) {
+  const verifiedWeeks = ensureSixWeeks(weeks);
+  cachedWeeks = verifiedWeeks;
+  cachedHistory = history;
+  cachedActive = active;
+  lastLocalEditTimestamp = Date.now();
+  if (typeof window === 'undefined') return;
+
+  emitSave('saving');
+  try {
+    localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(verifiedWeeks));
+    localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+    localStorage.setItem(STORAGE_KEYS.ACTIVE, JSON.stringify(active));
+    crossTabChannel?.postMessage({ type: 'plan', data: verifiedWeeks });
+    crossTabChannel?.postMessage({ type: 'history', data: history });
+    crossTabChannel?.postMessage({ type: 'settings', data: active });
+    pushAllToCloud(verifiedWeeks, history, active);
+    emitSave('saved');
+  } catch (err) {
+    console.error('Failed to save all to storage', err);
+  }
+}
+
+// -------------------------------------------------------------
 // ALWAYS-ON CONTINUOUS BACKGROUND MULTI-DEVICE SYNC ENGINE
 // -------------------------------------------------------------
 let isSyncInitialized = false;
@@ -349,94 +381,41 @@ let isAutoSyncRunning = false;
 export async function performContinuousCloudSync(force = false) {
   if (typeof window === 'undefined' || isAutoSyncRunning) return;
 
-  // Protect local changes: if the user recently edited anything locally (< 8s ago), do not pull and overwrite!
-  if (!force && Date.now() - lastLocalEditTimestamp < 8000) {
+  // Protect local changes: if the user recently edited anything locally (< 5s ago), do not pull and overwrite!
+  if (!force && Date.now() - lastLocalEditTimestamp < 5000) {
     return;
   }
 
   isAutoSyncRunning = true;
 
   try {
-    let cloudPlan: WeekPlan[] | null = null;
-    let cloudHistory: WorkoutHistoryEntry[] | null = null;
-    let cloudSettings: any = null;
-    let serverTime: string = new Date().toISOString();
-
-    // 1. Direct Supabase Cloud Check
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const { data: supaPlan, error: supaErr } = await supabase
-          .from('workout_plan')
-          .select('weeks, updated_at')
-          .eq('id', 'default_plan')
-          .maybeSingle();
-
-        if (!supaErr && supaPlan && Array.isArray(supaPlan.weeks) && supaPlan.weeks.length > 0) {
-          cloudPlan = ensureSixWeeks(supaPlan.weeks);
-          serverTime = supaPlan.updated_at || serverTime;
-        }
-      } catch {}
+    const cloudData = await pullAllFromCloud();
+    if (!cloudData) {
+      isAutoSyncRunning = false;
+      return;
     }
 
-    // 2. Fetch from /api/sync if Supabase didn't provide a plan or to get server state
-    if (!cloudPlan) {
-      try {
-        const res = await fetch('/api/sync', { cache: 'no-store' });
-        if (res.ok) {
-          const body = await res.json();
-          if (body && body.success && body.plan) {
-            cloudPlan = ensureSixWeeks(body.plan);
-            cloudHistory = body.history || null;
-            cloudSettings = body.settings || null;
-            serverTime = body.updatedAt || serverTime;
-          }
-        }
-      } catch {}
-    }
+    const { plan: cloudPlan, history: cloudHistory, settings: cloudSettings, updatedAt: serverTime } = cloudData;
 
     const localRawWeeks = localStorage.getItem(STORAGE_KEYS.WEEKS);
     const localWeeks = localRawWeeks ? JSON.parse(localRawWeeks) : null;
     const localHasExercises =
       localWeeks &&
       Array.isArray(localWeeks) &&
-      localWeeks.some((w: any) => w.days.some((d: any) => d.exercises?.length > 0));
+      localWeeks.some((w: any) => w.days?.some((d: any) => d.exercises?.length > 0));
 
     const serverHasExercises =
       cloudPlan &&
       Array.isArray(cloudPlan) &&
-      cloudPlan.some((w: any) => w.days.some((d: any) => d.exercises?.length > 0));
+      cloudPlan.some((w: any) => w.days?.some((d: any) => d.exercises?.length > 0));
 
     // Case 1: First-time seed / Upload to Server & Supabase
     // Local device has exercises, but cloud database is empty of exercises
     if (localHasExercises && !serverHasExercises) {
       const active = getActiveSelection();
       const hist = getSavedHistory();
-      await fetch('/api/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'save_all',
-          data: { plan: localWeeks, history: hist, settings: active },
-        }),
-      }).catch(() => {});
-
-      if (isSupabaseConfigured && supabase) {
-        Promise.resolve(
-          supabase
-            .from('workout_plan')
-            .upsert(
-              {
-                id: 'default_plan',
-                weeks: ensureSixWeeks(localWeeks),
-                updated_at: new Date().toISOString(),
-              },
-              { onConflict: 'id' }
-            )
-        ).catch(() => {});
-      }
-
+      await pushAllToCloud(localWeeks, hist, active);
       lastSyncedServerTimestamp = new Date().toISOString();
-      notifyCloudStatus('synced', 'Database Synced');
       isAutoSyncRunning = false;
       return;
     }
@@ -454,7 +433,7 @@ export async function performContinuousCloudSync(force = false) {
       if (Array.isArray(cloudHistory)) {
         cachedHistory = cloudHistory;
         localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(cloudHistory));
-        historyListeners.forEach((l) => l(cloudHistory!));
+        historyListeners.forEach((l) => l(cloudHistory));
       }
 
       if (cloudSettings && typeof cloudSettings === 'object') {
@@ -463,12 +442,12 @@ export async function performContinuousCloudSync(force = false) {
         settingsListeners.forEach((l) => l(cloudSettings));
       }
 
-      notifyCloudStatus('synced', 'Database Synced');
+      notifyCloudStatus('synced', 'Database Synced', false);
       isAutoSyncRunning = false;
       return;
     }
 
-    // Case 3: Both have exercises -> sync if cloud has a newer timestamp or forced
+    // Case 3: Both have exercises -> sync if cloud has newer timestamp, forced, or plan changed
     if (serverHasExercises && localHasExercises) {
       if (force || serverTime !== lastSyncedServerTimestamp) {
         lastSyncedServerTimestamp = serverTime;
@@ -479,30 +458,47 @@ export async function performContinuousCloudSync(force = false) {
           localStorage.setItem(STORAGE_KEYS.WEEKS, serverWeeksStr);
           planListeners.forEach((l) => l(validServerWeeks));
         }
-
-        if (Array.isArray(cloudHistory)) {
-          const localHistRaw = localStorage.getItem(STORAGE_KEYS.HISTORY);
-          const serverHistStr = JSON.stringify(cloudHistory);
-          if (localHistRaw !== serverHistStr) {
-            cachedHistory = cloudHistory;
-            localStorage.setItem(STORAGE_KEYS.HISTORY, serverHistStr);
-            historyListeners.forEach((l) => l(cloudHistory!));
-          }
-        }
-
-        if (cloudSettings && typeof cloudSettings === 'object') {
-          const localActiveRaw = localStorage.getItem(STORAGE_KEYS.ACTIVE);
-          const serverSettingsStr = JSON.stringify(cloudSettings);
-          if (localActiveRaw !== serverSettingsStr) {
-            cachedActive = cloudSettings;
-            localStorage.setItem(STORAGE_KEYS.ACTIVE, serverSettingsStr);
-            settingsListeners.forEach((l) => l(cloudSettings));
-          }
-        }
-
-        notifyCloudStatus('synced', 'Database Synced');
       }
     }
+
+    // HISTORY MERGE: Always merge cloud and local history so no workout on ANY device is ever lost!
+    if (Array.isArray(cloudHistory)) {
+      const localHistory = getSavedHistory();
+      const map = new Map<string, WorkoutHistoryEntry>();
+      localHistory.forEach((h) => map.set(h.id, h));
+      cloudHistory.forEach((h) => map.set(h.id, h));
+
+      const mergedHistory = Array.from(map.values()).sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+
+      const localHistStr = JSON.stringify(localHistory);
+      const mergedHistStr = JSON.stringify(mergedHistory);
+
+      if (localHistStr !== mergedHistStr) {
+        cachedHistory = mergedHistory;
+        localStorage.setItem(STORAGE_KEYS.HISTORY, mergedHistStr);
+        historyListeners.forEach((l) => l(mergedHistory));
+
+        // If local had workouts that were missing in the cloud, mirror merged history back to cloud!
+        if (mergedHistory.length > cloudHistory.length) {
+          pushHistoryToCloud(mergedHistory);
+        }
+      }
+    }
+
+    // SETTINGS MERGE: Pull active settings if available
+    if (cloudSettings && typeof cloudSettings === 'object') {
+      const localActiveRaw = localStorage.getItem(STORAGE_KEYS.ACTIVE);
+      const serverSettingsStr = JSON.stringify(cloudSettings);
+      if (localActiveRaw !== serverSettingsStr) {
+        cachedActive = cloudSettings;
+        localStorage.setItem(STORAGE_KEYS.ACTIVE, serverSettingsStr);
+        settingsListeners.forEach((l) => l(cloudSettings));
+      }
+    }
+
+    notifyCloudStatus('synced', 'Database Synced', false);
   } catch (err) {
     // Offline or network hiccup - silent retry
   } finally {
@@ -532,24 +528,32 @@ export function initBackgroundCloudSync() {
     performContinuousCloudSync(true);
   });
 
-  // 3. Continuous automatic heartbeat check every 15 seconds
+  // 3. Continuous automatic heartbeat check every 8 seconds
   setInterval(() => {
     if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
       performContinuousCloudSync(false);
     }
-  }, 15000);
+  }, 8000);
 
-  // 4. Supabase Realtime channel subscription (instant multi-device push)
+  // 4. Supabase Realtime channel subscription (instant sub-second multi-device push)
   if (isSupabaseConfigured && supabase) {
     try {
       supabase
-        .channel('public:workout_sync')
+        .channel('public:workout_sync_realtime')
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'workout_plan' },
-          () => {
-            performContinuousCloudSync(true);
-          }
+          () => performContinuousCloudSync(true)
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'workout_history' },
+          () => performContinuousCloudSync(true)
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'app_settings' },
+          () => performContinuousCloudSync(true)
         )
         .subscribe();
     } catch {}

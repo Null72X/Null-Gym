@@ -45,6 +45,17 @@ export default function Navbar() {
       );
     }
     switch (cloudInfo.status) {
+      case 'needs_rls_fix':
+        return (
+          <Link
+            href="/settings"
+            className="cloud-status-pill needs_rls_fix"
+            title="Action needed: Supabase RLS is blocking writes. Tap to fix in 5 seconds."
+          >
+            <span>⚠️</span>
+            <span>Setup Needed</span>
+          </Link>
+        );
       case 'syncing':
         return (
           <Link
@@ -54,6 +65,17 @@ export default function Navbar() {
           >
             <span>🟡</span>
             <span>Syncing</span>
+          </Link>
+        );
+      case 'error':
+        return (
+          <Link
+            href="/settings"
+            className="cloud-status-pill error"
+            title={cloudInfo.message || 'Sync issue. Saved locally.'}
+          >
+            <span>🔴</span>
+            <span>Sync Alert</span>
           </Link>
         );
       case 'synced':

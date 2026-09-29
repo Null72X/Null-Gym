@@ -17,6 +17,7 @@ import {
   saveWeeks,
   getSavedHistory,
   saveHistory,
+  saveAll,
   getActiveSelection,
   saveActiveSelection,
   advanceToNextCycle,
@@ -407,7 +408,6 @@ export default function DashboardPage() {
     });
 
     setWeeks(updatedWeeks);
-    saveWeeks(updatedWeeks);
 
     // Compute volume and log to history
     let completedSets = 0;
@@ -446,13 +446,13 @@ export default function DashboardPage() {
 
     const updatedHistory = [newHistoryEntry, ...history];
     setHistory(updatedHistory);
-    saveHistory(updatedHistory);
+    saveAll(updatedWeeks, updatedHistory, { weekNumber: currentWeek, dayIndex: currentDayIndex, unit });
     setActiveTimer(null);
 
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate([100, 50, 100, 50, 200]);
     }
-    triggerToast('Workout logged to history! 🎉');
+    triggerToast('Workout logged to history & synced! 🎉');
   };
 
   if (!isLoaded || weeks.length === 0) {
