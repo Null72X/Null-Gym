@@ -513,7 +513,7 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
           ) : (
             <div>
               <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
-                You are currently in <strong>Guest Mode</strong>. All workouts, history, and settings are saved locally on this browser. Sign in with 1-tap Google or Magic Link to access private cloud synchronization between your phone, tablet, and PC.
+                You are currently in <strong>Guest Mode</strong>. All workouts, history, and settings are saved locally on this browser. Log in or create an account with your email and password to access private cloud synchronization between your phone, tablet, and PC.
               </p>
 
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -524,7 +524,7 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
                   style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px' }}
                 >
                   <Sparkles size={14} />
-                  <span>Sign In / Create Account (1-Tap)</span>
+                  <span>Log In / Create Account</span>
                 </button>
               </div>
             </div>

@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Mail, Lock, ArrowRight, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
-import { signInWithGoogle, signInWithMagicLink, signInWithPassword, signUpWithPassword } from '../lib/authService';
+import { X, Mail, Lock, CheckCircle2, AlertCircle, ArrowRight, Eye, EyeOff, ShieldCheck, Dumbbell } from 'lucide-react';
+import { signInWithPassword, signUpWithPassword } from '../lib/authService';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -11,72 +11,81 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
-  const [tab, setTab] = useState<'magic' | 'password'>('magic');
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
+  const handleTabSwitch = (newMode: 'login' | 'signup') => {
+    setMode(newMode);
     setErrorMessage(null);
-    const { error } = await signInWithGoogle();
-    if (error) {
-      const msg = error.message || '';
-      if (msg.includes('provider is not enabled') || msg.includes('validation_failed') || msg.includes('Unsupported provider')) {
-        setErrorMessage('google_not_enabled');
-      } else {
-        setErrorMessage(error.message || 'Google sign-in failed.');
+    setSuccessMessage(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail || !password) {
+      setErrorMessage('Please fill in all fields.');
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMessage('Password must be at least 6 characters.');
+      return;
+    }
+
+    if (mode === 'signup') {
+      if (!confirmPassword) {
+        setErrorMessage('Please verify your password in the confirmation field.');
+        return;
       }
+      if (password !== confirmPassword) {
+        setErrorMessage('Passwords do not match! Please make sure both password fields match.');
+        return;
+      }
+
+      setLoading(true);
+      const { error, user } = await signUpWithPassword(cleanEmail, password);
       setLoading(false);
-    }
-  };
 
-  const handleMagicLink = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-
-    setLoading(true);
-    setErrorMessage(null);
-    const { error } = await signInWithMagicLink(email);
-    setLoading(false);
-
-    if (error) {
-      setErrorMessage(error.message || 'Failed to send magic link.');
-    } else {
-      setMagicLinkSent(true);
-    }
-  };
-
-  const handlePasswordAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) return;
-
-    setLoading(true);
-    setErrorMessage(null);
-
-    if (isSignUp) {
-      const { error, user } = await signUpWithPassword(email, password);
-      setLoading(false);
       if (error) {
         setErrorMessage(error.message || 'Failed to create account.');
       } else {
         if (user) {
-          onSuccess?.();
-          onClose();
+          setSuccessMessage('Account created successfully! Synchronizing workouts...');
+          setTimeout(() => {
+            onSuccess?.();
+            onClose();
+          }, 1000);
         } else {
-          setErrorMessage('Account created! Please check your email to confirm.');
+          setSuccessMessage('Account created! Please check your email to verify your account, or sign in.');
         }
       }
     } else {
-      const { error } = await signInWithPassword(email, password);
+      // Mode: login
+      setLoading(true);
+      const { error } = await signInWithPassword(cleanEmail, password);
       setLoading(false);
+
       if (error) {
-        setErrorMessage(error.message || 'Invalid email or password.');
+        const msg = error.message || '';
+        if (msg.toLowerCase().includes('invalid login credentials')) {
+          setErrorMessage('Invalid email or password. If you do not have an account yet, click "Create Account".');
+        } else {
+          setErrorMessage(error.message || 'Failed to sign in.');
+        }
       } else {
         onSuccess?.();
         onClose();
@@ -92,7 +101,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.78)',
+        backgroundColor: 'rgba(0, 0, 0, 0.82)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
         zIndex: 1000,
@@ -109,9 +118,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
           border: '1px solid rgba(255, 255, 255, 0.12)',
           borderRadius: '20px',
           width: '100%',
-          maxWidth: '420px',
+          maxWidth: '430px',
           padding: '28px 24px',
-          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6)',
+          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.75)',
           position: 'relative',
         }}
         onClick={(e) => e.stopPropagation()}
@@ -132,35 +141,88 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
             borderRadius: '50%',
             display: 'flex',
           }}
+          title="Close"
         >
           <X size={18} />
         </button>
 
-        {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '22px' }}>
+        {/* Modal Header */}
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
           <div
             style={{
-              width: '44px',
-              height: '44px',
+              width: '46px',
+              height: '46px',
               borderRadius: '12px',
               background: 'rgba(239, 68, 68, 0.12)',
-              border: '1px solid rgba(239, 68, 68, 0.25)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 12px',
             }}
           >
-            <Sparkles size={20} color="var(--accent-red)" />
+            <Dumbbell size={22} color="var(--accent-red)" />
           </div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', margin: '0 0 6px' }}>
-            Sync Across All Devices
+            Null Gym Cloud
           </h2>
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>
-            Sign in to unlock private multi-device cloud synchronization.
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
+            {mode === 'login'
+              ? 'Log in to sync your workouts across all your devices.'
+              : 'Create an account with any email & password to start private syncing.'}
           </p>
         </div>
 
+        {/* Two-Section Tab Selector: Log In vs Create Account */}
+        <div
+          style={{
+            display: 'flex',
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '12px',
+            padding: '4px',
+            marginBottom: '18px',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => handleTabSwitch('login')}
+            style={{
+              flex: 1,
+              padding: '9px 12px',
+              background: mode === 'login' ? 'var(--accent-red)' : 'transparent',
+              color: mode === 'login' ? '#fff' : 'var(--text-muted)',
+              border: 'none',
+              borderRadius: '9px',
+              fontSize: '0.8rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            Log In
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTabSwitch('signup')}
+            style={{
+              flex: 1,
+              padding: '9px 12px',
+              background: mode === 'signup' ? 'var(--accent-red)' : 'transparent',
+              color: mode === 'signup' ? '#fff' : 'var(--text-muted)',
+              border: 'none',
+              borderRadius: '9px',
+              fontSize: '0.8rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            Create Account
+          </button>
+        </div>
+
+        {/* Error Alert Box */}
         {errorMessage && (
           <div
             style={{
@@ -171,301 +233,230 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
               marginBottom: '16px',
               fontSize: '0.74rem',
               color: '#fca5a5',
-              lineHeight: 1.5,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              lineHeight: 1.4,
             }}
           >
-            {errorMessage === 'google_not_enabled' ? (
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, marginBottom: '4px' }}>
-                  <AlertCircle size={15} style={{ flexShrink: 0, color: '#f87171' }} />
-                  <span>Google Sign-In is not enabled in Supabase yet</span>
-                </div>
-                <div style={{ color: '#cbd5e1', fontSize: '0.72rem', marginBottom: '8px' }}>
-                  To enable Google 1-Tap, turn on Google in your Supabase Auth Providers.
-                  <br />
-                  💡 <strong>Tip:</strong> You can use <strong>1-Tap Magic Link</strong> or <strong>Email &amp; Password</strong> below right now!
-                </div>
-                <a
-                  href="https://supabase.com/dashboard/project/ftssrejkpjyrzkgkkfnz/auth/providers"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-block',
-                    background: 'rgba(56, 189, 248, 0.15)',
-                    border: '1px solid rgba(56, 189, 248, 0.35)',
-                    color: '#7dd3fc',
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    textDecoration: 'none',
-                    fontSize: '0.7rem',
-                    fontWeight: 700,
-                  }}
-                >
-                  Enable Google in Supabase Dashboard ↗
-                </a>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <AlertCircle size={15} style={{ flexShrink: 0 }} />
-                <span>{errorMessage}</span>
-              </div>
-            )}
+            <AlertCircle size={16} style={{ flexShrink: 0, color: '#f87171' }} />
+            <span>{errorMessage}</span>
           </div>
         )}
 
-        {/* 1-Tap Google Sign In */}
-        <button
-          type="button"
-          onClick={handleGoogleSignIn}
-          disabled={loading}
-          style={{
-            width: '100%',
-            padding: '12px 16px',
-            background: '#ffffff',
-            color: '#1f2937',
-            border: 'none',
-            borderRadius: '12px',
-            fontSize: '0.88rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '12px',
-            transition: 'all 0.2s ease',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-            marginBottom: '18px',
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24">
-            <path
-              fill="#4285F4"
-              d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.14z"
-            />
-            <path
-              fill="#34A853"
-              d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.36 7.33 24 12 24z"
-            />
-            <path
-              fill="#FBBC05"
-              d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.16 0 9.94 0 12s.45 3.84 1.24 5.42l4.04-3.15z"
-            />
-            <path
-              fill="#EA4335"
-              d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-            />
-          </svg>
-          <span>Continue with Google</span>
-        </button>
-
-        {/* Divider */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            marginBottom: '18px',
-          }}
-        >
-          <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.1)' }} />
-          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            or with email
-          </span>
-          <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.1)' }} />
-        </div>
-
-        {/* Tab Selector */}
-        <div
-          style={{
-            display: 'flex',
-            background: 'rgba(255, 255, 255, 0.04)',
-            borderRadius: '10px',
-            padding: '3px',
-            marginBottom: '16px',
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => { setTab('magic'); setMagicLinkSent(false); }}
+        {/* Success Alert Box */}
+        {successMessage && (
+          <div
             style={{
-              flex: 1,
-              padding: '7px',
-              background: tab === 'magic' ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
-              color: tab === 'magic' ? '#fff' : 'var(--text-muted)',
-              border: 'none',
-              borderRadius: '8px',
+              background: 'rgba(34, 197, 94, 0.12)',
+              border: '1px solid rgba(34, 197, 94, 0.35)',
+              borderRadius: '10px',
+              padding: '10px 12px',
+              marginBottom: '16px',
               fontSize: '0.74rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
+              color: '#86efac',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              lineHeight: 1.4,
             }}
           >
-            1-Tap Magic Link
-          </button>
-          <button
-            type="button"
-            onClick={() => { setTab('password'); setMagicLinkSent(false); }}
-            style={{
-              flex: 1,
-              padding: '7px',
-              background: tab === 'password' ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
-              color: tab === 'password' ? '#fff' : 'var(--text-muted)',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '0.74rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            Email & Password
-          </button>
-        </div>
-
-        {/* Tab 1: Magic Link */}
-        {tab === 'magic' && (
-          magicLinkSent ? (
-            <div
-              style={{
-                textAlign: 'center',
-                padding: '16px 8px',
-                background: 'rgba(34, 197, 94, 0.08)',
-                border: '1px solid rgba(34, 197, 94, 0.25)',
-                borderRadius: '12px',
-              }}
-            >
-              <CheckCircle2 size={32} color="#86efac" style={{ margin: '0 auto 8px' }} />
-              <h4 style={{ color: '#86efac', margin: '0 0 4px', fontSize: '0.9rem' }}>Check your email!</h4>
-              <p style={{ color: '#cbd5e1', fontSize: '0.76rem', margin: 0, lineHeight: 1.5 }}>
-                We sent a 1-tap sign-in link to <strong>{email}</strong>. Click the link in your email to sign in.
-              </p>
-            </div>
-          ) : (
-            <form onSubmit={handleMagicLink}>
-              <div style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                  Email Address
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <Mail size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '12px' }} />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@gmail.com"
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px 10px 38px',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
-                      borderRadius: '10px',
-                      color: '#fff',
-                      fontSize: '0.85rem',
-                      outline: 'none',
-                    }}
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading || !email}
-                className="btn-clean btn-primary"
-                style={{ width: '100%', padding: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-              >
-                <span>{loading ? 'Sending link...' : 'Send 1-Tap Sign-In Link'}</span>
-                <ArrowRight size={15} />
-              </button>
-            </form>
-          )
+            <CheckCircle2 size={16} style={{ flexShrink: 0, color: '#86efac' }} />
+            <span>{successMessage}</span>
+          </div>
         )}
 
-        {/* Tab 2: Email & Password */}
-        {tab === 'password' && (
-          <form onSubmit={handlePasswordAuth}>
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                Email Address
-              </label>
-              <div style={{ position: 'relative' }}>
-                <Mail size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '12px' }} />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@gmail.com"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px 10px 38px',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    borderRadius: '10px',
-                    color: '#fff',
-                    fontSize: '0.85rem',
-                    outline: 'none',
-                  }}
-                />
-              </div>
+        {/* Main Authentication Form */}
+        <form onSubmit={handleSubmit}>
+          {/* Email Field */}
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, color: '#e2e8f0', marginBottom: '6px' }}>
+              Email Address
+            </label>
+            <div style={{ position: 'relative' }}>
+              <Mail
+                size={16}
+                color="var(--text-muted)"
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }}
+              />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your.email@example.com"
+                required
+                style={{
+                  width: '100%',
+                  padding: '11px 12px 11px 38px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  borderRadius: '10px',
+                  color: '#fff',
+                  fontSize: '0.85rem',
+                  outline: 'none',
+                }}
+              />
             </div>
+          </div>
 
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                Password
+          {/* Password Field */}
+          <div style={{ marginBottom: mode === 'signup' ? '14px' : '20px' }}>
+            <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, color: '#e2e8f0', marginBottom: '6px' }}>
+              Password
+            </label>
+            <div style={{ position: 'relative' }}>
+              <Lock
+                size={16}
+                color="var(--text-muted)"
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }}
+              />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                minLength={6}
+                style={{
+                  width: '100%',
+                  padding: '11px 40px 11px 38px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  borderRadius: '10px',
+                  color: '#fff',
+                  fontSize: '0.85rem',
+                  outline: 'none',
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  padding: 0,
+                  display: 'flex',
+                }}
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Confirm Password Field (Only in Create Account mode) */}
+          {mode === 'signup' && (
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, color: '#e2e8f0', marginBottom: '6px' }}>
+                Verify Password (Confirm)
               </label>
               <div style={{ position: 'relative' }}>
-                <Lock size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '12px' }} />
+                <ShieldCheck
+                  size={16}
+                  color={confirmPassword && password === confirmPassword ? '#86efac' : 'var(--text-muted)'}
+                  style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }}
+                />
                 <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter password"
                   required
                   minLength={6}
                   style={{
                     width: '100%',
-                    padding: '10px 12px 10px 38px',
+                    padding: '11px 40px 11px 38px',
                     background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    border: `1px solid ${
+                      confirmPassword
+                        ? password === confirmPassword
+                          ? 'rgba(34, 197, 94, 0.45)'
+                          : 'rgba(239, 68, 68, 0.45)'
+                        : 'rgba(255, 255, 255, 0.12)'
+                    }`,
                     borderRadius: '10px',
                     color: '#fff',
                     fontSize: '0.85rem',
                     outline: 'none',
                   }}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    padding: 0,
+                    display: 'flex',
+                  }}
+                  title={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
+              {confirmPassword && password !== confirmPassword && (
+                <div style={{ fontSize: '0.68rem', color: '#fca5a5', marginTop: '4px' }}>
+                  Passwords do not match yet
+                </div>
+              )}
             </div>
+          )}
 
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={loading || !email || !password || (mode === 'signup' && !confirmPassword)}
+            className="btn-clean btn-primary"
+            style={{
+              width: '100%',
+              padding: '12px',
+              fontSize: '0.86rem',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              marginBottom: '14px',
+            }}
+          >
+            <span>{loading ? 'Please wait...' : mode === 'login' ? 'Log In to Account' : 'Create Account & Sync'}</span>
+            <ArrowRight size={16} />
+          </button>
+
+          {/* Switch Tab Prompt */}
+          <div style={{ textAlign: 'center' }}>
             <button
-              type="submit"
-              disabled={loading || !email || !password}
-              className="btn-clean btn-primary"
-              style={{ width: '100%', padding: '11px', marginBottom: '12px' }}
+              type="button"
+              onClick={() => handleTabSwitch(mode === 'login' ? 'signup' : 'login')}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--accent-red)',
+                fontSize: '0.76rem',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
             >
-              <span>{loading ? 'Processing...' : isSignUp ? 'Create Free Account' : 'Sign In'}</span>
+              {mode === 'login'
+                ? "Don't have an account? Create one"
+                : 'Already have an account? Log in'}
             </button>
+          </div>
+        </form>
 
-            <div style={{ textAlign: 'center' }}>
-              <button
-                type="button"
-                onClick={() => setIsSignUp(!isSignUp)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--accent-red)',
-                  fontSize: '0.75rem',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                }}
-              >
-                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Footer: Offline mode option */}
+        {/* Footer: Offline Guest Mode */}
         <div style={{ marginTop: '20px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>
           <button
             type="button"
