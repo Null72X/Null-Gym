@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { X, Mail, Lock, CheckCircle2, AlertCircle, ArrowRight, Eye, EyeOff, ShieldCheck, Dumbbell } from 'lucide-react';
-import { signInWithPassword, signUpWithPassword } from '../lib/authService';
+import { signInWithPassword, signUpWithPassword, resendConfirmationEmail } from '../lib/authService';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -18,6 +18,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -57,20 +58,20 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       }
 
       setLoading(true);
-      const { error, user } = await signUpWithPassword(cleanEmail, password);
+      const { error, user, hasSession } = await signUpWithPassword(cleanEmail, password);
       setLoading(false);
 
       if (error) {
         setErrorMessage(error.message || 'Failed to create account.');
       } else {
-        if (user) {
+        if (hasSession) {
           setSuccessMessage('Account created successfully! Synchronizing workouts...');
           setTimeout(() => {
             onSuccess?.();
             onClose();
           }, 1000);
         } else {
-          setSuccessMessage('Account created! Please check your email to verify your account, or sign in.');
+          setErrorMessage('email_not_confirmed');
         }
       }
     } else {
@@ -81,7 +82,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
 
       if (error) {
         const msg = error.message || '';
-        if (msg.toLowerCase().includes('invalid login credentials')) {
+        if (msg.toLowerCase().includes('email not confirmed')) {
+          setErrorMessage('email_not_confirmed');
+        } else if (msg.toLowerCase().includes('invalid login credentials')) {
           setErrorMessage('Invalid email or password. If you do not have an account yet, click "Create Account".');
         } else {
           setErrorMessage(error.message || 'Failed to sign in.');
@@ -229,18 +232,81 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
               background: 'rgba(239, 68, 68, 0.12)',
               border: '1px solid rgba(239, 68, 68, 0.35)',
               borderRadius: '10px',
-              padding: '10px 12px',
+              padding: '12px 14px',
               marginBottom: '16px',
               fontSize: '0.74rem',
               color: '#fca5a5',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              lineHeight: 1.4,
+              lineHeight: 1.5,
             }}
           >
-            <AlertCircle size={16} style={{ flexShrink: 0, color: '#f87171' }} />
-            <span>{errorMessage}</span>
+            {errorMessage === 'email_not_confirmed' ? (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, color: '#f87171', marginBottom: '4px' }}>
+                  <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                  <span>Email Confirmation Required</span>
+                </div>
+                <div style={{ color: '#cbd5e1', fontSize: '0.72rem', marginBottom: '8px' }}>
+                  Supabase sent a confirmation link to <strong>{email || 'your email'}</strong>. Click it to verify your account.
+                  <br />
+                  💡 <strong>Or disable email confirmation</strong> in Supabase for 1-second instant signups without emails!
+                </div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {email && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setResendLoading(true);
+                        const { error } = await resendConfirmationEmail(email);
+                        setResendLoading(false);
+                        if (!error) {
+                          setSuccessMessage(`Confirmation email resent to ${email}! Please check your inbox or spam.`);
+                          setErrorMessage(null);
+                        } else {
+                          setErrorMessage(error.message);
+                        }
+                      }}
+                      disabled={resendLoading}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.12)',
+                        border: '1px solid rgba(255, 255, 255, 0.25)',
+                        borderRadius: '6px',
+                        padding: '5px 10px',
+                        color: '#fff',
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {resendLoading ? 'Sending...' : 'Resend Confirmation Email'}
+                    </button>
+                  )}
+                  <a
+                    href="https://supabase.com/dashboard/project/ftssrejkpjyrzkgkkfnz/auth/providers"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      background: 'rgba(56, 189, 248, 0.15)',
+                      border: '1px solid rgba(56, 189, 248, 0.35)',
+                      color: '#7dd3fc',
+                      padding: '5px 10px',
+                      borderRadius: '6px',
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Turn OFF &quot;Confirm email&quot; in Supabase ↗
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <AlertCircle size={16} style={{ flexShrink: 0, color: '#f87171' }} />
+                <span>{errorMessage}</span>
+              </div>
+            )}
           </div>
         )}
 

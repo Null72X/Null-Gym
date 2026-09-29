@@ -171,9 +171,9 @@ export async function signInWithPassword(email: string, password: string): Promi
 /**
  * Sign Up with Email & Password
  */
-export async function signUpWithPassword(email: string, password: string): Promise<{ error: Error | null; user: AppUser | null }> {
+export async function signUpWithPassword(email: string, password: string): Promise<{ error: Error | null; user: AppUser | null; hasSession: boolean }> {
   if (!isSupabaseConfigured || !supabase) {
-    return { error: new Error('Supabase is not configured.'), user: null };
+    return { error: new Error('Supabase is not configured.'), user: null, hasSession: false };
   }
 
   try {
@@ -195,9 +195,28 @@ export async function signUpWithPassword(email: string, password: string): Promi
     if (data.session) {
       notifyAuthChange(user);
     }
-    return { error: null, user };
+    return { error: null, user, hasSession: Boolean(data.session) };
   } catch (err: any) {
-    return { error: err, user: null };
+    return { error: err, user: null, hasSession: false };
+  }
+}
+
+/**
+ * Resend email confirmation
+ */
+export async function resendConfirmationEmail(email: string): Promise<{ error: Error | null }> {
+  if (!isSupabaseConfigured || !supabase) {
+    return { error: new Error('Supabase is not configured.') };
+  }
+  try {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email.trim().toLowerCase(),
+    });
+    if (error) throw error;
+    return { error: null };
+  } catch (err: any) {
+    return { error: err };
   }
 }
 
