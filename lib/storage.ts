@@ -447,16 +447,17 @@ export async function performContinuousCloudSync(force = false) {
       return;
     }
 
-    // Case 3: Both have exercises -> sync if cloud has newer timestamp, forced, or plan changed
+    // Case 3: Both have exercises -> smart set-level & day-level merge!
     if (serverHasExercises && localHasExercises) {
       if (force || serverTime !== lastSyncedServerTimestamp) {
         lastSyncedServerTimestamp = serverTime;
         const validServerWeeks = ensureSixWeeks(cloudPlan!);
-        const serverWeeksStr = JSON.stringify(validServerWeeks);
-        if (localRawWeeks !== serverWeeksStr) {
-          cachedWeeks = validServerWeeks;
-          localStorage.setItem(STORAGE_KEYS.WEEKS, serverWeeksStr);
-          planListeners.forEach((l) => l(validServerWeeks));
+        const mergedWeeks = mergeWeekPlans(localWeeks, validServerWeeks);
+        const mergedWeeksStr = JSON.stringify(mergedWeeks);
+        if (localRawWeeks !== mergedWeeksStr) {
+          cachedWeeks = mergedWeeks;
+          localStorage.setItem(STORAGE_KEYS.WEEKS, mergedWeeksStr);
+          planListeners.forEach((l) => l(mergedWeeks));
         }
       }
     }
@@ -506,6 +507,74 @@ export async function performContinuousCloudSync(force = false) {
   }
 }
 
+// -------------------------------------------------------------
+// LOSSLESS 6-WEEK PLAN MERGING (Never drops checked-off sets)
+// -------------------------------------------------------------
+export function mergeWeekPlans(localWeeks: WeekPlan[], cloudWeeks: WeekPlan[]): WeekPlan[] {
+  const merged = ensureSixWeeks(cloudWeeks);
+  const local = ensureSixWeeks(localWeeks);
+
+  for (let w = 0; w < 6; w++) {
+    const localWeek = local[w];
+    const mergedWeek = merged[w];
+    if (!localWeek || !mergedWeek) continue;
+
+    for (let d = 0; d < 7; d++) {
+      const localDay = localWeek.days[d];
+      const mergedDay = mergedWeek.days[d];
+      if (!localDay || !mergedDay) continue;
+
+      if (localDay.completed) {
+        mergedDay.completed = true;
+      }
+
+      mergedDay.exercises.forEach((mergedEx, exIdx) => {
+        const localEx = localDay.exercises[exIdx];
+        if (!localEx || localEx.name !== mergedEx.name) return;
+
+        if (localEx.completed) {
+          mergedEx.completed = true;
+        }
+
+        mergedEx.sets.forEach((mergedSet, setIdx) => {
+          const localSet = localEx.sets[setIdx];
+          if (!localSet) return;
+
+          // If either device completed the set, keep it completed!
+          if (localSet.completed) {
+            mergedSet.completed = true;
+          }
+
+          // If local set has recorded weight and cloud was blank, keep local weight
+          if ((mergedSet.load === '' || mergedSet.load === 0) && localSet.load !== '' && localSet.load > 0) {
+            mergedSet.load = localSet.load;
+          }
+        });
+
+        if (mergedEx.sets.length > 0 && mergedEx.sets.every((s) => s.completed)) {
+          mergedEx.completed = true;
+        }
+      });
+
+      if (mergedDay.exercises.length > 0 && mergedDay.exercises.every((e) => e.completed)) {
+        mergedDay.completed = true;
+      }
+    }
+  }
+
+  return merged;
+}
+
+// User activity tracking for smart adaptive heartbeat
+let lastUserInteractionTime = Date.now();
+if (typeof window !== 'undefined') {
+  ['pointerdown', 'keydown', 'scroll', 'touchstart'].forEach((evt) => {
+    window.addEventListener(evt, () => {
+      lastUserInteractionTime = Date.now();
+    }, { passive: true });
+  });
+}
+
 export function initBackgroundCloudSync() {
   if (typeof window === 'undefined' || isSyncInitialized) return;
   isSyncInitialized = true;
@@ -516,24 +585,45 @@ export function initBackgroundCloudSync() {
   // 2. Instant sync when user unlocks phone, returns to app, or focuses window
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
+      lastUserInteractionTime = Date.now();
       performContinuousCloudSync(false);
     }
   });
 
   window.addEventListener('focus', () => {
+    lastUserInteractionTime = Date.now();
     performContinuousCloudSync(false);
   });
 
   window.addEventListener('online', () => {
+    lastUserInteractionTime = Date.now();
     performContinuousCloudSync(true);
   });
 
-  // 3. Continuous automatic heartbeat check every 8 seconds
-  setInterval(() => {
-    if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-      performContinuousCloudSync(false);
+  // 3. Adaptive battery-friendly heartbeat loop (8s active -> 18s rest timer -> 45s idle)
+  let adaptiveTimer: any = null;
+  const scheduleNextHeartbeat = () => {
+    if (adaptiveTimer) clearTimeout(adaptiveTimer);
+    if (typeof document === 'undefined') return;
+
+    const idleMs = Date.now() - lastUserInteractionTime;
+    let nextDelay = 8000; // 8s default when user is actively logging sets
+
+    if (idleMs > 60000) {
+      nextDelay = 45000; // 45s battery-saver when phone is resting on bench
+    } else if (idleMs > 20000) {
+      nextDelay = 18000; // 18s rest timer cadence
     }
-  }, 8000);
+
+    adaptiveTimer = setTimeout(() => {
+      if (document.visibilityState === 'visible') {
+        performContinuousCloudSync(false);
+      }
+      scheduleNextHeartbeat();
+    }, nextDelay);
+  };
+
+  scheduleNextHeartbeat();
 
   // 4. Supabase Realtime channel subscription (instant sub-second multi-device push)
   if (isSupabaseConfigured && supabase) {

@@ -7,11 +7,13 @@ import { Dumbbell, Calendar, BookOpen, TrendingUp, Settings, Cloud, Check, Alert
 import { initBackgroundCloudSync } from '../lib/storage';
 import { onCloudStatus, getCloudSyncInfo, CloudSyncInfo } from '../lib/supabaseSync';
 import { isAppOffline, onOfflineChange } from '../lib/offlineManager';
+import { onOutboxCountChange } from '../lib/outboxQueue';
 
 export default function Navbar() {
   const pathname = usePathname();
   const [cloudInfo, setCloudInfo] = useState<CloudSyncInfo>(() => getCloudSyncInfo());
   const [isOffline, setIsOffline] = useState<boolean>(() => isAppOffline());
+  const [pendingOutbox, setPendingOutbox] = useState<number>(0);
 
   useEffect(() => {
     // Start background sync on first load
@@ -25,9 +27,14 @@ export default function Navbar() {
       setIsOffline(offline);
     });
 
+    const unsubOutbox = onOutboxCountChange((count) => {
+      setPendingOutbox(count);
+    });
+
     return () => {
       unsubCloud();
       unsubOffline();
+      unsubOutbox();
     };
   }, []);
 
@@ -37,10 +44,10 @@ export default function Navbar() {
         <Link
           href="/settings"
           className="cloud-status-pill offline"
-          title="Offline mode active: all changes saved locally"
+          title={pendingOutbox > 0 ? `${pendingOutbox} updates queued locally. Will auto-sync when online.` : "Offline mode active: all changes saved locally"}
         >
           <span>📶</span>
-          <span>Offline</span>
+          <span>{pendingOutbox > 0 ? `Offline (${pendingOutbox})` : 'Offline'}</span>
         </Link>
       );
     }

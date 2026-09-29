@@ -129,3 +129,17 @@ self.addEventListener('fetch', (event) => {
     caches.match(request).then((response) => response || fetch(request))
   );
 });
+
+// 5. Background Sync Event (SyncManager)
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-workouts') {
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window' }).then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({ type: 'FLUSH_OUTBOX' });
+        });
+      })
+    );
+  }
+});
+

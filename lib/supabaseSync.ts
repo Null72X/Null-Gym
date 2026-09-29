@@ -2,6 +2,7 @@ import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { WeekPlan, WorkoutHistoryEntry, WeightUnit } from '../types/workout';
 import { ensureSixWeeks } from './planDefaults';
 import { isAppOffline } from './offlineManager';
+import { enqueueOutboxItem, flushOutboxQueue } from './outboxQueue';
 
 export type CloudSyncStatus = 'synced' | 'syncing' | 'offline' | 'needs_rls_fix' | 'error';
 
@@ -127,13 +128,15 @@ export async function pushAllToCloud(
   history: WorkoutHistoryEntry[],
   settings: { weekNumber: number; dayIndex: number; unit: WeightUnit }
 ): Promise<boolean> {
+  const fullWeeks = ensureSixWeeks(weeks);
+
   if (isAppOffline()) {
-    notifyCloudStatus('offline', 'Offline (Saved locally)');
+    enqueueOutboxItem('save_all', { plan: fullWeeks, history, settings });
+    notifyCloudStatus('offline', 'Offline (Saved locally, auto-sync queued)');
     return true;
   }
 
   notifyCloudStatus('syncing', 'Saving workout to cloud...');
-  const fullWeeks = ensureSixWeeks(weeks);
   const nowIso = new Date().toISOString();
 
   let hasRlsError = false;
@@ -206,7 +209,8 @@ export async function pushAllToCloud(
     }
     return true;
   } catch {
-    notifyCloudStatus('synced', 'Saved locally');
+    enqueueOutboxItem('save_all', { plan: fullWeeks, history, settings });
+    notifyCloudStatus('synced', 'Saved locally (Queued for sync)');
     return true;
   }
 }
@@ -225,13 +229,15 @@ export function debouncedPushPlanToCloud(weeks: WeekPlan[], delayMs = 350) {
 }
 
 export async function pushPlanToCloud(weeks: WeekPlan[]): Promise<boolean> {
+  const fullWeeks = ensureSixWeeks(weeks);
+
   if (isAppOffline()) {
-    notifyCloudStatus('offline', 'Offline (Saved locally)');
+    enqueueOutboxItem('save_plan', fullWeeks);
+    notifyCloudStatus('offline', 'Offline (Saved locally, auto-sync queued)');
     return true;
   }
 
   notifyCloudStatus('syncing', 'Syncing...');
-  const fullWeeks = ensureSixWeeks(weeks);
   const nowIso = new Date().toISOString();
   let hasRlsError = false;
 
@@ -278,7 +284,8 @@ export async function pushPlanToCloud(weeks: WeekPlan[]): Promise<boolean> {
     }
     return true;
   } catch {
-    notifyCloudStatus('synced', 'Changes saved locally');
+    enqueueOutboxItem('save_plan', fullWeeks);
+    notifyCloudStatus('synced', 'Changes saved locally (Queued)');
     return true;
   }
 }
@@ -287,7 +294,10 @@ export async function pushPlanToCloud(weeks: WeekPlan[]): Promise<boolean> {
 // PUSH HISTORY
 // -------------------------------------------------------------
 export async function pushHistoryToCloud(history: WorkoutHistoryEntry[]): Promise<boolean> {
-  if (isAppOffline()) return true;
+  if (isAppOffline()) {
+    enqueueOutboxItem('save_history', history);
+    return true;
+  }
 
   notifyCloudStatus('syncing', 'Saving workout log...');
   let hasRlsError = false;
@@ -328,6 +338,7 @@ export async function pushHistoryToCloud(history: WorkoutHistoryEntry[]): Promis
     }
     return true;
   } catch {
+    enqueueOutboxItem('save_history', history);
     return true;
   }
 }
@@ -353,7 +364,10 @@ export async function pushSettingsToCloud(settings: {
   dayIndex: number;
   unit: WeightUnit;
 }): Promise<boolean> {
-  if (isAppOffline()) return true;
+  if (isAppOffline()) {
+    enqueueOutboxItem('save_settings', settings);
+    return true;
+  }
 
   const nowIso = new Date().toISOString();
   try {
@@ -379,6 +393,7 @@ export async function pushSettingsToCloud(settings: {
     }
     return true;
   } catch {
+    enqueueOutboxItem('save_settings', settings);
     return true;
   }
 }
@@ -397,6 +412,9 @@ export async function pullAllFromCloud(): Promise<{
     notifyCloudStatus('offline', 'Offline (Saved locally)');
     return null;
   }
+
+  // Attempt to flush any pending outbox items before pulling fresh state
+  flushOutboxQueue().catch(() => {});
 
   // 1. Direct Supabase Query (Fastest on client)
   if (isSupabaseConfigured && supabase) {
