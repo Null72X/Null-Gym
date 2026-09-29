@@ -26,7 +26,12 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     setErrorMessage(null);
     const { error } = await signInWithGoogle();
     if (error) {
-      setErrorMessage(error.message || 'Google sign-in failed.');
+      const msg = error.message || '';
+      if (msg.includes('provider is not enabled') || msg.includes('validation_failed') || msg.includes('Unsupported provider')) {
+        setErrorMessage('google_not_enabled');
+      } else {
+        setErrorMessage(error.message || 'Google sign-in failed.');
+      }
       setLoading(false);
     }
   };
@@ -164,15 +169,47 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
               borderRadius: '10px',
               padding: '10px 12px',
               marginBottom: '16px',
-              fontSize: '0.75rem',
+              fontSize: '0.74rem',
               color: '#fca5a5',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
+              lineHeight: 1.5,
             }}
           >
-            <AlertCircle size={15} style={{ flexShrink: 0 }} />
-            <span>{errorMessage}</span>
+            {errorMessage === 'google_not_enabled' ? (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, marginBottom: '4px' }}>
+                  <AlertCircle size={15} style={{ flexShrink: 0, color: '#f87171' }} />
+                  <span>Google Sign-In is not enabled in Supabase yet</span>
+                </div>
+                <div style={{ color: '#cbd5e1', fontSize: '0.72rem', marginBottom: '8px' }}>
+                  To enable Google 1-Tap, turn on Google in your Supabase Auth Providers.
+                  <br />
+                  💡 <strong>Tip:</strong> You can use <strong>1-Tap Magic Link</strong> or <strong>Email &amp; Password</strong> below right now!
+                </div>
+                <a
+                  href="https://supabase.com/dashboard/project/ftssrejkpjyrzkgkkfnz/auth/providers"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-block',
+                    background: 'rgba(56, 189, 248, 0.15)',
+                    border: '1px solid rgba(56, 189, 248, 0.35)',
+                    color: '#7dd3fc',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    textDecoration: 'none',
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  Enable Google in Supabase Dashboard ↗
+                </a>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <AlertCircle size={15} style={{ flexShrink: 0 }} />
+                <span>{errorMessage}</span>
+              </div>
+            )}
           </div>
         )}
 
