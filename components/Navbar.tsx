@@ -3,21 +3,31 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Dumbbell, Calendar, BookOpen, TrendingUp, Settings, Cloud, Check, AlertCircle, RefreshCw } from 'lucide-react';
+import { Dumbbell, Calendar, BookOpen, TrendingUp, Settings, Cloud, Check, AlertCircle, RefreshCw, Sparkles, LogOut, User } from 'lucide-react';
 import { initBackgroundCloudSync } from '../lib/storage';
 import { onCloudStatus, getCloudSyncInfo, CloudSyncInfo } from '../lib/supabaseSync';
 import { isAppOffline, onOfflineChange } from '../lib/offlineManager';
 import { onOutboxCountChange } from '../lib/outboxQueue';
+import { initAuth, onAuthChange, signOutUser, AppUser } from '../lib/authService';
+import AuthModal from './AuthModal';
 
 export default function Navbar() {
   const pathname = usePathname();
   const [cloudInfo, setCloudInfo] = useState<CloudSyncInfo>(() => getCloudSyncInfo());
   const [isOffline, setIsOffline] = useState<boolean>(() => isAppOffline());
   const [pendingOutbox, setPendingOutbox] = useState<number>(0);
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   useEffect(() => {
-    // Start background sync on first load
+    // Start background sync and auth on first load
     initBackgroundCloudSync();
+    initAuth();
+
+    const unsubAuth = onAuthChange((u) => {
+      setUser(u);
+    });
 
     const unsubCloud = onCloudStatus((info) => {
       setCloudInfo(info);
@@ -32,6 +42,7 @@ export default function Navbar() {
     });
 
     return () => {
+      unsubAuth();
       unsubCloud();
       unsubOffline();
       unsubOutbox();
@@ -148,8 +159,160 @@ export default function Navbar() {
           </Link>
         </nav>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
           {renderCloudBadge()}
+
+          {user ? (
+            <div style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '3px 8px 3px 4px',
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  borderRadius: '20px',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                }}
+                title={`Signed in as ${user.name} (${user.email})`}
+              >
+                {user.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.name}
+                    style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: '22px',
+                      height: '22px',
+                      borderRadius: '50%',
+                      background: 'var(--accent-red)',
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                    }}
+                  >
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <span style={{ maxWidth: '75px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user.name.split(' ')[0]}
+                </span>
+              </button>
+
+              {/* Dropdown Menu */}
+              {showUserMenu && (
+                <>
+                  <div
+                    style={{ position: 'fixed', inset: 0, zIndex: 998 }}
+                    onClick={() => setShowUserMenu(false)}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 6px)',
+                      right: 0,
+                      zIndex: 999,
+                      background: '#0e121b',
+                      border: '1px solid rgba(255, 255, 255, 0.14)',
+                      borderRadius: '12px',
+                      padding: '12px',
+                      width: '220px',
+                      boxShadow: '0 12px 30px rgba(0, 0, 0, 0.6)',
+                    }}
+                  >
+                    <div style={{ marginBottom: '10px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '8px' }}>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#fff' }}>{user.name}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {user.email}
+                      </div>
+                      <div style={{ fontSize: '0.64rem', color: '#86efac', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>●</span>
+                        <span>Private Cloud Account</span>
+                      </div>
+                    </div>
+
+                    <Link
+                      href="/settings"
+                      onClick={() => setShowUserMenu(false)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px',
+                        color: '#cbd5e1',
+                        textDecoration: 'none',
+                        fontSize: '0.75rem',
+                        borderRadius: '6px',
+                      }}
+                    >
+                      <Settings size={14} />
+                      <span>Account &amp; Settings</span>
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        signOutUser();
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px',
+                        background: 'none',
+                        border: 'none',
+                        color: '#f87171',
+                        fontSize: '0.75rem',
+                        cursor: 'pointer',
+                        borderRadius: '6px',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <LogOut size={14} />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsAuthOpen(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '4px 10px',
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid rgba(239, 68, 68, 0.35)',
+                borderRadius: '20px',
+                color: '#fff',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+              title="Sign in to sync your workouts across all your devices"
+            >
+              <Sparkles size={12} color="var(--accent-red)" />
+              <span>Sign In</span>
+            </button>
+          )}
 
           <Link
             href="/settings"
@@ -200,6 +363,13 @@ export default function Navbar() {
           <span>Settings</span>
         </Link>
       </nav>
+
+      {/* Authentication Modal */}
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        onSuccess={() => setIsAuthOpen(false)}
+      />
     </>
   );
 }

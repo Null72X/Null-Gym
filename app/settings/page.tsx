@@ -51,6 +51,9 @@ import {
   Heart,
   ExternalLink,
   Github,
+  User,
+  LogOut,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   isAppOffline,
@@ -60,6 +63,8 @@ import {
   clearOfflineCache,
   getOfflineCacheStats,
 } from '../../lib/offlineManager';
+import { initAuth, onAuthChange, signOutUser, AppUser } from '../../lib/authService';
+import AuthModal from '../../components/AuthModal';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -112,8 +117,15 @@ export default function SettingsPage() {
   } | null>(null);
   const [isTestingDb, setIsTestingDb] = useState<boolean>(false);
   const [isSqlCopied, setIsSqlCopied] = useState<boolean>(false);
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
 
   useEffect(() => {
+    initAuth();
+    const unsubAuth = onAuthChange((u) => {
+      setUser(u);
+    });
+
     const unsubCloud = onCloudStatus((info) => {
       setCloudInfo(info);
     });
@@ -158,6 +170,7 @@ export default function SettingsPage() {
     });
 
     return () => {
+      unsubAuth();
       unsubCloud();
       unsubOffline();
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
@@ -387,6 +400,137 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
 
       {/* Settings Grid */}
       <div className="responsive-grid-2" style={{ marginBottom: '14px' }}>
+        {/* 0. User Account & Private Cloud Profile Card */}
+        <div className="clean-card" style={{ gridColumn: '1 / -1' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <h3
+              style={{
+                fontSize: '0.95rem',
+                fontWeight: 800,
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <User size={18} color="var(--accent-red)" />
+              <span>Account &amp; Cloud Profile</span>
+            </h3>
+            <span
+              className={`cloud-status-pill ${user ? 'synced' : 'offline'}`}
+              style={{ fontSize: '0.68rem', padding: '3px 8px' }}
+            >
+              {user ? '🟢 Private Account Connected' : '👤 Guest (Local Mode)'}
+            </span>
+          </div>
+
+          {user ? (
+            <div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: '12px',
+                  padding: '14px 16px',
+                  marginBottom: '14px',
+                }}
+              >
+                {user.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.name}
+                    style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '50%',
+                      background: 'var(--accent-red)',
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '1.2rem',
+                      fontWeight: 800,
+                    }}
+                  >
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', marginBottom: '2px' }}>
+                    {user.name}
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {user.email}
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: '#86efac', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <ShieldCheck size={13} />
+                    <span>Private Cloud Database Scope: <code style={{ color: '#93c5fd' }}>plan_{user.id.slice(0, 8)}...</code></span>
+                  </div>
+                </div>
+              </div>
+
+              <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.5 }}>
+                Your workouts, sets, weights, and logs are synchronized privately to your personal cloud account. Any device you sign into with this account will immediately download your 6-week program.
+              </p>
+
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn-clean btn-primary btn-sm"
+                  onClick={async () => {
+                    triggerToast('⚡ Pushing latest data to private cloud...');
+                    await forcePushAllToCloud();
+                    triggerToast('🟢 Cloud backup complete!');
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Cloud size={13} />
+                  <span>Force Cloud Backup Now</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="btn-clean btn-sm"
+                  onClick={async () => {
+                    await signOutUser();
+                    triggerToast('Signed out. Switched to Guest mode.');
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#f87171' }}
+                >
+                  <LogOut size={13} />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
+                You are currently in <strong>Guest Mode</strong>. All workouts, history, and settings are saved locally on this browser. Sign in with 1-tap Google or Magic Link to access private cloud synchronization between your phone, tablet, and PC.
+              </p>
+
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn-clean btn-primary btn-sm"
+                  onClick={() => setIsAuthOpen(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px' }}
+                >
+                  <Sparkles size={14} />
+                  <span>Sign In / Create Account (1-Tap)</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Offline Mode & Local Storage Engine Card */}
         <div className="clean-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -1235,6 +1379,13 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
       <div className={`clean-toast ${toastMessage ? 'show' : ''}`}>
         {toastMessage}
       </div>
+
+      {/* Authentication Modal */}
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        onSuccess={() => setIsAuthOpen(false)}
+      />
     </div>
   );
 }

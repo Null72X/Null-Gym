@@ -63,13 +63,15 @@ function mapSupabaseRowToHistoryEntry(row: any): WorkoutHistoryEntry {
   };
 }
 
-function mapHistoryEntryToSupabaseRow(entry: WorkoutHistoryEntry) {
+function mapHistoryEntryToSupabaseRow(entry: WorkoutHistoryEntry, userId?: string | null) {
+  const effectiveUserId = userId || entry.userId || 'guest';
   return {
     id: entry.id,
     session_date: entry.date,
     day_title: entry.workoutTitle,
     week_number: entry.weekNumber,
     sets: {
+      userId: effectiveUserId,
       exercises: entry.exercises,
       dayOfWeek: entry.dayOfWeek,
       completedExercises: entry.completedExercises,
@@ -132,8 +134,13 @@ async function persistDatabase(data: Partial<typeof inMemoryDatabase>) {
 }
 
 // GET /api/sync -> 100% Automatic Cloud & Server Database Pull
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+    const planId = userId ? `plan_${userId}` : 'default_plan';
+    const settingsId = userId ? `settings_${userId}` : 'settings';
+
     let cloudPlan: WeekPlan[] | null = null;
     let cloudHistory: WorkoutHistoryEntry[] | null = null;
     let cloudSettings: { weekNumber: number; dayIndex: number; unit: WeightUnit } | null = null;
@@ -142,21 +149,27 @@ export async function GET() {
     // 1. If Supabase is configured, try querying the cloud database first
     if (isSupabaseConfigured && supabaseServer) {
       try {
+        let histQuery = supabaseServer
+          .from('workout_history')
+          .select('*');
+
+        if (userId) {
+          histQuery = histQuery.filter('sets->>userId', 'eq', userId);
+        }
+
         const [planRes, historyRes, settingsRes] = await Promise.allSettled([
           supabaseServer
             .from('workout_plan')
             .select('weeks, updated_at')
-            .eq('id', 'default_plan')
+            .eq('id', planId)
             .maybeSingle(),
-          supabaseServer
-            .from('workout_history')
-            .select('*')
+          histQuery
             .order('created_at', { ascending: false })
             .limit(250),
           supabaseServer
             .from('app_settings')
             .select('settings, updated_at')
-            .eq('id', 'settings')
+            .eq('id', settingsId)
             .maybeSingle(),
         ]);
 
@@ -193,14 +206,15 @@ export async function GET() {
 
     // 2. Fallback to server local/tmp database
     const db = loadDatabaseFromDisk();
-    const validPlan = db.plan ? ensureSixWeeks(db.plan) : null;
+    const userDb = userId && (db as any).users?.[userId] ? (db as any).users[userId] : db;
+    const validPlan = userDb.plan ? ensureSixWeeks(userDb.plan) : null;
 
     return NextResponse.json({
       success: true,
       plan: validPlan,
-      history: db.history || [],
-      settings: db.settings || { weekNumber: 1, dayIndex: 0, unit: 'kg' },
-      updatedAt: db.updatedAt,
+      history: userDb.history || [],
+      settings: userDb.settings || { weekNumber: 1, dayIndex: 0, unit: 'kg' },
+      updatedAt: userDb.updatedAt || db.updatedAt,
       source: 'server_database',
     });
   } catch (err: any) {
@@ -215,22 +229,50 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { action, data } = body;
+    const { action, data, userId } = body;
+    const planId = userId ? `plan_${userId}` : 'default_plan';
+    const settingsId = userId ? `settings_${userId}` : 'settings';
     const nowIso = new Date().toISOString();
 
     const db = loadDatabaseFromDisk();
     let rlsBlocked = false;
 
-    if (action === 'save_plan' && Array.isArray(data)) {
-      db.plan = ensureSixWeeks(data);
-    } else if (action === 'save_history' && Array.isArray(data)) {
-      db.history = data;
-    } else if (action === 'save_settings' && data) {
-      db.settings = { ...db.settings, ...data };
-    } else if (action === 'save_all' && data) {
-      if (data.plan) db.plan = ensureSixWeeks(data.plan);
-      if (data.history) db.history = data.history;
-      if (data.settings) db.settings = data.settings;
+    // Handle user scoped in-memory database
+    if (userId) {
+      if (!(db as any).users) (db as any).users = {};
+      if (!(db as any).users[userId]) {
+        (db as any).users[userId] = {
+          plan: null,
+          history: [],
+          settings: { weekNumber: 1, dayIndex: 0, unit: 'kg' },
+          updatedAt: nowIso,
+        };
+      }
+      const target = (db as any).users[userId];
+      if (action === 'save_plan' && Array.isArray(data)) {
+        target.plan = ensureSixWeeks(data);
+      } else if (action === 'save_history' && Array.isArray(data)) {
+        target.history = data;
+      } else if (action === 'save_settings' && data) {
+        target.settings = { ...target.settings, ...data };
+      } else if (action === 'save_all' && data) {
+        if (data.plan) target.plan = ensureSixWeeks(data.plan);
+        if (data.history) target.history = data.history;
+        if (data.settings) target.settings = data.settings;
+      }
+      target.updatedAt = nowIso;
+    } else {
+      if (action === 'save_plan' && Array.isArray(data)) {
+        db.plan = ensureSixWeeks(data);
+      } else if (action === 'save_history' && Array.isArray(data)) {
+        db.history = data;
+      } else if (action === 'save_settings' && data) {
+        db.settings = { ...db.settings, ...data };
+      } else if (action === 'save_all' && data) {
+        if (data.plan) db.plan = ensureSixWeeks(data.plan);
+        if (data.history) db.history = data.history;
+        if (data.settings) db.settings = data.settings;
+      }
     }
 
     await persistDatabase(db);
@@ -245,7 +287,7 @@ export async function POST(request: Request) {
             .from('workout_plan')
             .upsert(
               {
-                id: 'default_plan',
+                id: planId,
                 weeks: ensureSixWeeks(planToSave),
                 updated_at: nowIso,
               },
@@ -258,7 +300,7 @@ export async function POST(request: Request) {
         if (action === 'save_history' || (action === 'save_all' && data?.history)) {
           const historyToSave: WorkoutHistoryEntry[] = action === 'save_history' ? data : data.history;
           if (Array.isArray(historyToSave) && historyToSave.length > 0) {
-            const rows = historyToSave.map(mapHistoryEntryToSupabaseRow);
+            const rows = historyToSave.map((h) => mapHistoryEntryToSupabaseRow(h, userId));
             const res = await supabaseServer
               .from('workout_history')
               .upsert(rows, { onConflict: 'id' });
@@ -273,7 +315,7 @@ export async function POST(request: Request) {
             .from('app_settings')
             .upsert(
               {
-                id: 'settings',
+                id: settingsId,
                 settings: settingsToSave,
                 updated_at: nowIso,
               },

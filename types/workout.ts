@@ -107,6 +107,7 @@ export interface SavedExercisePerformance {
 
 export interface WorkoutHistoryEntry {
   id: string;
+  userId?: string;
   date: string;
   weekNumber: number;
   dayOfWeek: string;

@@ -11,7 +11,11 @@ export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 // Public / client-side Supabase client (anon or publishable key)
 export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false },
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
     })
   : null;
 

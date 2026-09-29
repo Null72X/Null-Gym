@@ -4,7 +4,8 @@ import { isAppOffline } from './offlineManager';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { WeekPlan, WorkoutHistoryEntry, WeightUnit } from '../types/workout';
 import { ensureSixWeeks } from './planDefaults';
-import { mapHistoryEntryToSupabaseRow } from './supabaseSync';
+import { mapHistoryEntryToSupabaseRow, getUserPlanId, getUserSettingsId } from './supabaseSync';
+import { getCurrentUser } from './authService';
 
 export interface OutboxItem {
   id: string;
@@ -150,6 +151,11 @@ export async function flushOutboxQueue(): Promise<boolean> {
   const nowIso = new Date().toISOString();
   const remaining: OutboxItem[] = [];
 
+  const user = getCurrentUser();
+  const userId = user ? user.id : null;
+  const planId = getUserPlanId(userId);
+  const settingsId = getUserSettingsId(userId);
+
   for (const item of queue) {
     try {
       let succeeded = false;
@@ -158,7 +164,7 @@ export async function flushOutboxQueue(): Promise<boolean> {
       const apiRes = await fetch('/api/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: item.action, data: item.data }),
+        body: JSON.stringify({ action: item.action, userId, data: item.data }),
       }).catch(() => null);
 
       if (apiRes && apiRes.ok) {
@@ -169,16 +175,16 @@ export async function flushOutboxQueue(): Promise<boolean> {
       if (isSupabaseConfigured && supabase) {
         if (item.action === 'save_plan' && Array.isArray(item.data)) {
           await supabase.from('workout_plan').upsert(
-            { id: 'default_plan', weeks: ensureSixWeeks(item.data), updated_at: nowIso },
+            { id: planId, weeks: ensureSixWeeks(item.data), updated_at: nowIso },
             { onConflict: 'id' }
           );
         } else if (item.action === 'save_history' && Array.isArray(item.data) && item.data.length > 0) {
           await supabase
             .from('workout_history')
-            .upsert(item.data.map(mapHistoryEntryToSupabaseRow), { onConflict: 'id' });
+            .upsert(item.data.map((h: WorkoutHistoryEntry) => mapHistoryEntryToSupabaseRow(h, userId)), { onConflict: 'id' });
         } else if (item.action === 'save_settings' && item.data) {
           await supabase.from('app_settings').upsert(
-            { id: 'settings', settings: item.data, updated_at: nowIso },
+            { id: settingsId, settings: item.data, updated_at: nowIso },
             { onConflict: 'id' }
           );
         } else if (item.action === 'save_all' && item.data) {
@@ -186,7 +192,7 @@ export async function flushOutboxQueue(): Promise<boolean> {
           if (item.data.plan) {
             promises.push(
               supabase.from('workout_plan').upsert(
-                { id: 'default_plan', weeks: ensureSixWeeks(item.data.plan), updated_at: nowIso },
+                { id: planId, weeks: ensureSixWeeks(item.data.plan), updated_at: nowIso },
                 { onConflict: 'id' }
               )
             );
@@ -195,13 +201,13 @@ export async function flushOutboxQueue(): Promise<boolean> {
             promises.push(
               supabase
                 .from('workout_history')
-                .upsert(item.data.history.map(mapHistoryEntryToSupabaseRow), { onConflict: 'id' })
+                .upsert(item.data.history.map((h: WorkoutHistoryEntry) => mapHistoryEntryToSupabaseRow(h, userId)), { onConflict: 'id' })
             );
           }
           if (item.data.settings) {
             promises.push(
               supabase.from('app_settings').upsert(
-                { id: 'settings', settings: item.data.settings, updated_at: nowIso },
+                { id: settingsId, settings: item.data.settings, updated_at: nowIso },
                 { onConflict: 'id' }
               )
             );

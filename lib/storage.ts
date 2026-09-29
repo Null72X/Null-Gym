@@ -22,8 +22,11 @@ import {
   pushAllToCloud,
   pullAllFromCloud,
   notifyCloudStatus,
+  getUserPlanId,
+  getUserSettingsId,
 } from './supabaseSync';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
+import { onAuthChange, getCurrentUser } from './authService';
 
 const STORAGE_KEYS = {
   WEEKS: 'gym_weeks_v6',
@@ -582,7 +585,13 @@ export function initBackgroundCloudSync() {
   // 1. Initial immediate sync on mount
   performContinuousCloudSync(true);
 
-  // 2. Instant sync when user unlocks phone, returns to app, or focuses window
+  // 2. React to Auth changes (sign-in, switch account, sign-out)
+  onAuthChange(() => {
+    lastSyncedServerTimestamp = null;
+    performContinuousCloudSync(true);
+  });
+
+  // 3. Instant sync when user unlocks phone, returns to app, or focuses window
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       lastUserInteractionTime = Date.now();
@@ -600,7 +609,7 @@ export function initBackgroundCloudSync() {
     performContinuousCloudSync(true);
   });
 
-  // 3. Adaptive battery-friendly heartbeat loop (8s active -> 18s rest timer -> 45s idle)
+  // 4. Adaptive battery-friendly heartbeat loop (8s active -> 18s rest timer -> 45s idle)
   let adaptiveTimer: any = null;
   const scheduleNextHeartbeat = () => {
     if (adaptiveTimer) clearTimeout(adaptiveTimer);
@@ -625,7 +634,7 @@ export function initBackgroundCloudSync() {
 
   scheduleNextHeartbeat();
 
-  // 4. Supabase Realtime channel subscription (instant sub-second multi-device push)
+  // 5. Supabase Realtime channel subscription (instant sub-second multi-device push)
   if (isSupabaseConfigured && supabase) {
     try {
       supabase
@@ -633,7 +642,13 @@ export function initBackgroundCloudSync() {
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'workout_plan' },
-          () => performContinuousCloudSync(true)
+          (payload: any) => {
+            const user = getCurrentUser();
+            const planId = getUserPlanId(user?.id);
+            if (!payload?.new?.id || payload.new.id === planId) {
+              performContinuousCloudSync(true);
+            }
+          }
         )
         .on(
           'postgres_changes',
@@ -643,7 +658,13 @@ export function initBackgroundCloudSync() {
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'app_settings' },
-          () => performContinuousCloudSync(true)
+          (payload: any) => {
+            const user = getCurrentUser();
+            const settingsId = getUserSettingsId(user?.id);
+            if (!payload?.new?.id || payload.new.id === settingsId) {
+              performContinuousCloudSync(true);
+            }
+          }
         )
         .subscribe();
     } catch {}

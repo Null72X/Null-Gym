@@ -3,6 +3,7 @@ import { WeekPlan, WorkoutHistoryEntry, WeightUnit } from '../types/workout';
 import { ensureSixWeeks } from './planDefaults';
 import { isAppOffline } from './offlineManager';
 import { enqueueOutboxItem, flushOutboxQueue } from './outboxQueue';
+import { getCurrentUser } from './authService';
 
 export type CloudSyncStatus = 'synced' | 'syncing' | 'offline' | 'needs_rls_fix' | 'error';
 
@@ -22,6 +23,14 @@ let currentInfo: CloudSyncInfo = {
   lastSyncedAt: new Date().toLocaleTimeString(),
   needsRlsFix: false,
 };
+
+export function getUserPlanId(userId?: string | null): string {
+  return userId ? `plan_${userId}` : 'default_plan';
+}
+
+export function getUserSettingsId(userId?: string | null): string {
+  return userId ? `settings_${userId}` : 'settings';
+}
 
 export function getCloudSyncInfo(): CloudSyncInfo {
   return currentInfo;
@@ -67,6 +76,7 @@ export function mapSupabaseRowToHistoryEntry(row: any): WorkoutHistoryEntry {
   let completedSets = 0;
   let totalSets = 0;
   let totalVolumeKg = 0;
+  let userId: string | undefined = undefined;
 
   if (row.sets) {
     if (Array.isArray(row.sets)) {
@@ -81,11 +91,13 @@ export function mapSupabaseRowToHistoryEntry(row: any): WorkoutHistoryEntry {
       completedSets = row.sets.completedSets ?? 0;
       totalSets = row.sets.totalSets ?? 0;
       totalVolumeKg = row.sets.totalVolumeKg ?? 0;
+      userId = row.sets.userId || row.user_id || undefined;
     }
   }
 
   return {
     id: row.id,
+    userId,
     date: row.session_date || row.created_at || new Date().toISOString(),
     weekNumber: row.week_number || 1,
     dayOfWeek: dayOfWeek,
@@ -99,13 +111,15 @@ export function mapSupabaseRowToHistoryEntry(row: any): WorkoutHistoryEntry {
   };
 }
 
-export function mapHistoryEntryToSupabaseRow(entry: WorkoutHistoryEntry) {
+export function mapHistoryEntryToSupabaseRow(entry: WorkoutHistoryEntry, explicitUserId?: string | null) {
+  const userId = explicitUserId || entry.userId || getCurrentUser()?.id || 'guest';
   return {
     id: entry.id,
     session_date: entry.date,
     day_title: entry.workoutTitle,
     week_number: entry.weekNumber,
     sets: {
+      userId,
       exercises: entry.exercises,
       dayOfWeek: entry.dayOfWeek,
       completedExercises: entry.completedExercises,
@@ -129,9 +143,13 @@ export async function pushAllToCloud(
   settings: { weekNumber: number; dayIndex: number; unit: WeightUnit }
 ): Promise<boolean> {
   const fullWeeks = ensureSixWeeks(weeks);
+  const user = getCurrentUser();
+  const userId = user ? user.id : null;
+  const planId = getUserPlanId(userId);
+  const settingsId = getUserSettingsId(userId);
 
   if (isAppOffline()) {
-    enqueueOutboxItem('save_all', { plan: fullWeeks, history, settings });
+    enqueueOutboxItem('save_all', { plan: fullWeeks, history, settings, userId });
     notifyCloudStatus('offline', 'Offline (Saved locally, auto-sync queued)');
     return true;
   }
@@ -148,6 +166,7 @@ export async function pushAllToCloud(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'save_all',
+        userId,
         data: { plan: fullWeeks, history, settings },
       }),
     })
@@ -163,7 +182,7 @@ export async function pushAllToCloud(
       const p1 = Promise.resolve(
         supabase.from('workout_plan').upsert(
           {
-            id: 'default_plan',
+            id: planId,
             weeks: fullWeeks,
             updated_at: nowIso,
           },
@@ -176,14 +195,17 @@ export async function pushAllToCloud(
           ? Promise.resolve(
               supabase
                 .from('workout_history')
-                .upsert(history.map(mapHistoryEntryToSupabaseRow), { onConflict: 'id' })
+                .upsert(
+                  history.map((h) => mapHistoryEntryToSupabaseRow(h, userId)),
+                  { onConflict: 'id' }
+                )
             )
           : Promise.resolve({ error: null });
 
       const p3 = Promise.resolve(
         supabase.from('app_settings').upsert(
           {
-            id: 'settings',
+            id: settingsId,
             settings,
             updated_at: nowIso,
           },
@@ -209,7 +231,7 @@ export async function pushAllToCloud(
     }
     return true;
   } catch {
-    enqueueOutboxItem('save_all', { plan: fullWeeks, history, settings });
+    enqueueOutboxItem('save_all', { plan: fullWeeks, history, settings, userId });
     notifyCloudStatus('synced', 'Saved locally (Queued for sync)');
     return true;
   }
@@ -230,6 +252,9 @@ export function debouncedPushPlanToCloud(weeks: WeekPlan[], delayMs = 350) {
 
 export async function pushPlanToCloud(weeks: WeekPlan[]): Promise<boolean> {
   const fullWeeks = ensureSixWeeks(weeks);
+  const user = getCurrentUser();
+  const userId = user ? user.id : null;
+  const planId = getUserPlanId(userId);
 
   if (isAppOffline()) {
     enqueueOutboxItem('save_plan', fullWeeks);
@@ -246,7 +271,7 @@ export async function pushPlanToCloud(weeks: WeekPlan[]): Promise<boolean> {
     const apiPromise = fetch('/api/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'save_plan', data: fullWeeks }),
+      body: JSON.stringify({ action: 'save_plan', userId, data: fullWeeks }),
     })
       .then((res) => res.json())
       .then((json) => {
@@ -262,7 +287,7 @@ export async function pushPlanToCloud(weeks: WeekPlan[]): Promise<boolean> {
           .from('workout_plan')
           .upsert(
             {
-              id: 'default_plan',
+              id: planId,
               weeks: fullWeeks,
               updated_at: nowIso,
             },
@@ -294,6 +319,9 @@ export async function pushPlanToCloud(weeks: WeekPlan[]): Promise<boolean> {
 // PUSH HISTORY
 // -------------------------------------------------------------
 export async function pushHistoryToCloud(history: WorkoutHistoryEntry[]): Promise<boolean> {
+  const user = getCurrentUser();
+  const userId = user ? user.id : null;
+
   if (isAppOffline()) {
     enqueueOutboxItem('save_history', history);
     return true;
@@ -307,7 +335,7 @@ export async function pushHistoryToCloud(history: WorkoutHistoryEntry[]): Promis
     const apiPromise = fetch('/api/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'save_history', data: history }),
+      body: JSON.stringify({ action: 'save_history', userId, data: history }),
     })
       .then((res) => res.json())
       .then((json) => {
@@ -321,7 +349,10 @@ export async function pushHistoryToCloud(history: WorkoutHistoryEntry[]): Promis
       supaPromise = Promise.resolve(
         supabase
           .from('workout_history')
-          .upsert(history.map(mapHistoryEntryToSupabaseRow), { onConflict: 'id' })
+          .upsert(
+            history.map((h) => mapHistoryEntryToSupabaseRow(h, userId)),
+            { onConflict: 'id' }
+          )
       )
         .then((res) => {
           if (res.error?.code === '42501') hasRlsError = true;
@@ -364,6 +395,10 @@ export async function pushSettingsToCloud(settings: {
   dayIndex: number;
   unit: WeightUnit;
 }): Promise<boolean> {
+  const user = getCurrentUser();
+  const userId = user ? user.id : null;
+  const settingsId = getUserSettingsId(userId);
+
   if (isAppOffline()) {
     enqueueOutboxItem('save_settings', settings);
     return true;
@@ -374,7 +409,7 @@ export async function pushSettingsToCloud(settings: {
     fetch('/api/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'save_settings', data: settings }),
+      body: JSON.stringify({ action: 'save_settings', userId, data: settings }),
     }).catch(() => {});
 
     if (isSupabaseConfigured && supabase) {
@@ -383,7 +418,7 @@ export async function pushSettingsToCloud(settings: {
           .from('app_settings')
           .upsert(
             {
-              id: 'settings',
+              id: settingsId,
               settings,
               updated_at: nowIso,
             },
@@ -416,24 +451,35 @@ export async function pullAllFromCloud(): Promise<{
   // Attempt to flush any pending outbox items before pulling fresh state
   flushOutboxQueue().catch(() => {});
 
+  const user = getCurrentUser();
+  const userId = user ? user.id : null;
+  const planId = getUserPlanId(userId);
+  const settingsId = getUserSettingsId(userId);
+
   // 1. Direct Supabase Query (Fastest on client)
   if (isSupabaseConfigured && supabase) {
     try {
+      let historyQuery = supabase
+        .from('workout_history')
+        .select('*');
+
+      if (userId) {
+        historyQuery = historyQuery.filter('sets->>userId', 'eq', userId);
+      }
+
       const [planRes, historyRes, settingsRes] = await Promise.allSettled([
         supabase
           .from('workout_plan')
           .select('weeks, updated_at')
-          .eq('id', 'default_plan')
+          .eq('id', planId)
           .maybeSingle(),
-        supabase
-          .from('workout_history')
-          .select('*')
+        historyQuery
           .order('created_at', { ascending: false })
           .limit(250),
         supabase
           .from('app_settings')
           .select('settings, updated_at')
-          .eq('id', 'settings')
+          .eq('id', settingsId)
           .maybeSingle(),
       ]);
 
@@ -441,10 +487,12 @@ export async function pullAllFromCloud(): Promise<{
       let cloudHistory: WorkoutHistoryEntry[] | null = null;
       let cloudSettings: any = null;
       let cloudUpdatedAt: string | null = null;
+      let planQuerySucceeded = false;
 
-      if (planRes.status === 'fulfilled' && !planRes.value.error && planRes.value.data) {
+      if (planRes.status === 'fulfilled' && !planRes.value.error) {
+        planQuerySucceeded = true;
         const d = planRes.value.data;
-        if (Array.isArray(d.weeks) && d.weeks.length > 0) {
+        if (d && Array.isArray(d.weeks) && d.weeks.length > 0) {
           cloudPlan = ensureSixWeeks(d.weeks);
           cloudUpdatedAt = d.updated_at || cloudUpdatedAt;
         }
@@ -458,10 +506,10 @@ export async function pullAllFromCloud(): Promise<{
         cloudSettings = settingsRes.value.data.settings;
       }
 
-      if (cloudPlan && cloudPlan.length > 0) {
+      if (planQuerySucceeded) {
         return {
           plan: cloudPlan,
-          history: cloudHistory,
+          history: cloudHistory || [],
           settings: cloudSettings,
           updatedAt: cloudUpdatedAt,
           source: 'supabase',
@@ -472,7 +520,8 @@ export async function pullAllFromCloud(): Promise<{
 
   // 2. Fallback to /api/sync (Server DB / serverless proxy)
   try {
-    const res = await fetch('/api/sync', { cache: 'no-store' });
+    const syncUrl = userId ? `/api/sync?userId=${encodeURIComponent(userId)}` : '/api/sync';
+    const res = await fetch(syncUrl, { cache: 'no-store' });
     if (res.ok) {
       const body = await res.json();
       if (body && body.success) {
