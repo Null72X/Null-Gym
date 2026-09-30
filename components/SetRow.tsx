@@ -306,8 +306,8 @@ export default function SetRow({
         </button>
       )}
 
-      {/* Timer Editors (Tracker Mode) */}
-      {mode === 'tracker' && (
+      {/* Timer Editors (Planner Mode) */}
+      {mode === 'planner' && (
         <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
           <input
             type="text"
