@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { initAuth } from '@/lib/authService';
@@ -10,32 +10,53 @@ export default function AuthCallbackPage() {
   const router = useRouter();
   const [statusMessage, setStatusMessage] = useState('Verifying your sign in...');
   const [error, setError] = useState<string | null>(null);
+  const handledRef = useRef(false);
 
   useEffect(() => {
-    async function handleAuth() {
+    if (handledRef.current) return;
+    handledRef.current = true;
+
+    async function processAuthCallback() {
       if (!isSupabaseConfigured || !supabase) {
         router.replace('/login');
         return;
       }
 
       let nextUrl = '/';
+
       if (typeof window !== 'undefined') {
         const searchParams = new URLSearchParams(window.location.search);
         nextUrl = searchParams.get('next') || '/';
 
-        // Check if provider returned an error in query params or hash
-        const urlError = searchParams.get('error_description') || searchParams.get('error');
-        if (urlError) {
-          console.error('[Auth Callback] Provider error:', urlError);
-          router.replace(`/login?error=${encodeURIComponent(urlError)}`);
+        // Check for error in query or hash
+        const queryError = searchParams.get('error_description') || searchParams.get('error');
+        if (queryError) {
+          console.error('[Auth Callback] OAuth query error:', queryError);
+          router.replace(`/login?error=${encodeURIComponent(queryError)}`);
           return;
         }
 
+        // Also check hash for error parameters (implicit flow)
+        if (window.location.hash) {
+          const hashParams = new URLSearchParams(window.location.hash.substring(1));
+          const hashError = hashParams.get('error_description') || hashParams.get('error');
+          if (hashError) {
+            console.error('[Auth Callback] OAuth hash error:', hashError);
+            router.replace(`/login?error=${encodeURIComponent(hashError)}`);
+            return;
+          }
+        }
+
+        // PKCE Code Exchange
         const code = searchParams.get('code');
         if (code) {
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-          if (exchangeError) {
-            console.warn('[Auth Callback] Code exchange notice:', exchangeError);
+          try {
+            const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+            if (exchangeError) {
+              console.warn('[Auth Callback] Code exchange warning:', exchangeError.message);
+            }
+          } catch (err) {
+            console.warn('[Auth Callback] Code exchange caught error:', err);
           }
         }
       }
@@ -45,44 +66,54 @@ export default function AuthCallbackPage() {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
-          throw sessionError;
+          console.error('[Auth Callback] Session retrieval error:', sessionError);
         }
 
-        if (session) {
+        if (session?.user) {
           await initAuth();
           setStatusMessage('Synchronizing workouts...');
-          await forcePullAllFromCloud().catch(() => {});
+          try {
+            await forcePullAllFromCloud();
+          } catch (e) {
+            console.warn('[Auth Callback] Cloud pull notice:', e);
+          }
           router.replace(nextUrl);
           return;
         }
 
-        // Listen for state change in case of delayed hash exchange
-        const { data: authListener } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-          if (newSession) {
+        // If session not immediately available (e.g. hash processing in progress), wait for onAuthStateChange
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+          if (newSession?.user) {
+            subscription.unsubscribe();
             await initAuth();
-            await forcePullAllFromCloud().catch(() => {});
+            try {
+              await forcePullAllFromCloud();
+            } catch (e) {}
             router.replace(nextUrl);
           }
         });
 
-        setTimeout(() => {
+        // Fail-safe redirect after 2.5s
+        const timer = setTimeout(() => {
+          subscription.unsubscribe();
           router.replace(nextUrl);
-        }, 3000);
+        }, 2500);
 
         return () => {
-          authListener?.subscription?.unsubscribe();
+          subscription.unsubscribe();
+          clearTimeout(timer);
         };
       } catch (err: any) {
-        console.error('[Auth Callback] Error:', err);
+        console.error('[Auth Callback] Exception:', err);
         const errMsg = err?.message || 'Failed to complete sign in.';
         setError(errMsg);
         setTimeout(() => {
           router.replace(`/login?error=${encodeURIComponent(errMsg)}`);
-        }, 2000);
+        }, 1500);
       }
     }
 
-    handleAuth();
+    processAuthCallback();
   }, [router]);
 
   return (
@@ -122,13 +153,11 @@ export default function AuthCallbackPage() {
           }}
         >
           <div
+            className="auth-spinner"
             style={{
               width: '24px',
               height: '24px',
-              border: '3px solid rgba(239, 68, 68, 0.2)',
-              borderTopColor: 'var(--accent-red)',
-              borderRadius: '50%',
-              animation: 'spin 0.8s linear infinite',
+              borderWidth: '3px',
             }}
           />
         </div>
@@ -141,14 +170,6 @@ export default function AuthCallbackPage() {
           {error ? <span style={{ color: '#fca5a5' }}>{error}</span> : statusMessage}
         </p>
       </div>
-
-      <style jsx>{`
-        @keyframes spin {
-          to {
-            transform: rotate(360deg);
-          }
-        }
-      `}</style>
     </div>
   );
 }

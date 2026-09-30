@@ -1666,6 +1666,10 @@ body {
   to { transform: rotate(360deg); }
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .login-page-wrap {
   min-height: 100vh;
   min-height: 100dvh;
