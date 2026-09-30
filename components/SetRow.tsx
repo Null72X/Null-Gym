@@ -173,10 +173,8 @@ export default function SetRow({
               outline: 'none',
               fontFamily: 'var(--font-mono)',
               fontSize: '0.75rem',
-              ...(mode === 'tracker' ? { opacity: 0.7, pointerEvents: 'none' } : {})
             }}
             onChange={(e) => onUpdate({ ...set, duration: e.target.value, reps: e.target.value })}
-            readOnly={mode === 'tracker'}
           />
 
           {/* Cardio Distance / Intensity */}
@@ -221,10 +219,8 @@ export default function SetRow({
               outline: 'none',
               fontFamily: 'var(--font-mono)',
               fontSize: '0.75rem',
-              ...(mode === 'tracker' ? { opacity: 0.7, pointerEvents: 'none' } : {})
             }}
             onChange={(e) => onUpdate({ ...set, duration: e.target.value, reps: e.target.value })}
-            readOnly={mode === 'tracker'}
           />
         </>
       ) : trackingType === 'distance_time' ? (
@@ -267,10 +263,8 @@ export default function SetRow({
               fontFamily: 'var(--font-mono)',
               fontSize: '0.75rem',
               textAlign: 'center',
-              ...(mode === 'tracker' ? { opacity: 0.7, pointerEvents: 'none' } : {})
             }}
             onChange={(e) => onUpdate({ ...set, duration: e.target.value })}
-            readOnly={mode === 'tracker'}
           />
         </>
       ) : (
@@ -312,7 +306,31 @@ export default function SetRow({
         </button>
       )}
 
-      {/* 1-Tap 90s Work Timer Button for this set (Tracker Mode) */}
+      {/* Timer Editors (Tracker Mode) */}
+      {mode === 'tracker' && (
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          <input
+            type="text"
+            className="set-reps-input"
+            style={{ width: '38px', fontSize: '0.65rem', padding: '2px', textAlign: 'center' }}
+            value={set.duration || ''}
+            placeholder="Work"
+            title="Work Timer (s)"
+            onChange={(e) => onUpdate({ ...set, duration: e.target.value })}
+          />
+          <input
+            type="text"
+            className="set-reps-input"
+            style={{ width: '38px', fontSize: '0.65rem', padding: '2px', textAlign: 'center' }}
+            value={set.rest || ''}
+            placeholder="Rest"
+            title="Rest Timer (s)"
+            onChange={(e) => onUpdate({ ...set, rest: e.target.value })}
+          />
+        </div>
+      )}
+
+      {/* 1-Tap Work Timer Button for this set (Tracker Mode) */}
       {mode === 'tracker' && !set.completed && onStartTimer && (
         <button
           type="button"
@@ -325,10 +343,10 @@ export default function SetRow({
             }
             onStartTimer(duration);
           }}
-          title={isActiveTimerSet ? '90s Set Timer is running' : 'Start 90s Work Timer for this set'}
+          title={isActiveTimerSet ? 'Set Timer is running' : 'Start Work Timer for this set'}
         >
           {isActiveTimerSet ? <Zap size={11} color="var(--accent-red)" /> : <Clock size={11} />}
-          <span>90s</span>
+          <span>{set.duration || '90s'}</span>
         </button>
       )}
 
