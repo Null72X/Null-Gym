@@ -34,6 +34,7 @@ const STORAGE_KEYS = {
   LIBRARY: 'gym_library_v7_exercisedb',
   ACTIVE: 'gym_active_v6',
   PROGRESSION: 'gym_progression_v6',
+  ACTIVE_USER_ID: 'gym_active_user_id',
 };
 
 // 1,323 ExerciseDB Master exercise library with animated demonstrations & coaching cues
@@ -49,6 +50,33 @@ let cachedLibrary: ExerciseLibraryItem[] | null = null;
 let cachedActive: { weekNumber: number; dayIndex: number; unit: WeightUnit } | null = null;
 let cachedProgression: ProgressionConfig | null = null;
 let lastLocalEditTimestamp = 0;
+
+export function clearLocalUserData(): void {
+  const blank = createBlankWeeks();
+  cachedWeeks = blank;
+  cachedHistory = [];
+  cachedActive = { weekNumber: 1, dayIndex: 0, unit: 'kg' };
+  lastLocalEditTimestamp = 0;
+  lastSyncedServerTimestamp = null;
+
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(blank));
+      localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.ACTIVE, JSON.stringify({ weekNumber: 1, dayIndex: 0, unit: 'kg' }));
+    } catch (e) {
+      console.error('Failed to clear local user data', e);
+    }
+
+    planListeners.forEach((l) => l(blank));
+    historyListeners.forEach((l) => l([]));
+    settingsListeners.forEach((l) => l({ weekNumber: 1, dayIndex: 0, unit: 'kg' }));
+
+    crossTabChannel?.postMessage({ type: 'plan', data: blank });
+    crossTabChannel?.postMessage({ type: 'history', data: [] });
+    crossTabChannel?.postMessage({ type: 'settings', data: { weekNumber: 1, dayIndex: 0, unit: 'kg' } });
+  }
+}
 
 export function getLastLocalEditTimestamp() {
   return lastLocalEditTimestamp;
@@ -430,7 +458,7 @@ export async function performContinuousCloudSync(force = false) {
       return;
     }
 
-    // Case 2: Cloud has real exercises, but local device is empty (e.g. mobile opening for the first time)
+    // Case 2: Cloud has real exercises, but local device is empty (e.g. fresh login on this device)
     // -> Pull cloud workouts to local device automatically!
     if (serverHasExercises && !localHasExercises) {
       lastSyncedServerTimestamp = serverTime;
@@ -472,8 +500,23 @@ export async function performContinuousCloudSync(force = false) {
       }
     }
 
+    // Case 4: Neither has exercises (e.g. brand-new account)
+    if (!serverHasExercises && !localHasExercises) {
+      if (Array.isArray(cloudHistory) && cloudHistory.length > 0) {
+        cachedHistory = cloudHistory;
+        localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(cloudHistory));
+        historyListeners.forEach((l) => l(cloudHistory));
+      }
+
+      if (cloudSettings && typeof cloudSettings === 'object') {
+        cachedActive = cloudSettings;
+        localStorage.setItem(STORAGE_KEYS.ACTIVE, JSON.stringify(cloudSettings));
+        settingsListeners.forEach((l) => l(cloudSettings));
+      }
+    }
+
     // HISTORY MERGE: Always merge cloud and local history so no workout on ANY device is ever lost!
-    if (Array.isArray(cloudHistory)) {
+    if (Array.isArray(cloudHistory) && cloudHistory.length > 0) {
       const localHistory = getSavedHistory();
       const map = new Map<string, WorkoutHistoryEntry>();
       localHistory.forEach((h) => map.set(h.id, h));
@@ -538,9 +581,12 @@ export function mergeWeekPlans(localWeeks: WeekPlan[], cloudWeeks: WeekPlan[]): 
         mergedDay.completed = true;
       }
 
-      mergedDay.exercises.forEach((mergedEx, exIdx) => {
-        const localEx = localDay.exercises[exIdx];
-        if (!localEx || localEx.name !== mergedEx.name) return;
+      mergedDay.exercises.forEach((mergedEx) => {
+        const localEx = localDay.exercises.find(
+          (e) => (e.id && mergedEx.id && e.id === mergedEx.id) ||
+                 (e.name && mergedEx.name && e.name.trim().toLowerCase() === mergedEx.name.trim().toLowerCase())
+        );
+        if (!localEx) return;
 
         if (localEx.completed) {
           mergedEx.completed = true;
@@ -585,15 +631,47 @@ if (typeof window !== 'undefined') {
   });
 }
 
+let lastActiveUserId: string | null = null;
+
 export function initBackgroundCloudSync() {
   if (typeof window === 'undefined' || isSyncInitialized) return;
   isSyncInitialized = true;
+  lastActiveUserId = localStorage.getItem(STORAGE_KEYS.ACTIVE_USER_ID) || null;
 
   // 1. Initial immediate sync on mount
   performContinuousCloudSync(true);
 
   // 2. React to Auth changes (sign-in, switch account, sign-out)
-  onAuthChange(() => {
+  onAuthChange(async (user) => {
+    const currentUserId = user ? user.id : null;
+
+    if (currentUserId !== lastActiveUserId) {
+      lastActiveUserId = currentUserId;
+
+      if (typeof window !== 'undefined') {
+        if (currentUserId) {
+          localStorage.setItem(STORAGE_KEYS.ACTIVE_USER_ID, currentUserId);
+        } else {
+          localStorage.removeItem(STORAGE_KEYS.ACTIVE_USER_ID);
+        }
+      }
+
+      // If user signed out:
+      if (!currentUserId) {
+        clearLocalUserData();
+        notifyCloudStatus('synced', 'Signed Out', false);
+        return;
+      }
+
+      // If user switched to another account:
+      // Clear previous user's local workouts first so they never leak into the new account!
+      clearLocalUserData();
+
+      // Immediately pull the new user's cloud data
+      await performContinuousCloudSync(true);
+      return;
+    }
+
     lastSyncedServerTimestamp = null;
     performContinuousCloudSync(true);
   });
