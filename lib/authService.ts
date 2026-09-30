@@ -105,7 +105,7 @@ export async function getAuthToken(): Promise<string | null> {
 }
 
 export function getAuthRedirectUrl(nextPath?: string): string {
-  let origin = 'https://null-gym.vercel.app';
+  let origin = 'https://nullgym.vercel.app';
   if (typeof window !== 'undefined' && window.location.origin) {
     origin = window.location.origin;
   } else if (process.env.NEXT_PUBLIC_SITE_URL) {
