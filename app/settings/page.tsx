@@ -54,6 +54,8 @@ import {
   User,
   LogOut,
   ShieldCheck,
+  AlertTriangle,
+  X,
 } from 'lucide-react';
 import {
   isAppOffline,
@@ -346,52 +348,84 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
     e.target.value = '';
   };
 
-  // Reset to blank 6 weeks
-  const handleResetBlank = () => {
-    if (!confirm('Reset plan to a clean 6-week blank slate (Weeks 1 to 6)?')) return;
-    const blank = createBlankWeeks();
-    saveWeeks(blank);
-    triggerToast('Created blank 6-week plan!');
-    router.push('/planner');
+  // Reset Confirmation Modal State (Zero delay, non-blocking)
+  const [resetModal, setResetModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    willDelete: string[];
+    willKeepSafe: string[];
+    confirmText: string;
+    onConfirm: () => void;
+  } | null>(null);
+
+  // 1. Wipe All Planned Exercises (keeps history & PRs safe!)
+  const openCleanExercisesModal = () => {
+    setResetModal({
+      isOpen: true,
+      title: 'Clean All Exercises from Plan',
+      description: 'Remove all planned workout exercises, target reps, and weights from all 6 weeks?',
+      willDelete: ['All scheduled exercises across Weeks 1 to 6', 'Target reps, sets, and weights in the planner'],
+      willKeepSafe: ['All logged workout history & past sessions', 'All Personal Records (PRs)', 'Full 1,323 Exercise Library'],
+      confirmText: 'Yes, Wipe Planned Exercises',
+      onConfirm: () => {
+        clearAllExercisesFromPlan();
+        triggerToast('All exercises removed from 6-week plan');
+        window.location.replace('/planner');
+      },
+    });
   };
 
-  // Clear all exercises from all weeks
-  const handleCleanAllExercises = () => {
-    if (!confirm('Wipe all planned exercises from all 6 weeks? Your workout history and PRs will stay intact.')) return;
-    clearAllExercisesFromPlan();
-    triggerToast('All exercises removed from plan.');
-    router.push('/planner');
+  // 2. Reset 6-Week Plan to Clean Blank Template
+  const openResetBlankModal = () => {
+    setResetModal({
+      isOpen: true,
+      title: 'Reset to Blank 6-Week Plan',
+      description: 'Reset your workout routine to a clean 6-week blank template (Day 1 to Day 7 for Weeks 1–6)?',
+      willDelete: ['Custom week labels, custom day names, and planned exercises'],
+      willKeepSafe: ['All logged workout history & past sessions', 'All Personal Records (PRs)', 'Full 1,323 Exercise Library'],
+      confirmText: 'Yes, Reset to Blank Plan',
+      onConfirm: () => {
+        const blank = createBlankWeeks();
+        saveWeeks(blank);
+        triggerToast('Created fresh blank 6-week plan!');
+        window.location.replace('/planner');
+      },
+    });
   };
 
-  // Restore Master Exercise Catalog (1,323 items)
-  const handleRestoreCatalog = () => {
-    if (!confirm(`Restore the Master Exercise Library to all ${ALL_CATALOG_EXERCISES.length} default exercises with YouTube tutorials?`)) return;
-    const restored = restoreDefaultLibrary();
-    setLibraryCount(restored.length);
-    triggerToast(`Restored all ${restored.length} master exercises to library!`);
+  // 3. Clear Workout History & PRs
+  const openClearHistoryModal = () => {
+    setResetModal({
+      isOpen: true,
+      title: 'Clear Workout History & PRs',
+      description: 'Delete all logged workout sessions, completed sets history, and calculated personal records?',
+      willDelete: ['All logged workout sessions & timestamps', 'All PR progress curves & estimated 1RMs'],
+      willKeepSafe: ['Your 6-week planned workouts & routines', 'Exercise library catalog'],
+      confirmText: 'Yes, Clear History & PRs',
+      onConfirm: () => {
+        saveHistory([]);
+        triggerToast('Workout history and PRs cleared');
+        window.location.replace('/progress');
+      },
+    });
   };
 
-  // Clear Master Exercise Library
-  const handleClearLibrary = () => {
-    if (!confirm('Clear all exercises from the Exercise Library? You can re-restore them anytime.')) return;
-    saveLibrary([]);
-    setLibraryCount(0);
-    triggerToast('Exercise library cleared');
-  };
-
-  // Clear all workout history
-  const handleClearHistory = () => {
-    if (!confirm('Delete ALL logged workout history and personal records? This cannot be undone.')) return;
-    saveHistory([]);
-    triggerToast('Workout history and PRs cleared');
-  };
-
-  // Factory Reset Website
-  const handleFactoryReset = () => {
-    if (!confirm(`FACTORY RESET: This will reset all 6 weeks to blank, restore the full ${ALL_CATALOG_EXERCISES.length}-exercise library, and delete all history. Continue?`)) return;
-    factoryResetAll();
-    triggerToast('Reset complete!');
-    router.push('/');
+  // 4. Full Factory Reset
+  const openFactoryResetModal = () => {
+    setResetModal({
+      isOpen: true,
+      title: 'Factory Reset Entire Application',
+      description: 'Perform a complete wipe back to fresh out-of-the-box installation state?',
+      willDelete: ['All 6-week planned workouts', 'All logged workout history and PR records', 'Active day selection and settings cache'],
+      willKeepSafe: ['Restores complete 1,323 master exercise catalog'],
+      confirmText: 'Yes, Factory Reset Everything',
+      onConfirm: () => {
+        factoryResetAll();
+        triggerToast('Application factory reset complete!');
+        window.location.replace('/');
+      },
+    });
   };
 
   // Change default unit
@@ -1199,57 +1233,7 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
           </div>
         )}
 
-        {/* 5. Master Exercise Catalog */}
-        <div className="clean-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <h3
-              style={{
-                fontSize: '0.88rem',
-                fontWeight: 800,
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
-            >
-              <BookOpen size={15} color="var(--accent-red)" />
-              <span>Master Exercise Library ({libraryCount} Exercises)</span>
-            </h3>
-            <Link
-              href="/library"
-              className="btn-clean btn-sm"
-              style={{ fontSize: '0.7rem', padding: '3px 8px' }}
-            >
-              Browse Library ↗
-            </Link>
-          </div>
 
-          <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-            Curated library across the 7 Master Muscle Pillars and functional categories, with instant YouTube tutorials for each exercise.
-          </p>
-
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              className="btn-clean btn-primary btn-sm"
-              onClick={handleRestoreCatalog}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              <RefreshCw size={13} />
-              <span>Restore {ALL_CATALOG_EXERCISES.length} Master Catalog</span>
-            </button>
-
-            <button
-              type="button"
-              className="btn-clean btn-sm"
-              onClick={handleClearLibrary}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              <Trash2 size={13} />
-              <span>Clear Library</span>
-            </button>
-          </div>
-        </div>
 
         {/* 6. Personal Workout Backup & Restore */}
         <div className="clean-card">
@@ -1303,71 +1287,291 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
         </div>
       </div>
 
-      {/* 7. Reset & Clean Options */}
+      {/* 6. Reset & Cleanup */}
       <div
         className="clean-card"
         style={{ border: '1px solid rgba(239, 68, 68, 0.25)', background: 'rgba(239, 68, 68, 0.02)' }}
       >
-        <h3
-          style={{
-            fontSize: '0.88rem',
-            fontWeight: 800,
-            color: '#f87171',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            marginBottom: '8px',
-          }}
-        >
-          <Trash2 size={15} />
-          <span>Reset &amp; Cleanup</span>
-        </h3>
-        <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-          Manage your program canvas or start over with a fresh blank 6-week plan.
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+          <h3
+            style={{
+              fontSize: '0.88rem',
+              fontWeight: 800,
+              color: '#f87171',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              margin: 0,
+            }}
+          >
+            <Trash2 size={15} />
+            <span>Reset &amp; Cleanup</span>
+          </h3>
+          <span
+            style={{
+              fontSize: '0.66rem',
+              color: 'var(--text-dim)',
+              fontFamily: 'var(--font-mono)',
+              background: 'rgba(255, 255, 255, 0.04)',
+              padding: '2px 8px',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+            }}
+          >
+            Zero-Delay Instant Wipe
+          </span>
+        </div>
+        <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.45 }}>
+          Selective clean-up tools for your routine, completed history, and system state. Each action shows exactly what will be removed and what stays safe before proceeding.
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* Action 1: Clean All Exercises from Plan */}
           <button
             type="button"
             className="btn-clean btn-sm"
-            style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', wordBreak: 'break-word', lineHeight: 1.4 }}
-            onClick={handleResetBlank}
+            onClick={openCleanExercisesModal}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 14px',
+              background: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+              textAlign: 'left',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
           >
-            <RefreshCw size={13} style={{ flexShrink: 0 }} />
-            <span>Create Empty 6-Week Plan (Weeks 1–6)</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Trash2 size={14} color="#fca5a5" style={{ flexShrink: 0 }} />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#fff' }}>
+                  Wipe All Planned Exercises
+                </div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Removes exercises from Weeks 1–6 • Keeps history and PRs safe
+                </div>
+              </div>
+            </div>
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-red)', fontWeight: 700 }}>Wipe →</span>
           </button>
 
+          {/* Action 2: Reset to Blank 6-Week Plan */}
           <button
             type="button"
-            className="btn-clean btn-danger btn-sm"
-            style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', wordBreak: 'break-word', lineHeight: 1.4 }}
-            onClick={handleCleanAllExercises}
+            className="btn-clean btn-sm"
+            onClick={openResetBlankModal}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 14px',
+              background: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+              textAlign: 'left',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
           >
-            <Trash2 size={13} style={{ flexShrink: 0 }} />
-            <span>Clean All Exercises from Plan</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <RefreshCw size={14} color="#93c5fd" style={{ flexShrink: 0 }} />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#fff' }}>
+                  Reset 6-Week Plan to Blank
+                </div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Resets routine to clean 7-day canvas • Keeps history and PRs safe
+                </div>
+              </div>
+            </div>
+            <span style={{ fontSize: '0.72rem', color: '#60a5fa', fontWeight: 700 }}>Reset →</span>
           </button>
 
+          {/* Action 3: Clear Logged Workout History & PRs */}
           <button
             type="button"
-            className="btn-clean btn-danger btn-sm"
-            style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', wordBreak: 'break-word', lineHeight: 1.4 }}
-            onClick={handleClearHistory}
+            className="btn-clean btn-sm"
+            onClick={openClearHistoryModal}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 14px',
+              background: 'rgba(239, 68, 68, 0.03)',
+              border: '1px solid rgba(239, 68, 68, 0.25)',
+              borderRadius: 'var(--radius)',
+              textAlign: 'left',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
           >
-            <Trash2 size={13} style={{ flexShrink: 0 }} />
-            <span>Clear Logged Workout History &amp; PRs</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Trash2 size={14} color="var(--accent-red)" style={{ flexShrink: 0 }} />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#fff' }}>
+                  Clear Logged History &amp; PRs
+                </div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Clears past workout logs and PR graphs • Keeps planned routines safe
+                </div>
+              </div>
+            </div>
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-red)', fontWeight: 700 }}>Clear →</span>
           </button>
 
+          {/* Action 4: Factory Reset App */}
           <button
             type="button"
-            className="btn-clean btn-danger btn-sm"
-            style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', wordBreak: 'break-word', lineHeight: 1.4 }}
-            onClick={handleFactoryReset}
+            className="btn-clean btn-sm"
+            onClick={openFactoryResetModal}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 14px',
+              background: 'rgba(239, 68, 68, 0.07)',
+              border: '1px solid rgba(239, 68, 68, 0.4)',
+              borderRadius: 'var(--radius)',
+              textAlign: 'left',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
           >
-            <Zap size={13} style={{ flexShrink: 0 }} />
-            <span>Restore Default App (Blank 6-Week Plan + {ALL_CATALOG_EXERCISES.length} Catalog)</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Zap size={14} color="var(--accent-red)" style={{ flexShrink: 0 }} />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#f87171' }}>
+                  Factory Reset Entire Application
+                </div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Wipes plan and history, restores full {ALL_CATALOG_EXERCISES.length} catalog
+                </div>
+              </div>
+            </div>
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-red)', fontWeight: 800 }}>Wipe All →</span>
           </button>
         </div>
       </div>
+
+      {/* Instant In-App Reset Confirmation Modal (Zero delay, non-blocking) */}
+      {resetModal && resetModal.isOpen && (
+        <div
+          className="clean-modal-backdrop"
+          onClick={() => setResetModal(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reset-modal-title"
+        >
+          <div
+            className="clean-modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '440px' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '34px',
+                    height: '34px',
+                    borderRadius: 'var(--radius)',
+                    background: 'rgba(239, 68, 68, 0.15)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <AlertTriangle size={18} color="var(--accent-red)" />
+                </div>
+                <h3 id="reset-modal-title" style={{ fontSize: '0.98rem', fontWeight: 800, color: '#fff', margin: 0 }}>
+                  {resetModal.title}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setResetModal(null)}
+                className="icon-action-btn"
+                style={{ padding: '4px' }}
+                aria-label="Close dialog"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '14px' }}>
+              {resetModal.description}
+            </p>
+
+            {/* What Will Be Deleted */}
+            <div
+              style={{
+                background: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                borderRadius: 'var(--radius)',
+                padding: '10px 12px',
+                marginBottom: '10px',
+              }}
+            >
+              <div style={{ fontSize: '0.66rem', fontWeight: 800, color: '#f87171', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.04em' }}>
+                Will Be Removed:
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '0.73rem', color: '#fca5a5', lineHeight: 1.4 }}>
+                {resetModal.willDelete.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
+            </div>
+
+            {/* What Stays Safe */}
+            <div
+              style={{
+                background: 'rgba(16, 185, 129, 0.08)',
+                border: '1px solid rgba(16, 185, 129, 0.25)',
+                borderRadius: 'var(--radius)',
+                padding: '10px 12px',
+                marginBottom: '18px',
+              }}
+            >
+              <div style={{ fontSize: '0.66rem', fontWeight: 800, color: '#34d399', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.04em' }}>
+                Stays 100% Safe:
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '0.73rem', color: '#6ee7b7', lineHeight: 1.4 }}>
+                {resetModal.willKeepSafe.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn-clean btn-sm"
+                onClick={() => setResetModal(null)}
+                style={{ padding: '8px 14px' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-clean btn-danger btn-sm"
+                onClick={() => {
+                  const action = resetModal.onConfirm;
+                  setResetModal(null);
+                  action();
+                }}
+                style={{ padding: '8px 14px', fontWeight: 700 }}
+              >
+                {resetModal.confirmText}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Credits & Acknowledgments Card */}
       <div className="clean-card" style={{ marginTop: '14px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>

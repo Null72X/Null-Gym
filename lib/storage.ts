@@ -149,12 +149,19 @@ export function getSavedWeeks(): WeekPlan[] {
   }
 }
 
-// Clean / wipe all exercises from all weeks and days
+// Clean / wipe all exercises from all weeks and days (preserves week/day names and keeps history/PRs safe!)
 export function clearAllExercisesFromPlan(): WeekPlan[] {
-  const blank = createBlankWeeks();
-  saveWeeks(blank);
-  saveHistory([]);
-  return blank;
+  const currentWeeks = getSavedWeeks();
+  const cleaned: WeekPlan[] = currentWeeks.map((week) => ({
+    ...week,
+    days: week.days.map((day) => ({
+      ...day,
+      exercises: [],
+    })),
+  }));
+
+  saveWeeks(cleaned);
+  return cleaned;
 }
 
 export function saveWeeks(weeks: WeekPlan[]) {
@@ -746,8 +753,30 @@ export function restoreDefaultLibrary(): ExerciseLibraryItem[] {
 
 export function factoryResetAll(): void {
   const blank = createBlankWeeks();
-  saveWeeks(blank);
-  saveLibrary(DEFAULT_LIBRARY);
-  saveHistory([]);
-  saveActiveSelection({ weekNumber: 1, dayIndex: 0, unit: 'kg' });
+  cachedWeeks = blank;
+  cachedLibrary = DEFAULT_LIBRARY;
+  cachedHistory = [];
+  cachedActive = { weekNumber: 1, dayIndex: 0, unit: 'kg' };
+
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(STORAGE_KEYS.WEEKS, JSON.stringify(blank));
+      localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(DEFAULT_LIBRARY));
+      localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.ACTIVE, JSON.stringify({ weekNumber: 1, dayIndex: 0, unit: 'kg' }));
+    } catch (e) {
+      console.error('Factory reset write failed', e);
+    }
+
+    planListeners.forEach((l) => l(blank));
+    historyListeners.forEach((l) => l([]));
+    settingsListeners.forEach((l) => l({ weekNumber: 1, dayIndex: 0, unit: 'kg' }));
+
+    crossTabChannel?.postMessage({ type: 'plan', data: blank });
+    crossTabChannel?.postMessage({ type: 'history', data: [] });
+    crossTabChannel?.postMessage({ type: 'settings', data: { weekNumber: 1, dayIndex: 0, unit: 'kg' } });
+
+    // Atomic cloud push
+    pushAllToCloud(blank, [], { weekNumber: 1, dayIndex: 0, unit: 'kg' }).catch(() => {});
+  }
 }
