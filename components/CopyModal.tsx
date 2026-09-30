@@ -134,7 +134,7 @@ export default function CopyModal({
           style={{
             background: 'rgba(239, 68, 68, 0.1)',
             border: '1px solid rgba(239, 68, 68, 0.3)',
-            borderRadius: '10px',
+            borderRadius: 'var(--radius)',
             padding: '10px 12px',
             display: 'flex',
             alignItems: 'flex-start',

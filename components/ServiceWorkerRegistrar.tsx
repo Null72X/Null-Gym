@@ -44,7 +44,7 @@ export default function ServiceWorkerRegistrar() {
         border: `1px solid ${isOffline ? 'rgba(245, 158, 11, 0.4)' : 'rgba(16, 185, 129, 0.4)'}`,
         color: isOffline ? '#fef3c7' : '#ffffff',
         padding: '8px 16px',
-        borderRadius: '24px',
+        borderRadius: 'var(--radius)',
         fontSize: '0.75rem',
         fontWeight: 600,
         boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',

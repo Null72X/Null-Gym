@@ -14,25 +14,34 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     async function handleAuth() {
       if (!isSupabaseConfigured || !supabase) {
-        router.replace('/');
+        router.replace('/login');
         return;
+      }
+
+      let nextUrl = '/';
+      if (typeof window !== 'undefined') {
+        const searchParams = new URLSearchParams(window.location.search);
+        nextUrl = searchParams.get('next') || '/';
+
+        // Check if provider returned an error in query params or hash
+        const urlError = searchParams.get('error_description') || searchParams.get('error');
+        if (urlError) {
+          console.error('[Auth Callback] Provider error:', urlError);
+          router.replace(`/login?error=${encodeURIComponent(urlError)}`);
+          return;
+        }
+
+        const code = searchParams.get('code');
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError) {
+            console.warn('[Auth Callback] Code exchange notice:', exchangeError);
+          }
+        }
       }
 
       try {
         setStatusMessage('Syncing your account...');
-
-        // If code query parameter exists (PKCE code flow), exchange it for a session
-        if (typeof window !== 'undefined') {
-          const params = new URLSearchParams(window.location.search);
-          const code = params.get('code');
-          if (code) {
-            const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-            if (exchangeError) {
-              console.warn('[Auth Callback] Code exchange notice:', exchangeError);
-            }
-          }
-        }
-
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
@@ -43,21 +52,21 @@ export default function AuthCallbackPage() {
           await initAuth();
           setStatusMessage('Synchronizing workouts...');
           await forcePullAllFromCloud().catch(() => {});
-          router.replace('/');
+          router.replace(nextUrl);
           return;
         }
 
-        // Wait a short moment in case hash fragment is processing
+        // Listen for state change in case of delayed hash exchange
         const { data: authListener } = supabase.auth.onAuthStateChange(async (event, newSession) => {
           if (newSession) {
             await initAuth();
             await forcePullAllFromCloud().catch(() => {});
-            router.replace('/');
+            router.replace(nextUrl);
           }
         });
 
         setTimeout(() => {
-          router.replace('/');
+          router.replace(nextUrl);
         }, 3000);
 
         return () => {
@@ -65,10 +74,11 @@ export default function AuthCallbackPage() {
         };
       } catch (err: any) {
         console.error('[Auth Callback] Error:', err);
-        setError(err?.message || 'Failed to complete sign in.');
+        const errMsg = err?.message || 'Failed to complete sign in.';
+        setError(errMsg);
         setTimeout(() => {
-          router.replace('/');
-        }, 2500);
+          router.replace(`/login?error=${encodeURIComponent(errMsg)}`);
+        }, 2000);
       }
     }
 
@@ -82,27 +92,27 @@ export default function AuthCallbackPage() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: '75vh',
+        minHeight: '80vh',
         padding: '24px',
         textAlign: 'center',
       }}
     >
       <div
         style={{
-          background: 'var(--card-bg)',
+          background: 'var(--card)',
           border: '1px solid var(--border)',
-          borderRadius: '16px',
+          borderRadius: 'var(--radius)',
           padding: '36px 28px',
           maxWidth: '400px',
           width: '100%',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          boxShadow: '0 12px 36px rgba(0,0,0,0.6)',
         }}
       >
         <div
           style={{
             width: '48px',
             height: '48px',
-            borderRadius: '50%',
+            borderRadius: 'var(--radius)',
             background: 'rgba(239, 68, 68, 0.12)',
             border: '1px solid rgba(239, 68, 68, 0.3)',
             display: 'flex',

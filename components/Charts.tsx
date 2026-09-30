@@ -67,7 +67,7 @@ export function ProgressionChart({ data, exerciseName, unit = 'kg' }: Progressio
       style={{
         background: 'var(--card)',
         border: '1px solid var(--border)',
-        borderRadius: '14px',
+        borderRadius: 'var(--radius)',
         padding: '14px',
         marginBottom: '16px',
       }}
@@ -223,7 +223,7 @@ export function WeeklyBarChart({ weeklyRates }: WeeklyBarChartProps) {
       style={{
         background: 'var(--card)',
         border: '1px solid var(--border)',
-        borderRadius: '14px',
+        borderRadius: 'var(--radius)',
         padding: '14px',
         marginBottom: '16px',
       }}
@@ -267,7 +267,7 @@ export function WeeklyBarChart({ weeklyRates }: WeeklyBarChartProps) {
                   background: isComplete
                     ? 'var(--accent-green)'
                     : 'var(--accent-gradient)',
-                  borderRadius: '6px 6px 3px 3px',
+                  borderRadius: 'var(--radius) var(--radius) 0 0',
                   boxShadow: isComplete
                     ? '0 0 8px var(--accent-green-glow)'
                     : '0 0 8px var(--accent-red-glow)',

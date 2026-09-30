@@ -3,7 +3,7 @@ import { WeekPlan, WorkoutHistoryEntry, WeightUnit } from '../types/workout';
 import { ensureSixWeeks } from './planDefaults';
 import { isAppOffline } from './offlineManager';
 import { enqueueOutboxItem, flushOutboxQueue } from './outboxQueue';
-import { getCurrentUser } from './authService';
+import { getCurrentUser, getAuthToken } from './authService';
 
 export type CloudSyncStatus = 'synced' | 'syncing' | 'offline' | 'needs_rls_fix' | 'error';
 
@@ -24,12 +24,25 @@ let currentInfo: CloudSyncInfo = {
   needsRlsFix: false,
 };
 
+export async function getAuthHeaders(): Promise<HeadersInit> {
+  const token = await getAuthToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 export function getUserPlanId(userId?: string | null): string {
-  return userId ? `plan_${userId}` : 'default_plan';
+  const effectiveId = userId || getCurrentUser()?.id;
+  return effectiveId ? `plan_${effectiveId}` : 'default_plan';
 }
 
 export function getUserSettingsId(userId?: string | null): string {
-  return userId ? `settings_${userId}` : 'settings';
+  const effectiveId = userId || getCurrentUser()?.id;
+  return effectiveId ? `settings_${effectiveId}` : 'settings';
 }
 
 export function getCloudSyncInfo(): CloudSyncInfo {
@@ -112,7 +125,7 @@ export function mapSupabaseRowToHistoryEntry(row: any): WorkoutHistoryEntry {
 }
 
 export function mapHistoryEntryToSupabaseRow(entry: WorkoutHistoryEntry, explicitUserId?: string | null) {
-  const userId = explicitUserId || entry.userId || getCurrentUser()?.id || 'guest';
+  const userId = explicitUserId || entry.userId || getCurrentUser()?.id || '';
   return {
     id: entry.id,
     session_date: entry.date,
@@ -161,12 +174,12 @@ export async function pushAllToCloud(
 
   try {
     // 1. Send atomic save_all to built-in Server Database
+    const headers = await getAuthHeaders();
     const apiPromise = fetch('/api/sync', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         action: 'save_all',
-        userId,
         data: { plan: fullWeeks, history, settings },
       }),
     })
@@ -268,10 +281,11 @@ export async function pushPlanToCloud(weeks: WeekPlan[]): Promise<boolean> {
 
   try {
     // 1. Built-in Server Database
+    const headers = await getAuthHeaders();
     const apiPromise = fetch('/api/sync', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'save_plan', userId, data: fullWeeks }),
+      headers,
+      body: JSON.stringify({ action: 'save_plan', data: fullWeeks }),
     })
       .then((res) => res.json())
       .then((json) => {
@@ -332,10 +346,11 @@ export async function pushHistoryToCloud(history: WorkoutHistoryEntry[]): Promis
 
   try {
     // 1. Server DB
+    const headers = await getAuthHeaders();
     const apiPromise = fetch('/api/sync', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'save_history', userId, data: history }),
+      headers,
+      body: JSON.stringify({ action: 'save_history', data: history }),
     })
       .then((res) => res.json())
       .then((json) => {
@@ -406,10 +421,11 @@ export async function pushSettingsToCloud(settings: {
 
   const nowIso = new Date().toISOString();
   try {
+    const headers = await getAuthHeaders();
     fetch('/api/sync', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'save_settings', userId, data: settings }),
+      headers,
+      body: JSON.stringify({ action: 'save_settings', data: settings }),
     }).catch(() => {});
 
     if (isSupabaseConfigured && supabase) {
@@ -520,8 +536,8 @@ export async function pullAllFromCloud(): Promise<{
 
   // 2. Fallback to /api/sync (Server DB / serverless proxy)
   try {
-    const syncUrl = userId ? `/api/sync?userId=${encodeURIComponent(userId)}` : '/api/sync';
-    const res = await fetch(syncUrl, { cache: 'no-store' });
+    const headers = await getAuthHeaders();
+    const res = await fetch('/api/sync', { headers, cache: 'no-store' });
     if (res.ok) {
       const body = await res.json();
       if (body && body.success) {

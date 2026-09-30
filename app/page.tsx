@@ -522,7 +522,7 @@ export default function DashboardPage() {
           style={{
             background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(20, 20, 30, 0.85) 100%)',
             border: '1px solid rgba(239, 68, 68, 0.35)',
-            borderRadius: '10px',
+            borderRadius: 'var(--radius)',
             padding: '10px 14px',
             marginBottom: '10px',
             display: 'flex',

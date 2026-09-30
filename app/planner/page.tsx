@@ -362,7 +362,7 @@ export default function PlannerPage() {
           style={{
             background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(20, 20, 29, 0.7) 100%)',
             border: '1px solid rgba(239, 68, 68, 0.3)',
-            borderRadius: '10px',
+            borderRadius: 'var(--radius)',
             padding: '10px 12px',
             marginBottom: '10px',
             display: 'flex',
@@ -408,7 +408,7 @@ export default function PlannerPage() {
           style={{
             background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(20, 20, 29, 0.8) 100%)',
             border: '1px solid rgba(239, 68, 68, 0.35)',
-            borderRadius: '10px',
+            borderRadius: 'var(--radius)',
             padding: '10px 12px',
             marginBottom: '10px',
             display: 'flex',

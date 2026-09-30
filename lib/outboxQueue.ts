@@ -5,7 +5,7 @@ import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { WeekPlan, WorkoutHistoryEntry, WeightUnit } from '../types/workout';
 import { ensureSixWeeks } from './planDefaults';
 import { mapHistoryEntryToSupabaseRow, getUserPlanId, getUserSettingsId } from './supabaseSync';
-import { getCurrentUser } from './authService';
+import { getCurrentUser, getAuthToken } from './authService';
 
 export interface OutboxItem {
   id: string;
@@ -161,10 +161,14 @@ export async function flushOutboxQueue(): Promise<boolean> {
       let succeeded = false;
 
       // 1. Send to server /api/sync
+      const token = await getAuthToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const apiRes = await fetch('/api/sync', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: item.action, userId, data: item.data }),
+        headers,
+        body: JSON.stringify({ action: item.action, data: item.data }),
       }).catch(() => null);
 
       if (apiRes && apiRes.ok) {

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import AuthGuard from '../components/AuthGuard';
 import ServiceWorkerRegistrar from '../components/ServiceWorkerRegistrar';
 
 export const metadata: Metadata = {
@@ -52,9 +53,11 @@ export default function RootLayout({
       </head>
       <body>
         <div className="app-container">
-          <Navbar />
-          <main>{children}</main>
-          <Footer />
+          <AuthGuard>
+            <Navbar />
+            <main>{children}</main>
+            <Footer />
+          </AuthGuard>
         </div>
         <ServiceWorkerRegistrar />
       </body>

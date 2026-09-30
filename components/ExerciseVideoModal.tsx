@@ -121,7 +121,7 @@ export default function ExerciseVideoModal({
         style={{
           background: '#0d1117',
           border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '16px',
+          borderRadius: 'var(--radius)',
           width: '100%',
           maxWidth: '580px',
           maxHeight: '90vh',
@@ -148,7 +148,7 @@ export default function ExerciseVideoModal({
               style={{
                 fontSize: '0.72rem',
                 padding: '3px 8px',
-                borderRadius: '6px',
+                borderRadius: 'var(--radius)',
                 background: muscleInfo.pillarMeta.bg,
                 color: muscleInfo.pillarMeta.color,
                 border: `1px solid ${muscleInfo.pillarMeta.border}`,
@@ -187,7 +187,7 @@ export default function ExerciseVideoModal({
               background: 'rgba(255, 255, 255, 0.06)',
               border: '1px solid rgba(255, 255, 255, 0.1)',
               color: 'var(--text-dim)',
-              borderRadius: '8px',
+              borderRadius: 'var(--radius)',
               width: '28px',
               height: '28px',
               display: 'flex',
@@ -277,7 +277,7 @@ export default function ExerciseVideoModal({
                 style={{
                   fontSize: '0.66rem',
                   padding: '2px 7px',
-                  borderRadius: '5px',
+                  borderRadius: 'var(--radius)',
                   background: 'rgba(255, 255, 255, 0.05)',
                   color: '#e2e8f0',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -292,7 +292,7 @@ export default function ExerciseVideoModal({
                 style={{
                   fontSize: '0.66rem',
                   padding: '2px 7px',
-                  borderRadius: '5px',
+                  borderRadius: 'var(--radius)',
                   background: 'rgba(255, 255, 255, 0.05)',
                   color: '#cbd5e1',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -307,7 +307,7 @@ export default function ExerciseVideoModal({
                 style={{
                   fontSize: '0.66rem',
                   padding: '2px 7px',
-                  borderRadius: '5px',
+                  borderRadius: 'var(--radius)',
                   background: 'rgba(239, 68, 68, 0.12)',
                   color: '#fca5a5',
                   border: '1px solid rgba(239, 68, 68, 0.25)',
@@ -322,7 +322,7 @@ export default function ExerciseVideoModal({
                 style={{
                   fontSize: '0.66rem',
                   padding: '2px 7px',
-                  borderRadius: '5px',
+                  borderRadius: 'var(--radius)',
                   background: 'rgba(255, 255, 255, 0.04)',
                   color: 'var(--text-muted)',
                   border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -344,7 +344,7 @@ export default function ExerciseVideoModal({
                   width: '100%',
                   minHeight: '260px',
                   maxHeight: '340px',
-                  borderRadius: '12px',
+                  borderRadius: 'var(--radius)',
                   overflow: 'hidden',
                   background: '#05070a',
                   border: '1px solid rgba(255, 255, 255, 0.12)',
@@ -417,7 +417,7 @@ export default function ExerciseVideoModal({
                       <div
                         key={i}
                         style={{
-                          borderRadius: '8px',
+                          borderRadius: 'var(--radius)',
                           overflow: 'hidden',
                           border: '1px solid rgba(255, 255, 255, 0.08)',
                           background: '#000',
@@ -457,7 +457,7 @@ export default function ExerciseVideoModal({
                   style={{
                     background: 'rgba(255, 255, 255, 0.02)',
                     border: '1px solid rgba(255, 255, 255, 0.07)',
-                    borderRadius: '10px',
+                    borderRadius: 'var(--radius)',
                     padding: '12px',
                   }}
                 >
@@ -506,7 +506,7 @@ export default function ExerciseVideoModal({
                 style={{
                   background: 'rgba(255, 255, 255, 0.02)',
                   border: '1px solid rgba(255, 255, 255, 0.07)',
-                  borderRadius: '10px',
+                  borderRadius: 'var(--radius)',
                   padding: '12px',
                 }}
               >
@@ -556,7 +556,7 @@ export default function ExerciseVideoModal({
                   style={{
                     background: 'rgba(255, 255, 255, 0.03)',
                     border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '10px',
+                    borderRadius: 'var(--radius)',
                     padding: '10px 12px',
                     fontSize: '0.75rem',
                     color: '#e2e8f0',
@@ -588,7 +588,7 @@ export default function ExerciseVideoModal({
                 style={{
                   background: 'rgba(245, 158, 11, 0.08)',
                   border: '1px solid rgba(245, 158, 11, 0.25)',
-                  borderRadius: '10px',
+                  borderRadius: 'var(--radius)',
                   padding: '10px 12px',
                   fontSize: '0.74rem',
                   color: '#fef3c7',
@@ -639,7 +639,7 @@ export default function ExerciseVideoModal({
               alignItems: 'center',
               gap: '6px',
               padding: '7px 12px',
-              borderRadius: '8px',
+              borderRadius: 'var(--radius)',
               background: 'rgba(239, 68, 68, 0.14)',
               border: '1px solid rgba(239, 68, 68, 0.35)',
               color: '#fca5a5',

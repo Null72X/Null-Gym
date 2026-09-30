@@ -64,7 +64,6 @@ import {
   getOfflineCacheStats,
 } from '../../lib/offlineManager';
 import { initAuth, onAuthChange, signOutUser, AppUser, isUserAdmin, ADMIN_EMAIL } from '../../lib/authService';
-import AuthModal from '../../components/AuthModal';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -438,7 +437,7 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
               className={`cloud-status-pill ${user ? 'synced' : 'offline'}`}
               style={{ fontSize: '0.68rem', padding: '3px 8px' }}
             >
-              {user ? '🟢 Private Account Connected' : '👤 Guest (Local Mode)'}
+              {user ? '🟢 Google Account Verified' : 'Authentication Required'}
             </span>
           </div>
 
@@ -451,7 +450,7 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
                   gap: '14px',
                   background: 'rgba(255, 255, 255, 0.03)',
                   border: '1px solid rgba(255, 255, 255, 0.08)',
-                  borderRadius: '12px',
+                  borderRadius: 'var(--radius)',
                   padding: '14px 16px',
                   marginBottom: '14px',
                 }}
@@ -504,7 +503,7 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
               </div>
 
               <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.5 }}>
-                Your workouts, sets, weights, and logs are synchronized privately to your personal cloud account. Any device you sign into with this account will immediately download your 6-week program.
+                Your workouts, sets, weights, and logs are synchronized privately to your personal account. Any device you sign into will automatically load your 6-week program.
               </p>
 
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -527,7 +526,7 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
                   className="btn-clean btn-sm"
                   onClick={async () => {
                     await signOutUser();
-                    triggerToast('Signed out. Switched to Guest mode.');
+                    window.location.href = '/login';
                   }}
                   style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#f87171' }}
                 >
@@ -539,19 +538,18 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
           ) : (
             <div>
               <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
-                You are currently in <strong>Guest Mode</strong>. All workouts, history, and settings are saved locally on this browser. Log in or create an account with your email and password to access private cloud synchronization between your phone, tablet, and PC.
+                Please authenticate using your Google account to synchronize your workouts, logs, and progression across all your devices.
               </p>
 
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
+                <Link
+                  href="/login"
                   className="btn-clean btn-primary btn-sm"
-                  onClick={() => setIsAuthOpen(true)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', textDecoration: 'none' }}
                 >
                   <Sparkles size={14} />
-                  <span>Log In / Create Account</span>
-                </button>
+                  <span>Continue with Google</span>
+                </Link>
               </div>
             </div>
           )}
@@ -593,7 +591,7 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
               justifyContent: 'space-between',
               background: 'rgba(255, 255, 255, 0.02)',
               border: '1px solid var(--border)',
-              borderRadius: '8px',
+              borderRadius: 'var(--radius)',
               padding: '10px 12px',
               marginBottom: '10px',
             }}
@@ -620,7 +618,7 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
             style={{
               background: 'rgba(255, 255, 255, 0.015)',
               border: '1px solid rgba(255, 255, 255, 0.06)',
-              borderRadius: '8px',
+              borderRadius: 'var(--radius)',
               padding: '8px 12px',
               marginBottom: '12px',
               fontSize: '0.72rem',
@@ -699,7 +697,7 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
               style={{
                 background: 'rgba(255, 255, 255, 0.03)',
                 border: '1px solid var(--border)',
-                borderRadius: '8px',
+                borderRadius: 'var(--radius)',
                 padding: '10px 12px',
                 marginBottom: '12px',
                 fontSize: '0.74rem',
@@ -776,7 +774,7 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
               justifyContent: 'space-between',
               background: 'rgba(255, 255, 255, 0.02)',
               border: '1px solid var(--border)',
-              borderRadius: '8px',
+              borderRadius: 'var(--radius)',
               padding: '10px 12px',
               marginBottom: '10px',
             }}
@@ -947,7 +945,7 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
             style={{
               background: 'rgba(255, 255, 255, 0.02)',
               border: '1px solid var(--border)',
-              borderRadius: '8px',
+              borderRadius: 'var(--radius)',
               padding: '10px 14px',
               marginBottom: '12px',
               fontSize: '0.72rem',
@@ -969,7 +967,7 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
               gap: '10px',
               background: 'rgba(34, 197, 94, 0.06)',
               border: '1px solid rgba(34, 197, 94, 0.2)',
-              borderRadius: '8px',
+              borderRadius: 'var(--radius)',
               padding: '8px 12px',
             }}
           >
@@ -1016,7 +1014,7 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
                 style={{
                   fontSize: '0.68rem',
                   padding: '3px 8px',
-                  borderRadius: '6px',
+                  borderRadius: 'var(--radius)',
                   background: 'rgba(234, 179, 8, 0.15)',
                   border: '1px solid rgba(234, 179, 8, 0.35)',
                   color: '#fde047',
@@ -1123,7 +1121,7 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
                       ? 'rgba(34, 197, 94, 0.35)'
                       : 'rgba(245, 158, 11, 0.35)'
                   }`,
-                  borderRadius: '8px',
+                  borderRadius: 'var(--radius)',
                   padding: '12px 14px',
                   marginBottom: '10px',
                   fontSize: '0.74rem',
@@ -1143,7 +1141,7 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
                       style={{
                         background: 'rgba(0,0,0,0.6)',
                         padding: '10px',
-                        borderRadius: '6px',
+                        borderRadius: 'var(--radius)',
                         fontFamily: 'var(--font-mono)',
                         fontSize: '0.68rem',
                         overflowX: 'auto',
@@ -1394,7 +1392,7 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
                 color: 'var(--accent-red)',
                 background: 'rgba(239, 68, 68, 0.12)',
                 padding: '3px 8px',
-                borderRadius: '6px',
+                borderRadius: 'var(--radius)',
                 border: '1px solid rgba(239, 68, 68, 0.25)',
                 fontFamily: 'var(--font-mono)',
                 fontWeight: 700,
@@ -1408,7 +1406,7 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
                 color: '#22c55e',
                 background: 'rgba(34, 197, 94, 0.12)',
                 padding: '3px 8px',
-                borderRadius: '6px',
+                borderRadius: 'var(--radius)',
                 border: '1px solid rgba(34, 197, 94, 0.25)',
                 fontWeight: 700,
               }}
@@ -1428,7 +1426,7 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
             style={{
               background: 'rgba(255, 255, 255, 0.02)',
               border: '1px solid var(--border)',
-              borderRadius: '8px',
+              borderRadius: 'var(--radius)',
               padding: '12px',
             }}
           >
@@ -1457,7 +1455,7 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
             style={{
               background: 'rgba(255, 255, 255, 0.02)',
               border: '1px solid var(--border)',
-              borderRadius: '8px',
+              borderRadius: 'var(--radius)',
               padding: '12px',
             }}
           >
@@ -1478,7 +1476,7 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
             style={{
               background: 'rgba(255, 255, 255, 0.02)',
               border: '1px solid var(--border)',
-              borderRadius: '8px',
+              borderRadius: 'var(--radius)',
               padding: '12px',
             }}
           >
@@ -1525,13 +1523,6 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
       <div className={`clean-toast ${toastMessage ? 'show' : ''}`}>
         {toastMessage}
       </div>
-
-      {/* Authentication Modal */}
-      <AuthModal
-        isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
-        onSuccess={() => setIsAuthOpen(false)}
-      />
     </div>
   );
 }

@@ -354,7 +354,7 @@ export default function ProgressPage() {
               style={{
                 background: 'rgba(255, 255, 255, 0.02)',
                 border: '1px solid var(--border)',
-                borderRadius: '8px',
+                borderRadius: 'var(--radius)',
                 padding: '8px 10px',
               }}
             >
@@ -381,7 +381,7 @@ export default function ProgressPage() {
               style={{
                 background: 'rgba(255, 255, 255, 0.02)',
                 border: '1px solid var(--border)',
-                borderRadius: '8px',
+                borderRadius: 'var(--radius)',
                 padding: '8px 10px',
               }}
             >
@@ -408,7 +408,7 @@ export default function ProgressPage() {
               style={{
                 background: 'rgba(255, 255, 255, 0.02)',
                 border: '1px solid var(--border)',
-                borderRadius: '8px',
+                borderRadius: 'var(--radius)',
                 padding: '8px 10px',
               }}
             >
@@ -523,7 +523,7 @@ export default function ProgressPage() {
                   justifyContent: 'space-between',
                   background: 'rgba(255, 255, 255, 0.02)',
                   border: '1px solid rgba(255, 255, 255, 0.04)',
-                  borderRadius: '8px',
+                  borderRadius: 'var(--radius)',
                   padding: '8px 12px',
                   cursor: 'pointer',
                   transition: 'border-color 0.15s ease',
@@ -695,7 +695,7 @@ export default function ProgressPage() {
                   style={{
                     background: 'rgba(255, 255, 255, 0.02)',
                     border: '1px solid var(--border)',
-                    borderRadius: '10px',
+                    borderRadius: 'var(--radius)',
                     padding: '10px 12px',
                     cursor: 'pointer',
                   }}

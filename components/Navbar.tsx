@@ -9,7 +9,6 @@ import { onCloudStatus, getCloudSyncInfo, CloudSyncInfo } from '../lib/supabaseS
 import { isAppOffline, onOfflineChange } from '../lib/offlineManager';
 import { onOutboxCountChange } from '../lib/outboxQueue';
 import { initAuth, onAuthChange, signOutUser, AppUser, isUserAdmin } from '../lib/authService';
-import AuthModal from './AuthModal';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -17,8 +16,12 @@ export default function Navbar() {
   const [isOffline, setIsOffline] = useState<boolean>(() => isAppOffline());
   const [pendingOutbox, setPendingOutbox] = useState<number>(0);
   const [user, setUser] = useState<AppUser | null>(null);
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+
+  // Do not render Navbar on public auth routes
+  if (pathname === '/login' || pathname === '/auth/callback') {
+    return null;
+  }
 
   const isAdmin = isUserAdmin(user);
 
@@ -188,7 +191,7 @@ export default function Navbar() {
                   padding: '3px 8px 3px 4px',
                   background: 'rgba(255, 255, 255, 0.06)',
                   border: '1px solid rgba(255, 255, 255, 0.12)',
-                  borderRadius: '20px',
+                  borderRadius: 'var(--radius)',
                   color: '#fff',
                   cursor: 'pointer',
                   fontSize: '0.74rem',
@@ -243,7 +246,7 @@ export default function Navbar() {
                       zIndex: 999,
                       background: '#0e121b',
                       border: '1px solid rgba(255, 255, 255, 0.14)',
-                      borderRadius: '12px',
+                      borderRadius: 'var(--radius)',
                       padding: '12px',
                       width: '220px',
                       boxShadow: '0 12px 30px rgba(0, 0, 0, 0.6)',
@@ -278,7 +281,7 @@ export default function Navbar() {
                         color: '#cbd5e1',
                         textDecoration: 'none',
                         fontSize: '0.75rem',
-                        borderRadius: '6px',
+                        borderRadius: 'var(--radius)',
                       }}
                     >
                       <Settings size={14} />
@@ -287,9 +290,10 @@ export default function Navbar() {
 
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         setShowUserMenu(false);
-                        signOutUser();
+                        await signOutUser();
+                        window.location.href = '/login';
                       }}
                       style={{
                         width: '100%',
@@ -302,7 +306,7 @@ export default function Navbar() {
                         color: '#f87171',
                         fontSize: '0.75rem',
                         cursor: 'pointer',
-                        borderRadius: '6px',
+                        borderRadius: 'var(--radius)',
                         textAlign: 'left',
                       }}
                     >
@@ -314,9 +318,8 @@ export default function Navbar() {
               )}
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => setIsAuthOpen(true)}
+            <Link
+              href="/login"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -324,18 +327,18 @@ export default function Navbar() {
                 padding: '4px 10px',
                 background: 'rgba(239, 68, 68, 0.15)',
                 border: '1px solid rgba(239, 68, 68, 0.35)',
-                borderRadius: '20px',
+                borderRadius: 'var(--radius)',
                 color: '#fff',
                 fontSize: '0.72rem',
                 fontWeight: 700,
-                cursor: 'pointer',
+                textDecoration: 'none',
                 transition: 'all 0.2s ease',
               }}
-              title="Sign in to sync your workouts across all your devices"
+              title="Sign In with Google"
             >
               <Sparkles size={12} color="var(--accent-red)" />
               <span>Sign In</span>
-            </button>
+            </Link>
           )}
 
           <Link
@@ -387,13 +390,6 @@ export default function Navbar() {
           <span>Settings</span>
         </Link>
       </nav>
-
-      {/* Authentication Modal */}
-      <AuthModal
-        isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
-        onSuccess={() => setIsAuthOpen(false)}
-      />
     </>
   );
 }

@@ -1,8 +1,17 @@
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Github, ExternalLink, Heart } from 'lucide-react';
 
 export default function Footer() {
+  const pathname = usePathname();
+
+  if (pathname === '/login' || pathname === '/auth/callback') {
+    return null;
+  }
+
   return (
     <footer
       style={{
@@ -27,7 +36,7 @@ export default function Footer() {
             color: 'var(--accent-red)',
             background: 'rgba(239, 68, 68, 0.12)',
             padding: '2px 7px',
-            borderRadius: '4px',
+            borderRadius: 'var(--radius)',
             border: '1px solid rgba(239, 68, 68, 0.25)',
             fontFamily: 'var(--font-mono)',
           }}

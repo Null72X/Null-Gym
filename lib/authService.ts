@@ -91,26 +91,40 @@ export async function initAuth(): Promise<AppUser | null> {
   }
 }
 
-export function getAuthRedirectUrl(): string {
+export async function getAuthToken(): Promise<string | null> {
+  if (typeof window === 'undefined' || !isSupabaseConfigured || !supabase) {
+    return null;
+  }
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token || null;
+  } catch (err) {
+    console.error('[Auth] Failed to get session token:', err);
+    return null;
+  }
+}
+
+export function getAuthRedirectUrl(nextPath?: string): string {
+  let origin = 'https://null-gym.vercel.app';
   if (typeof window !== 'undefined' && window.location.origin) {
-    return `${window.location.origin}/auth/callback`;
+    origin = window.location.origin;
+  } else if (process.env.NEXT_PUBLIC_SITE_URL) {
+    origin = process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '');
   }
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return `${process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')}/auth/callback`;
-  }
-  return 'https://null-gym.vercel.app/auth/callback';
+  const nextParam = nextPath ? `?next=${encodeURIComponent(nextPath)}` : '';
+  return `${origin}/auth/callback${nextParam}`;
 }
 
 /**
  * Sign In with 1-Tap Google OAuth
  */
-export async function signInWithGoogle(): Promise<{ error: Error | null }> {
+export async function signInWithGoogle(nextPath?: string): Promise<{ error: Error | null }> {
   if (!isSupabaseConfigured || !supabase) {
     return { error: new Error('Supabase is not configured.') };
   }
 
   try {
-    const redirectTo = getAuthRedirectUrl();
+    const redirectTo = getAuthRedirectUrl(nextPath);
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',

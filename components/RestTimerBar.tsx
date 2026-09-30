@@ -563,7 +563,7 @@ export default function RestTimerBar({
           : isExerciseMode
           ? '0 12px 36px rgba(239, 68, 68, 0.25), 0 0 0 1px rgba(239, 68, 68, 0.15)'
           : '0 12px 36px rgba(0, 0, 0, 0.7)',
-        borderRadius: '16px',
+        borderRadius: 'var(--radius)',
         zIndex: 900,
         transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
         padding: '10px 14px',
@@ -575,7 +575,7 @@ export default function RestTimerBar({
           style={{
             background: 'rgba(34, 197, 94, 0.15)',
             border: '1px solid rgba(34, 197, 94, 0.4)',
-            borderRadius: '8px',
+            borderRadius: 'var(--radius)',
             padding: '4px 10px',
             marginBottom: '8px',
             fontSize: '0.70rem',
@@ -693,7 +693,7 @@ export default function RestTimerBar({
                   style={{
                     background: isExerciseMode ? 'rgba(239, 68, 68, 0.22)' : 'rgba(56, 189, 248, 0.22)',
                     padding: '1px 6px',
-                    borderRadius: '4px',
+                    borderRadius: 'var(--radius)',
                     fontSize: '0.58rem',
                     color: '#fff',
                     fontFamily: 'var(--font-mono)',
@@ -709,7 +709,7 @@ export default function RestTimerBar({
                     background: 'rgba(34, 197, 94, 0.2)',
                     color: '#86efac',
                     padding: '1px 5px',
-                    borderRadius: '4px',
+                    borderRadius: 'var(--radius)',
                     fontSize: '0.58rem',
                     fontWeight: 800,
                   }}
@@ -758,7 +758,7 @@ export default function RestTimerBar({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '4px',
-                borderRadius: '8px',
+                borderRadius: 'var(--radius)',
               }}
             >
               <Check size={13} color="var(--accent-green)" />
@@ -798,7 +798,7 @@ export default function RestTimerBar({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '4px',
-                borderRadius: '8px',
+                borderRadius: 'var(--radius)',
                 background: isFinalSetCalculated
                   ? isFinalExerciseCalculated
                     ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.3) 0%, rgba(16, 185, 129, 0.35) 100%)'
@@ -935,7 +935,7 @@ export default function RestTimerBar({
                 fontSize: '0.64rem',
                 fontWeight: isExerciseMode ? 800 : 600,
                 padding: '3px 8px',
-                borderRadius: '6px',
+                borderRadius: 'var(--radius)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -956,7 +956,7 @@ export default function RestTimerBar({
                 fontSize: '0.64rem',
                 fontWeight: !isExerciseMode ? 800 : 600,
                 padding: '3px 8px',
-                borderRadius: '6px',
+                borderRadius: 'var(--radius)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -978,7 +978,7 @@ export default function RestTimerBar({
                 fontSize: '0.62rem',
                 fontWeight: 800,
                 padding: '3px 8px',
-                borderRadius: '6px',
+                borderRadius: 'var(--radius)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -1031,7 +1031,7 @@ export default function RestTimerBar({
                     fontSize: '0.62rem',
                     fontWeight: isSelected || isDefault90 ? 800 : 600,
                     padding: '2px 6px',
-                    borderRadius: '5px',
+                    borderRadius: 'var(--radius)',
                     cursor: 'pointer',
                     fontFamily: 'var(--font-mono)',
                     transition: 'all 0.15s ease',

@@ -7,11 +7,21 @@ import { supabaseServer, isSupabaseConfigured } from '@/lib/supabaseClient';
 
 // In-memory database store
 let inMemoryDatabase: {
+  users?: Record<
+    string,
+    {
+      plan: WeekPlan[] | null;
+      history: WorkoutHistoryEntry[];
+      settings: { weekNumber: number; dayIndex: number; unit: WeightUnit };
+      updatedAt: string;
+    }
+  >;
   plan: WeekPlan[] | null;
   history: WorkoutHistoryEntry[];
   settings: { weekNumber: number; dayIndex: number; unit: WeightUnit };
   updatedAt: string;
 } = {
+  users: {},
   plan: null,
   history: [],
   settings: { weekNumber: 1, dayIndex: 0, unit: 'kg' },
@@ -63,15 +73,14 @@ function mapSupabaseRowToHistoryEntry(row: any): WorkoutHistoryEntry {
   };
 }
 
-function mapHistoryEntryToSupabaseRow(entry: WorkoutHistoryEntry, userId?: string | null) {
-  const effectiveUserId = userId || entry.userId || 'guest';
+function mapHistoryEntryToSupabaseRow(entry: WorkoutHistoryEntry, userId: string) {
   return {
     id: entry.id,
     session_date: entry.date,
     day_title: entry.workoutTitle,
     week_number: entry.weekNumber,
     sets: {
-      userId: effectiveUserId,
+      userId,
       exercises: entry.exercises,
       dayOfWeek: entry.dayOfWeek,
       completedExercises: entry.completedExercises,
@@ -117,14 +126,12 @@ async function persistDatabase(data: Partial<typeof inMemoryDatabase>) {
 
   const payload = JSON.stringify(inMemoryDatabase, null, 2);
 
-  // Attempt 1: Write to process.cwd()/data
   try {
     if (!fs.existsSync(DATA_DIR)) {
       await fs.promises.mkdir(DATA_DIR, { recursive: true });
     }
     await fs.promises.writeFile(DATA_FILE, payload, 'utf-8');
   } catch {
-    // Attempt 2: Write to /tmp for serverless environments (Vercel)
     try {
       await fs.promises.writeFile(TMP_FILE, payload, 'utf-8');
     } catch {}
@@ -133,29 +140,66 @@ async function persistDatabase(data: Partial<typeof inMemoryDatabase>) {
   return inMemoryDatabase;
 }
 
-// GET /api/sync -> 100% Automatic Cloud & Server Database Pull
+/**
+ * Strict server-side Bearer token authentication check
+ */
+async function authenticateRequest(request: Request): Promise<{ id: string; email?: string } | null> {
+  const authHeader = request.headers.get('Authorization') || request.headers.get('authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+
+  const token = authHeader.substring(7).trim();
+  if (!token) return null;
+
+  if (isSupabaseConfigured && supabaseServer) {
+    try {
+      const {
+        data: { user },
+        error,
+      } = await supabaseServer.auth.getUser(token);
+      if (error || !user) {
+        return null;
+      }
+      return { id: user.id, email: user.email };
+    } catch (err) {
+      console.error('[API Auth] Error verifying token:', err);
+      return null;
+    }
+  }
+
+  return null;
+}
+
+// GET /api/sync -> Authenticated Cloud & Server Database Pull
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const planId = userId ? `plan_${userId}` : 'default_plan';
-    const settingsId = userId ? `settings_${userId}` : 'settings';
+    const authUser = await authenticateRequest(request);
+    if (!authUser) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Authentication required.' },
+        { status: 401 }
+      );
+    }
+
+    const userId = authUser.id;
+    const planId = `plan_${userId}`;
+    const settingsId = `settings_${userId}`;
 
     let cloudPlan: WeekPlan[] | null = null;
     let cloudHistory: WorkoutHistoryEntry[] | null = null;
     let cloudSettings: { weekNumber: number; dayIndex: number; unit: WeightUnit } | null = null;
     let cloudUpdatedAt: string | null = null;
 
-    // 1. If Supabase is configured, try querying the cloud database first
+    // 1. Query Supabase Cloud Database scoped strictly to verified userId
     if (isSupabaseConfigured && supabaseServer) {
       try {
-        let histQuery = supabaseServer
+        const histQuery = supabaseServer
           .from('workout_history')
-          .select('*');
-
-        if (userId) {
-          histQuery = histQuery.filter('sets->>userId', 'eq', userId);
-        }
+          .select('*')
+          .filter('sets->>userId', 'eq', userId)
+          .order('created_at', { ascending: false })
+          .limit(250);
 
         const [planRes, historyRes, settingsRes] = await Promise.allSettled([
           supabaseServer
@@ -163,9 +207,7 @@ export async function GET(request: Request) {
             .select('weeks, updated_at')
             .eq('id', planId)
             .maybeSingle(),
-          histQuery
-            .order('created_at', { ascending: false })
-            .limit(250),
+          histQuery,
           supabaseServer
             .from('app_settings')
             .select('settings, updated_at')
@@ -193,20 +235,25 @@ export async function GET(request: Request) {
           return NextResponse.json({
             success: true,
             plan: cloudPlan,
-            history: cloudHistory || inMemoryDatabase.history || [],
-            settings: cloudSettings || inMemoryDatabase.settings || { weekNumber: 1, dayIndex: 0, unit: 'kg' },
-            updatedAt: cloudUpdatedAt || inMemoryDatabase.updatedAt,
+            history: cloudHistory || [],
+            settings: cloudSettings || { weekNumber: 1, dayIndex: 0, unit: 'kg' },
+            updatedAt: cloudUpdatedAt || new Date().toISOString(),
             source: 'supabase',
           });
         }
       } catch (supaErr) {
-        console.error('[API /api/sync] Supabase query failed:', supaErr);
+        console.error('[API /api/sync] Supabase query error:', supaErr);
       }
     }
 
-    // 2. Fallback to server local/tmp database
+    // 2. Fallback to server local/tmp database scoped strictly to verified userId
     const db = loadDatabaseFromDisk();
-    const userDb = userId && (db as any).users?.[userId] ? (db as any).users[userId] : db;
+    const userDb = db.users?.[userId] || {
+      plan: null,
+      history: [],
+      settings: { weekNumber: 1, dayIndex: 0, unit: 'kg' as WeightUnit },
+      updatedAt: new Date().toISOString(),
+    };
     const validPlan = userDb.plan ? ensureSixWeeks(userDb.plan) : null;
 
     return NextResponse.json({
@@ -225,102 +272,88 @@ export async function GET(request: Request) {
   }
 }
 
-// POST /api/sync -> 100% Automatic Background Save
+// POST /api/sync -> Authenticated Background Save
 export async function POST(request: Request) {
   try {
+    const authUser = await authenticateRequest(request);
+    if (!authUser) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Authentication required.' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
-    const { action, data, userId } = body;
-    const planId = userId ? `plan_${userId}` : 'default_plan';
-    const settingsId = userId ? `settings_${userId}` : 'settings';
+    const { action, data } = body;
+    const userId = authUser.id;
+    const planId = `plan_${userId}`;
+    const settingsId = `settings_${userId}`;
     const nowIso = new Date().toISOString();
 
     const db = loadDatabaseFromDisk();
     let rlsBlocked = false;
 
-    // Handle user scoped in-memory database
-    if (userId) {
-      if (!(db as any).users) (db as any).users = {};
-      if (!(db as any).users[userId]) {
-        (db as any).users[userId] = {
-          plan: null,
-          history: [],
-          settings: { weekNumber: 1, dayIndex: 0, unit: 'kg' },
-          updatedAt: nowIso,
-        };
-      }
-      const target = (db as any).users[userId];
-      if (action === 'save_plan' && Array.isArray(data)) {
-        target.plan = ensureSixWeeks(data);
-      } else if (action === 'save_history' && Array.isArray(data)) {
-        target.history = data;
-      } else if (action === 'save_settings' && data) {
-        target.settings = { ...target.settings, ...data };
-      } else if (action === 'save_all' && data) {
-        if (data.plan) target.plan = ensureSixWeeks(data.plan);
-        if (data.history) target.history = data.history;
-        if (data.settings) target.settings = data.settings;
-      }
-      target.updatedAt = nowIso;
-    } else {
-      if (action === 'save_plan' && Array.isArray(data)) {
-        db.plan = ensureSixWeeks(data);
-      } else if (action === 'save_history' && Array.isArray(data)) {
-        db.history = data;
-      } else if (action === 'save_settings' && data) {
-        db.settings = { ...db.settings, ...data };
-      } else if (action === 'save_all' && data) {
-        if (data.plan) db.plan = ensureSixWeeks(data.plan);
-        if (data.history) db.history = data.history;
-        if (data.settings) db.settings = data.settings;
-      }
+    if (!db.users) db.users = {};
+    if (!db.users[userId]) {
+      db.users[userId] = {
+        plan: null,
+        history: [],
+        settings: { weekNumber: 1, dayIndex: 0, unit: 'kg' },
+        updatedAt: nowIso,
+      };
     }
+    const target = db.users[userId];
+
+    if (action === 'save_plan' && Array.isArray(data)) {
+      target.plan = ensureSixWeeks(data);
+    } else if (action === 'save_history' && Array.isArray(data)) {
+      target.history = data;
+    } else if (action === 'save_settings' && data) {
+      target.settings = { ...target.settings, ...data };
+    } else if (action === 'save_all' && data) {
+      if (data.plan) target.plan = ensureSixWeeks(data.plan);
+      if (data.history) target.history = data.history;
+      if (data.settings) target.settings = data.settings;
+    }
+    target.updatedAt = nowIso;
 
     await persistDatabase(db);
 
-    // Mirror to Supabase if configured
+    // Mirror to Supabase with verified userId
     if (isSupabaseConfigured && supabaseServer) {
       try {
-        // Save plan
         if (action === 'save_plan' || (action === 'save_all' && data?.plan)) {
           const planToSave = action === 'save_plan' ? data : data.plan;
-          const res = await supabaseServer
-            .from('workout_plan')
-            .upsert(
-              {
-                id: planId,
-                weeks: ensureSixWeeks(planToSave),
-                updated_at: nowIso,
-              },
-              { onConflict: 'id' }
-            );
+          const res = await supabaseServer.from('workout_plan').upsert(
+            {
+              id: planId,
+              weeks: ensureSixWeeks(planToSave),
+              updated_at: nowIso,
+            },
+            { onConflict: 'id' }
+          );
           if (res?.error?.code === '42501') rlsBlocked = true;
         }
 
-        // Save history
         if (action === 'save_history' || (action === 'save_all' && data?.history)) {
           const historyToSave: WorkoutHistoryEntry[] = action === 'save_history' ? data : data.history;
           if (Array.isArray(historyToSave) && historyToSave.length > 0) {
             const rows = historyToSave.map((h) => mapHistoryEntryToSupabaseRow(h, userId));
-            const res = await supabaseServer
-              .from('workout_history')
-              .upsert(rows, { onConflict: 'id' });
+            const res = await supabaseServer.from('workout_history').upsert(rows, { onConflict: 'id' });
             if (res?.error?.code === '42501') rlsBlocked = true;
           }
         }
 
-        // Save settings
         if (action === 'save_settings' || (action === 'save_all' && data?.settings)) {
           const settingsToSave = action === 'save_settings' ? data : data.settings;
-          const res = await supabaseServer
-            .from('app_settings')
-            .upsert(
-              {
-                id: settingsId,
-                settings: settingsToSave,
-                updated_at: nowIso,
-              },
-              { onConflict: 'id' }
-            );
+          const res = await supabaseServer.from('app_settings').upsert(
+            {
+              id: settingsId,
+              settings: settingsToSave,
+              updated_at: nowIso,
+            },
+            { onConflict: 'id' }
+          );
           if (res?.error?.code === '42501') rlsBlocked = true;
         }
       } catch (err: any) {
@@ -333,7 +366,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       rlsBlocked,
-      updatedAt: inMemoryDatabase.updatedAt,
+      updatedAt: target.updatedAt,
     });
   } catch (err: any) {
     return NextResponse.json(

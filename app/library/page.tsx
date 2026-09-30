@@ -452,7 +452,7 @@ export default function LibraryPage() {
                 gap: '10px',
                 background: 'rgba(255, 255, 255, 0.02)',
                 border: '1px solid var(--border)',
-                borderRadius: '8px',
+                borderRadius: 'var(--radius)',
                 padding: '8px 10px',
               }}
             >
@@ -562,7 +562,7 @@ export default function LibraryPage() {
             alignItems: 'center',
             background: 'var(--card)',
             border: '1px solid var(--border)',
-            borderRadius: '10px',
+            borderRadius: 'var(--radius)',
             padding: '4px 10px',
             gap: '8px',
           }}
@@ -824,7 +824,7 @@ export default function LibraryPage() {
             background: selectedCategory === 'All' ? 'rgba(239, 68, 68, 0.2)' : 'var(--card)',
             border: `1px solid ${selectedCategory === 'All' ? 'var(--accent-red)' : 'var(--border)'}`,
             color: selectedCategory === 'All' ? '#fff' : 'var(--text-dim)',
-            borderRadius: '8px',
+            borderRadius: 'var(--radius)',
             padding: '5px 12px',
             fontSize: '0.7rem',
             fontWeight: 700,
@@ -855,7 +855,7 @@ export default function LibraryPage() {
                 background: isActive ? 'rgba(239, 68, 68, 0.2)' : 'var(--card)',
                 border: `1px solid ${isActive ? 'var(--accent-red)' : 'var(--border)'}`,
                 color: isActive ? '#fff' : 'var(--text-dim)',
-                borderRadius: '8px',
+                borderRadius: 'var(--radius)',
                 padding: '5px 12px',
                 fontSize: '0.7rem',
                 fontWeight: 700,
@@ -889,7 +889,7 @@ export default function LibraryPage() {
               marginBottom: '10px',
               background: 'rgba(255, 255, 255, 0.015)',
               border: '1px solid rgba(255, 255, 255, 0.05)',
-              borderRadius: '8px',
+              borderRadius: 'var(--radius)',
               padding: '6px 8px',
             }}
           >
@@ -917,7 +917,7 @@ export default function LibraryPage() {
                     background: isSubActive ? 'var(--accent-red)' : 'rgba(255, 255, 255, 0.04)',
                     border: `1px solid ${isSubActive ? 'var(--accent-red)' : 'rgba(255, 255, 255, 0.1)'}`,
                     color: isSubActive ? '#fff' : 'var(--text-muted)',
-                    borderRadius: '6px',
+                    borderRadius: 'var(--radius)',
                     padding: '3px 8px',
                     fontSize: '0.67rem',
                     fontWeight: isSubActive ? 700 : 500,
@@ -1025,7 +1025,7 @@ export default function LibraryPage() {
                         style={{
                           fontSize: '0.62rem',
                           padding: '1px 6px',
-                          borderRadius: '4px',
+                          borderRadius: 'var(--radius)',
                           background: 'rgba(16, 185, 129, 0.15)',
                           color: '#6ee7b7',
                           border: '1px solid rgba(16, 185, 129, 0.3)',
@@ -1074,7 +1074,7 @@ export default function LibraryPage() {
                     style={{
                       background: 'rgba(239, 68, 68, 0.08)',
                       border: '1px solid var(--accent-red)',
-                      borderRadius: '8px',
+                      borderRadius: 'var(--radius)',
                       padding: '8px 12px',
                       marginBottom: '10px',
                       display: 'flex',

@@ -592,7 +592,7 @@ export default function ExerciseLibraryModal({
                           background: isSubActive ? 'var(--accent-red)' : 'rgba(255, 255, 255, 0.04)',
                           border: `1px solid ${isSubActive ? 'var(--accent-red)' : 'rgba(255, 255, 255, 0.1)'}`,
                           color: isSubActive ? '#fff' : 'var(--text-muted)',
-                          borderRadius: '5px',
+                          borderRadius: 'var(--radius)',
                           padding: '2px 6px',
                           fontSize: '0.64rem',
                           fontWeight: isSubActive ? 700 : 500,
@@ -697,7 +697,7 @@ export default function ExerciseLibraryModal({
                       style={{
                         background: 'rgba(255, 255, 255, 0.025)',
                         border: '1px solid var(--border)',
-                        borderRadius: '8px',
+                        borderRadius: 'var(--radius)',
                         padding: '8px 10px',
                         display: 'flex',
                         alignItems: 'center',
@@ -732,7 +732,7 @@ export default function ExerciseLibraryModal({
                               style={{
                                 fontSize: '0.6rem',
                                 padding: '1px 5px',
-                                borderRadius: '4px',
+                                borderRadius: 'var(--radius)',
                                 background: 'rgba(16, 185, 129, 0.15)',
                                 color: '#6ee7b7',
                                 border: '1px solid rgba(16, 185, 129, 0.3)',
@@ -835,7 +835,7 @@ export default function ExerciseLibraryModal({
                         className="btn-clean btn-sm"
                         style={{
                           padding: '4px 8px',
-                          borderRadius: '6px',
+                          borderRadius: 'var(--radius)',
                           fontSize: '0.68rem',
                           display: 'flex',
                           alignItems: 'center',
@@ -861,7 +861,7 @@ export default function ExerciseLibraryModal({
                       padding: '7px 16px',
                       background: 'rgba(255, 255, 255, 0.05)',
                       border: '1px solid var(--border)',
-                      borderRadius: '6px',
+                      borderRadius: 'var(--radius)',
                       color: 'var(--text-muted)',
                       cursor: 'pointer',
                       width: '100%',
@@ -941,7 +941,7 @@ export default function ExerciseLibraryModal({
                 gap: '10px',
                 background: 'rgba(255, 255, 255, 0.02)',
                 border: '1px solid var(--border)',
-                borderRadius: '8px',
+                borderRadius: 'var(--radius)',
                 padding: '8px 10px',
               }}
             >
