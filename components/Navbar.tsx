@@ -8,7 +8,7 @@ import { initBackgroundCloudSync } from '../lib/storage';
 import { onCloudStatus, getCloudSyncInfo, CloudSyncInfo } from '../lib/supabaseSync';
 import { isAppOffline, onOfflineChange } from '../lib/offlineManager';
 import { onOutboxCountChange } from '../lib/outboxQueue';
-import { initAuth, onAuthChange, signOutUser, AppUser } from '../lib/authService';
+import { initAuth, onAuthChange, signOutUser, AppUser, isUserAdmin } from '../lib/authService';
 import AuthModal from './AuthModal';
 
 export default function Navbar() {
@@ -19,6 +19,8 @@ export default function Navbar() {
   const [user, setUser] = useState<AppUser | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const isAdmin = isUserAdmin(user);
 
   useEffect(() => {
     // Start background sync and auth on first load
@@ -64,14 +66,26 @@ export default function Navbar() {
     }
     switch (cloudInfo.status) {
       case 'needs_rls_fix':
+        if (isAdmin) {
+          return (
+            <Link
+              href="/settings"
+              className="cloud-status-pill needs_rls_fix"
+              title="Admin Alert: Supabase RLS is blocking writes. Tap to fix in Settings."
+            >
+              <span>⚠️</span>
+              <span>Setup Needed</span>
+            </Link>
+          );
+        }
         return (
           <Link
             href="/settings"
-            className="cloud-status-pill needs_rls_fix"
-            title="Action needed: Supabase RLS is blocking writes. Tap to fix in 5 seconds."
+            className="cloud-status-pill synced"
+            title="Database Ready & Synced"
           >
-            <span>⚠️</span>
-            <span>Setup Needed</span>
+            <span>🟢</span>
+            <span>Synced</span>
           </Link>
         );
       case 'syncing':
@@ -180,7 +194,7 @@ export default function Navbar() {
                   fontSize: '0.74rem',
                   fontWeight: 700,
                 }}
-                title={`Signed in as ${user.name} (${user.email})`}
+                title={isAdmin ? `👑 Administrator (${user.email})` : `Signed in as ${user.name} (${user.email})`}
               >
                 {user.avatarUrl ? (
                   <img
@@ -194,8 +208,8 @@ export default function Navbar() {
                       width: '22px',
                       height: '22px',
                       borderRadius: '50%',
-                      background: 'var(--accent-red)',
-                      color: '#fff',
+                      background: isAdmin ? '#eab308' : 'var(--accent-red)',
+                      color: isAdmin ? '#000' : '#fff',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -209,6 +223,9 @@ export default function Navbar() {
                 <span style={{ maxWidth: '75px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {user.name.split(' ')[0]}
                 </span>
+                {isAdmin && (
+                  <span title="Administrator" style={{ fontSize: '0.65rem' }}>👑</span>
+                )}
               </button>
 
               {/* Dropdown Menu */}
@@ -237,10 +254,17 @@ export default function Navbar() {
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {user.email}
                       </div>
-                      <div style={{ fontSize: '0.64rem', color: '#86efac', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span>●</span>
-                        <span>Private Cloud Account</span>
-                      </div>
+                      {isAdmin ? (
+                        <div style={{ fontSize: '0.64rem', color: '#fde047', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}>
+                          <span>👑</span>
+                          <span>Administrator</span>
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '0.64rem', color: '#86efac', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span>●</span>
+                          <span>Private Cloud Account</span>
+                        </div>
+                      )}
                     </div>
 
                     <Link

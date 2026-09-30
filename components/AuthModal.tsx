@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { X, Mail, Lock, CheckCircle2, AlertCircle, ArrowRight, Eye, EyeOff, ShieldCheck, Dumbbell } from 'lucide-react';
-import { signInWithPassword, signUpWithPassword, resendConfirmationEmail } from '../lib/authService';
+import { signInWithPassword, signUpWithPassword, resendConfirmationEmail, ADMIN_EMAIL } from '../lib/authService';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -245,10 +245,13 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                   <AlertCircle size={16} style={{ flexShrink: 0 }} />
                   <span>Email Confirmation Required</span>
                 </div>
-                <div style={{ color: '#cbd5e1', fontSize: '0.72rem', marginBottom: '8px' }}>
-                  Supabase sent a confirmation link to <strong>{email || 'your email'}</strong>. Click it to verify your account.
-                  <br />
-                  💡 <strong>Or disable email confirmation</strong> in Supabase for 1-second instant signups without emails!
+                <div style={{ color: '#cbd5e1', fontSize: '0.72rem', marginBottom: '8px', lineHeight: 1.5 }}>
+                  A confirmation email has been sent to <strong>{email || 'your email'}</strong>. Please check your inbox and spam folder, then tap the link to verify your account.
+                  {email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase() && (
+                    <div style={{ marginTop: '6px', color: '#93c5fd' }}>
+                      🛡️ <strong>Admin Tip:</strong> You can turn OFF &quot;Confirm email&quot; in Supabase to allow instant logins with any email.
+                    </div>
+                  )}
                 </div>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {email && (
@@ -270,9 +273,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                         background: 'rgba(255, 255, 255, 0.12)',
                         border: '1px solid rgba(255, 255, 255, 0.25)',
                         borderRadius: '6px',
-                        padding: '5px 10px',
+                        padding: '6px 12px',
                         color: '#fff',
-                        fontSize: '0.7rem',
+                        fontSize: '0.72rem',
                         fontWeight: 700,
                         cursor: 'pointer',
                       }}
@@ -280,25 +283,27 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                       {resendLoading ? 'Sending...' : 'Resend Confirmation Email'}
                     </button>
                   )}
-                  <a
-                    href="https://supabase.com/dashboard/project/ftssrejkpjyrzkgkkfnz/auth/providers"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      background: 'rgba(56, 189, 248, 0.15)',
-                      border: '1px solid rgba(56, 189, 248, 0.35)',
-                      color: '#7dd3fc',
-                      padding: '5px 10px',
-                      borderRadius: '6px',
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      textDecoration: 'none',
-                    }}
-                  >
-                    Turn OFF &quot;Confirm email&quot; in Supabase ↗
-                  </a>
+                  {email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase() && (
+                    <a
+                      href="https://supabase.com/dashboard/project/ftssrejkpjyrzkgkkfnz/auth/providers"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        background: 'rgba(56, 189, 248, 0.15)',
+                        border: '1px solid rgba(56, 189, 248, 0.35)',
+                        color: '#7dd3fc',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        textDecoration: 'none',
+                      }}
+                    >
+                      Supabase Auth Settings ↗
+                    </a>
+                  )}
                 </div>
               </div>
             ) : (

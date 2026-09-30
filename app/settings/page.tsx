@@ -63,7 +63,7 @@ import {
   clearOfflineCache,
   getOfflineCacheStats,
 } from '../../lib/offlineManager';
-import { initAuth, onAuthChange, signOutUser, AppUser } from '../../lib/authService';
+import { initAuth, onAuthChange, signOutUser, AppUser, isUserAdmin, ADMIN_EMAIL } from '../../lib/authService';
 import AuthModal from '../../components/AuthModal';
 
 export default function SettingsPage() {
@@ -119,11 +119,39 @@ export default function SettingsPage() {
   const [isSqlCopied, setIsSqlCopied] = useState<boolean>(false);
   const [user, setUser] = useState<AppUser | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
+  const isAdmin = isUserAdmin(user);
+
+  const handleSyncNow = async () => {
+    setIsSyncing(true);
+    try {
+      await forcePushAllToCloud();
+      await forcePullAllFromCloud();
+      triggerToast('🟢 Workouts synchronized across devices!');
+    } catch {
+      triggerToast('Workouts saved locally on this device.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   useEffect(() => {
     initAuth();
     const unsubAuth = onAuthChange((u) => {
       setUser(u);
+      if (isUserAdmin(u)) {
+        checkSupabaseConnection().then((result) => {
+          setDbTestResult({
+            tested: true,
+            connected: result.connected,
+            needsRlsFix: result.needsRlsFix,
+            message: result.message,
+          });
+        });
+      } else {
+        setDbTestResult(null);
+      }
     });
 
     const unsubCloud = onCloudStatus((info) => {
@@ -158,16 +186,6 @@ export default function SettingsPage() {
     if (/iphone|ipad|ipod/.test(userAgent)) {
       setIsIOS(true);
     }
-
-    // Auto-check connection diagnostics on mount
-    checkSupabaseConnection().then((result) => {
-      setDbTestResult({
-        tested: true,
-        connected: result.connected,
-        needsRlsFix: result.needsRlsFix,
-        message: result.message,
-      });
-    });
 
     return () => {
       unsubAuth();
@@ -450,8 +468,8 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
                       width: '48px',
                       height: '48px',
                       borderRadius: '50%',
-                      background: 'var(--accent-red)',
-                      color: '#fff',
+                      background: isAdmin ? '#eab308' : 'var(--accent-red)',
+                      color: isAdmin ? '#000' : '#fff',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -464,16 +482,24 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
                 )}
 
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', marginBottom: '2px' }}>
-                    {user.name}
+                  <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>{user.name}</span>
+                    {isAdmin && <span style={{ fontSize: '0.8rem' }} title="Administrator">👑</span>}
                   </div>
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {user.email}
                   </div>
-                  <div style={{ fontSize: '0.68rem', color: '#86efac', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <ShieldCheck size={13} />
-                    <span>Private Cloud Database Scope: <code style={{ color: '#93c5fd' }}>plan_{user.id.slice(0, 8)}...</code></span>
-                  </div>
+                  {isAdmin ? (
+                    <div style={{ fontSize: '0.68rem', color: '#fde047', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}>
+                      <ShieldCheck size={13} color="#fde047" />
+                      <span>👑 Administrator Account &bull; Full Database &amp; Developer Access</span>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '0.68rem', color: '#86efac', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <ShieldCheck size={13} />
+                      <span>Personal Cloud Sync Active &bull; Private &amp; Encrypted</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -908,12 +934,12 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
             <button
               type="button"
               className="btn-clean btn-primary btn-sm"
-              onClick={handleTestSupabase}
-              disabled={isTestingDb}
+              onClick={handleSyncNow}
+              disabled={isSyncing}
               style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', fontSize: '0.78rem' }}
             >
-              {isTestingDb ? <RefreshCw size={14} className="spin" /> : <Cloud size={14} />}
-              <span>{isTestingDb ? 'Synchronizing & Testing...' : '⚡ Test Connection & Force Sync Now'}</span>
+              {isSyncing ? <RefreshCw size={14} className="spin" /> : <Cloud size={14} />}
+              <span>{isSyncing ? 'Synchronizing Workouts...' : '⚡ Sync Workout Data Now'}</span>
             </button>
           </div>
 
@@ -932,101 +958,9 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
             <div style={{ fontWeight: 800, color: '#fff', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span>⚡ 100% Automatic Background Sync</span>
             </div>
-            Whenever you add exercises, update weights, or check off sets on PC, they are saved automatically to your cloud database.
-            When you open this website on your mobile phone, it automatically detects and downloads your latest workouts. No QR codes or PINs needed.
+            Whenever you add exercises, update weights, or check off sets, they are saved automatically to your personal cloud account.
+            When you open Null Gym on your mobile phone or tablet, it automatically synchronizes and downloads your latest workouts.
           </div>
-
-          {/* Database Diagnostics Result Box */}
-          {dbTestResult && (
-            <div
-              style={{
-                background: dbTestResult.needsRlsFix
-                  ? 'rgba(239, 68, 68, 0.12)'
-                  : dbTestResult.connected
-                  ? 'rgba(34, 197, 94, 0.12)'
-                  : 'rgba(245, 158, 11, 0.12)',
-                border: `1px solid ${
-                  dbTestResult.needsRlsFix
-                    ? 'rgba(239, 68, 68, 0.35)'
-                    : dbTestResult.connected
-                    ? 'rgba(34, 197, 94, 0.35)'
-                    : 'rgba(245, 158, 11, 0.35)'
-                }`,
-                borderRadius: '8px',
-                padding: '10px 12px',
-                marginBottom: '10px',
-                fontSize: '0.72rem',
-                lineHeight: 1.5,
-              }}
-            >
-              <div style={{ fontWeight: 800, marginBottom: '4px', color: dbTestResult.needsRlsFix ? '#fca5a5' : dbTestResult.connected ? '#86efac' : '#fde047' }}>
-                {dbTestResult.message}
-              </div>
-
-              {dbTestResult.needsRlsFix && (
-                <div style={{ marginTop: '10px' }}>
-                  <div style={{ color: '#cbd5e1', marginBottom: '6px' }}>
-                    Copy this 3-line SQL command and run it in your <strong>Supabase SQL Editor</strong> to enable instant multi-device cloud sync:
-                  </div>
-                  <pre
-                    style={{
-                      background: 'rgba(0,0,0,0.5)',
-                      padding: '10px',
-                      borderRadius: '6px',
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: '0.68rem',
-                      overflowX: 'auto',
-                      marginBottom: '10px',
-                      color: '#93c5fd',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                    }}
-                  >
-                    {sqlFixCode}
-                  </pre>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    <button
-                      type="button"
-                      className="btn-clean btn-primary btn-sm"
-                      onClick={handleCopySql}
-                      style={{ fontSize: '0.72rem', padding: '6px 12px' }}
-                    >
-                      {isSqlCopied ? <Check size={13} color="#fff" /> : <Copy size={13} />}
-                      <span>{isSqlCopied ? 'SQL Copied to Clipboard!' : '1. Copy SQL Script'}</span>
-                    </button>
-                    <a
-                      href="https://supabase.com/dashboard/project/ftssrejkpjyrzkgkkfnz/sql/new"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-clean btn-sm"
-                      style={{
-                        fontSize: '0.72rem',
-                        padding: '6px 12px',
-                        background: 'rgba(56, 189, 248, 0.15)',
-                        border: '1px solid rgba(56, 189, 248, 0.35)',
-                        color: '#7dd3fc',
-                        textDecoration: 'none',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
-                    >
-                      <span>2. Open Supabase SQL Editor ↗</span>
-                    </a>
-                    <button
-                      type="button"
-                      className="btn-clean btn-sm"
-                      onClick={handleTestSupabase}
-                      disabled={isTestingDb}
-                      style={{ fontSize: '0.72rem', padding: '6px 12px' }}
-                    >
-                      <RefreshCw size={13} className={isTestingDb ? 'spin' : ''} />
-                      <span>3. Re-test Now</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
 
           <div
             style={{
@@ -1054,6 +988,197 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
             </span>
           </div>
         </div>
+
+        {/* ADMIN EXCLUSIVE: Supabase Database & Developer Diagnostics */}
+        {isAdmin && (
+          <div
+            className="clean-card"
+            style={{
+              border: '1px solid rgba(234, 179, 8, 0.35)',
+              background: 'linear-gradient(180deg, rgba(234, 179, 8, 0.05) 0%, rgba(13, 17, 26, 0.6) 100%)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+              <h3
+                style={{
+                  fontSize: '0.88rem',
+                  fontWeight: 800,
+                  color: '#fde047',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <ShieldCheck size={16} color="#fde047" />
+                <span>[ADMIN CONSOLE] Database &amp; Developer Diagnostics</span>
+              </h3>
+              <span
+                style={{
+                  fontSize: '0.68rem',
+                  padding: '3px 8px',
+                  borderRadius: '6px',
+                  background: 'rgba(234, 179, 8, 0.15)',
+                  border: '1px solid rgba(234, 179, 8, 0.35)',
+                  color: '#fde047',
+                  fontWeight: 700,
+                }}
+              >
+                👑 Admin Mode ({ADMIN_EMAIL})
+              </span>
+            </div>
+
+            <p style={{ fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '12px', lineHeight: 1.5 }}>
+              This developer card is strictly hidden from regular users and only visible to you ({ADMIN_EMAIL}). Use it to test Supabase live connectivity, check Row-Level Security (RLS) write permissions, and access database tables.
+            </p>
+
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
+              <button
+                type="button"
+                className="btn-clean btn-primary btn-sm"
+                onClick={handleTestSupabase}
+                disabled={isTestingDb}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', fontSize: '0.78rem' }}
+              >
+                {isTestingDb ? <RefreshCw size={14} className="spin" /> : <Cloud size={14} />}
+                <span>{isTestingDb ? 'Testing Connection & RLS...' : '⚡ Test Supabase Connection & Permissions'}</span>
+              </button>
+
+              <a
+                href="https://supabase.com/dashboard/project/ftssrejkpjyrzkgkkfnz/sql/new"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-clean btn-sm"
+                style={{
+                  fontSize: '0.72rem',
+                  padding: '8px 12px',
+                  background: 'rgba(56, 189, 248, 0.15)',
+                  border: '1px solid rgba(56, 189, 248, 0.35)',
+                  color: '#7dd3fc',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <ExternalLink size={13} />
+                <span>Open Supabase SQL Editor ↗</span>
+              </a>
+
+              <a
+                href="https://supabase.com/dashboard/project/ftssrejkpjyrzkgkkfnz/auth/providers"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-clean btn-sm"
+                style={{
+                  fontSize: '0.72rem',
+                  padding: '8px 12px',
+                  background: 'rgba(168, 85, 247, 0.15)',
+                  border: '1px solid rgba(168, 85, 247, 0.35)',
+                  color: '#d8b4fe',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <ExternalLink size={13} />
+                <span>Supabase Auth Settings ↗</span>
+              </a>
+            </div>
+
+            {/* Database Diagnostics Result Box (Admin Only) */}
+            {dbTestResult && (
+              <div
+                style={{
+                  background: dbTestResult.needsRlsFix
+                    ? 'rgba(239, 68, 68, 0.12)'
+                    : dbTestResult.connected
+                    ? 'rgba(34, 197, 94, 0.12)'
+                    : 'rgba(245, 158, 11, 0.12)',
+                  border: `1px solid ${
+                    dbTestResult.needsRlsFix
+                      ? 'rgba(239, 68, 68, 0.35)'
+                      : dbTestResult.connected
+                      ? 'rgba(34, 197, 94, 0.35)'
+                      : 'rgba(245, 158, 11, 0.35)'
+                  }`,
+                  borderRadius: '8px',
+                  padding: '12px 14px',
+                  marginBottom: '10px',
+                  fontSize: '0.74rem',
+                  lineHeight: 1.5,
+                }}
+              >
+                <div style={{ fontWeight: 800, marginBottom: '4px', color: dbTestResult.needsRlsFix ? '#fca5a5' : dbTestResult.connected ? '#86efac' : '#fde047' }}>
+                  {dbTestResult.message}
+                </div>
+
+                {dbTestResult.needsRlsFix && (
+                  <div style={{ marginTop: '10px' }}>
+                    <div style={{ color: '#cbd5e1', marginBottom: '6px' }}>
+                      Copy this 3-line SQL command and run it in your <strong>Supabase SQL Editor</strong> to enable instant multi-device cloud sync:
+                    </div>
+                    <pre
+                      style={{
+                        background: 'rgba(0,0,0,0.6)',
+                        padding: '10px',
+                        borderRadius: '6px',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '0.68rem',
+                        overflowX: 'auto',
+                        marginBottom: '10px',
+                        color: '#93c5fd',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                      }}
+                    >
+                      {sqlFixCode}
+                    </pre>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        className="btn-clean btn-primary btn-sm"
+                        onClick={handleCopySql}
+                        style={{ fontSize: '0.72rem', padding: '6px 12px' }}
+                      >
+                        {isSqlCopied ? <Check size={13} color="#fff" /> : <Copy size={13} />}
+                        <span>{isSqlCopied ? 'SQL Copied to Clipboard!' : '1. Copy SQL Script'}</span>
+                      </button>
+                      <a
+                        href="https://supabase.com/dashboard/project/ftssrejkpjyrzkgkkfnz/sql/new"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-clean btn-sm"
+                        style={{
+                          fontSize: '0.72rem',
+                          padding: '6px 12px',
+                          background: 'rgba(56, 189, 248, 0.15)',
+                          border: '1px solid rgba(56, 189, 248, 0.35)',
+                          color: '#7dd3fc',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <span>2. Open Supabase SQL Editor ↗</span>
+                      </a>
+                      <button
+                        type="button"
+                        className="btn-clean btn-sm"
+                        onClick={handleTestSupabase}
+                        disabled={isTestingDb}
+                        style={{ fontSize: '0.72rem', padding: '6px 12px' }}
+                      >
+                        <RefreshCw size={13} className={isTestingDb ? 'spin' : ''} />
+                        <span>3. Re-test Now</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 5. Master Exercise Catalog */}
         <div className="clean-card">

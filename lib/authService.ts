@@ -37,6 +37,13 @@ function mapSupabaseUser(user: SupabaseUser | null): AppUser | null {
   };
 }
 
+export const ADMIN_EMAIL = 'nullx500@gmail.com';
+
+export function isUserAdmin(user: AppUser | null | undefined): boolean {
+  if (!user || !user.email) return false;
+  return user.email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase();
+}
+
 export function getCurrentUser(): AppUser | null {
   return currentUser;
 }
