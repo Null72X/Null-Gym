@@ -1082,7 +1082,28 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
                 }}
               >
                 <ExternalLink size={13} />
-                <span>Supabase Auth Settings ↗</span>
+                <span>Supabase Auth Providers ↗</span>
+              </a>
+
+              <a
+                href="https://supabase.com/dashboard/project/ftssrejkpjyrzkgkkfnz/auth/url-configuration"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-clean btn-sm"
+                style={{
+                  fontSize: '0.72rem',
+                  padding: '8px 12px',
+                  background: 'rgba(34, 197, 94, 0.15)',
+                  border: '1px solid rgba(34, 197, 94, 0.35)',
+                  color: '#86efac',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <ExternalLink size={13} />
+                <span>Site URL &amp; Redirects ↗</span>
               </a>
             </div>
 

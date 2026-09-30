@@ -248,8 +248,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                 <div style={{ color: '#cbd5e1', fontSize: '0.72rem', marginBottom: '8px', lineHeight: 1.5 }}>
                   A confirmation email has been sent to <strong>{email || 'your email'}</strong>. Please check your inbox and spam folder, then tap the link to verify your account.
                   {email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase() && (
-                    <div style={{ marginTop: '6px', color: '#93c5fd' }}>
-                      🛡️ <strong>Admin Tip:</strong> You can turn OFF &quot;Confirm email&quot; in Supabase to allow instant logins with any email.
+                    <div style={{ marginTop: '6px', color: '#93c5fd', lineHeight: 1.5 }}>
+                      🛡️ <strong>Admin Tip:</strong> To stop emails redirecting to localhost, set your hosted domain in <strong>URL Configuration</strong> or turn OFF <strong>&quot;Confirm email&quot;</strong> in Supabase!
                     </div>
                   )}
                 </div>
@@ -284,25 +284,46 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                     </button>
                   )}
                   {email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase() && (
-                    <a
-                      href="https://supabase.com/dashboard/project/ftssrejkpjyrzkgkkfnz/auth/providers"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        background: 'rgba(56, 189, 248, 0.15)',
-                        border: '1px solid rgba(56, 189, 248, 0.35)',
-                        color: '#7dd3fc',
-                        padding: '6px 12px',
-                        borderRadius: '6px',
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        textDecoration: 'none',
-                      }}
-                    >
-                      Supabase Auth Settings ↗
-                    </a>
+                    <>
+                      <a
+                        href="https://supabase.com/dashboard/project/ftssrejkpjyrzkgkkfnz/auth/url-configuration"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          background: 'rgba(56, 189, 248, 0.15)',
+                          border: '1px solid rgba(56, 189, 248, 0.35)',
+                          color: '#7dd3fc',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          textDecoration: 'none',
+                        }}
+                      >
+                        Fix Site URL in Supabase ↗
+                      </a>
+                      <a
+                        href="https://supabase.com/dashboard/project/ftssrejkpjyrzkgkkfnz/auth/providers"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          background: 'rgba(168, 85, 247, 0.15)',
+                          border: '1px solid rgba(168, 85, 247, 0.35)',
+                          color: '#d8b4fe',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          textDecoration: 'none',
+                        }}
+                      >
+                        Turn OFF Email Verification ↗
+                      </a>
+                    </>
                   )}
                 </div>
               </div>

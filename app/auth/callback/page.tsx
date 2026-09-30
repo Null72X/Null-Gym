@@ -20,6 +20,19 @@ export default function AuthCallbackPage() {
 
       try {
         setStatusMessage('Syncing your account...');
+
+        // If code query parameter exists (PKCE code flow), exchange it for a session
+        if (typeof window !== 'undefined') {
+          const params = new URLSearchParams(window.location.search);
+          const code = params.get('code');
+          if (code) {
+            const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+            if (exchangeError) {
+              console.warn('[Auth Callback] Code exchange notice:', exchangeError);
+            }
+          }
+        }
+
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {

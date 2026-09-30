@@ -91,6 +91,16 @@ export async function initAuth(): Promise<AppUser | null> {
   }
 }
 
+export function getAuthRedirectUrl(): string {
+  if (typeof window !== 'undefined' && window.location.origin) {
+    return `${window.location.origin}/auth/callback`;
+  }
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return `${process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')}/auth/callback`;
+  }
+  return 'https://null-gym.vercel.app/auth/callback';
+}
+
 /**
  * Sign In with 1-Tap Google OAuth
  */
@@ -100,10 +110,7 @@ export async function signInWithGoogle(): Promise<{ error: Error | null }> {
   }
 
   try {
-    const redirectTo =
-      typeof window !== 'undefined'
-        ? `${window.location.origin}/auth/callback`
-        : undefined;
+    const redirectTo = getAuthRedirectUrl();
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -133,10 +140,7 @@ export async function signInWithMagicLink(email: string): Promise<{ error: Error
   }
 
   try {
-    const emailRedirectTo =
-      typeof window !== 'undefined'
-        ? `${window.location.origin}/auth/callback`
-        : undefined;
+    const emailRedirectTo = getAuthRedirectUrl();
 
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
@@ -184,10 +188,7 @@ export async function signUpWithPassword(email: string, password: string): Promi
   }
 
   try {
-    const emailRedirectTo =
-      typeof window !== 'undefined'
-        ? `${window.location.origin}/auth/callback`
-        : undefined;
+    const emailRedirectTo = getAuthRedirectUrl();
 
     const { data, error } = await supabase.auth.signUp({
       email: email.trim().toLowerCase(),
@@ -216,9 +217,13 @@ export async function resendConfirmationEmail(email: string): Promise<{ error: E
     return { error: new Error('Supabase is not configured.') };
   }
   try {
+    const emailRedirectTo = getAuthRedirectUrl();
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email: email.trim().toLowerCase(),
+      options: {
+        emailRedirectTo,
+      },
     });
     if (error) throw error;
     return { error: null };
