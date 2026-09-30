@@ -53,12 +53,12 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       // User is not authenticated and trying to access protected route
       const nextParam = pathname && pathname !== '/' ? `?next=${encodeURIComponent(pathname)}` : '';
       router.replace(`/login${nextParam}`);
-    } else if (user && pathname === '/login') {
-      // User is already authenticated and visits /login
+    } else if (user && (pathname === '/login' || pathname === '/auth/callback')) {
+      // User is already authenticated and visits /login or /auth/callback
       if (typeof window !== 'undefined') {
         const searchParams = new URLSearchParams(window.location.search);
         const nextUrl = searchParams.get('next') || '/';
-        router.replace(nextUrl);
+        window.location.replace(nextUrl);
       } else {
         router.replace('/');
       }

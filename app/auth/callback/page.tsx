@@ -3,8 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
-import { initAuth } from '@/lib/authService';
-import { forcePullAllFromCloud } from '@/lib/storage';
+import { initAuth, getCurrentUser } from '@/lib/authService';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -17,11 +16,6 @@ export default function AuthCallbackPage() {
     handledRef.current = true;
 
     async function processAuthCallback() {
-      if (!isSupabaseConfigured || !supabase) {
-        router.replace('/login');
-        return;
-      }
-
       let nextUrl = '/';
 
       if (typeof window !== 'undefined') {
@@ -32,72 +26,70 @@ export default function AuthCallbackPage() {
         const queryError = searchParams.get('error_description') || searchParams.get('error');
         if (queryError) {
           console.error('[Auth Callback] OAuth query error:', queryError);
-          router.replace(`/login?error=${encodeURIComponent(queryError)}`);
+          window.location.replace(`/login?error=${encodeURIComponent(queryError)}`);
           return;
         }
 
-        // Also check hash for error parameters (implicit flow)
         if (window.location.hash) {
           const hashParams = new URLSearchParams(window.location.hash.substring(1));
           const hashError = hashParams.get('error_description') || hashParams.get('error');
           if (hashError) {
             console.error('[Auth Callback] OAuth hash error:', hashError);
-            router.replace(`/login?error=${encodeURIComponent(hashError)}`);
+            window.location.replace(`/login?error=${encodeURIComponent(hashError)}`);
             return;
           }
         }
+      }
 
-        // PKCE Code Exchange
+      // Check if user is already authenticated
+      const existingUser = getCurrentUser();
+      if (existingUser) {
+        window.location.replace(nextUrl || '/');
+        return;
+      }
+
+      if (!isSupabaseConfigured || !supabase) {
+        window.location.replace('/login');
+        return;
+      }
+
+      // Handle PKCE code if present
+      if (typeof window !== 'undefined') {
+        const searchParams = new URLSearchParams(window.location.search);
         const code = searchParams.get('code');
         if (code) {
           try {
-            const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-            if (exchangeError) {
-              console.warn('[Auth Callback] Code exchange warning:', exchangeError.message);
-            }
-          } catch (err) {
-            console.warn('[Auth Callback] Code exchange caught error:', err);
+            await supabase.auth.exchangeCodeForSession(code);
+          } catch (e) {
+            console.warn('[Auth Callback] Exchange warning:', e);
           }
         }
       }
 
       try {
         setStatusMessage('Syncing your account...');
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-        if (sessionError) {
-          console.error('[Auth Callback] Session retrieval error:', sessionError);
-        }
+        const { data: { session } } = await supabase.auth.getSession();
 
         if (session?.user) {
           await initAuth();
-          setStatusMessage('Synchronizing workouts...');
-          try {
-            await forcePullAllFromCloud();
-          } catch (e) {
-            console.warn('[Auth Callback] Cloud pull notice:', e);
-          }
-          router.replace(nextUrl);
+          window.location.replace(nextUrl || '/');
           return;
         }
 
-        // If session not immediately available (e.g. hash processing in progress), wait for onAuthStateChange
+        // Listen for delayed token processing
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
           if (newSession?.user) {
             subscription.unsubscribe();
             await initAuth();
-            try {
-              await forcePullAllFromCloud();
-            } catch (e) {}
-            router.replace(nextUrl);
+            window.location.replace(nextUrl || '/');
           }
         });
 
-        // Fail-safe redirect after 2.5s
+        // Fail-safe redirect after 1.5s
         const timer = setTimeout(() => {
           subscription.unsubscribe();
-          router.replace(nextUrl);
-        }, 2500);
+          window.location.replace(nextUrl || '/');
+        }, 1500);
 
         return () => {
           subscription.unsubscribe();
@@ -108,8 +100,8 @@ export default function AuthCallbackPage() {
         const errMsg = err?.message || 'Failed to complete sign in.';
         setError(errMsg);
         setTimeout(() => {
-          router.replace(`/login?error=${encodeURIComponent(errMsg)}`);
-        }, 1500);
+          window.location.replace(`/login?error=${encodeURIComponent(errMsg)}`);
+        }, 1200);
       }
     }
 
