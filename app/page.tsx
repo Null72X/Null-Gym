@@ -425,6 +425,9 @@ export default function DashboardPage() {
           load: s.load,
           unit: s.unit || unit,
           reps: s.reps,
+          rest: s.rest,
+          duration: s.duration,
+          distance: s.distance,
           completed: true,
         };
       }),

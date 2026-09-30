@@ -95,6 +95,7 @@ export interface SavedPerformanceSet {
   completed: boolean;
   duration?: string | number;
   distance?: string | number;
+  rest?: string;
 }
 
 export interface SavedExercisePerformance {
