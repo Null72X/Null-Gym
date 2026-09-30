@@ -120,6 +120,8 @@ export default function SetRow({
             placeholder="Reps"
             title="Target / Achieved Reps"
             onChange={(e) => onUpdate({ ...set, reps: e.target.value })}
+            readOnly={mode === 'tracker'}
+            style={mode === 'tracker' ? { opacity: 0.7, pointerEvents: 'none' } : {}}
           />
 
           {/* Stepper with Load Input & Unit */}
@@ -141,7 +143,7 @@ export default function SetRow({
               placeholder="--"
               onChange={handleLoadChange}
             />
-            <span className="clean-load-unit">{set.unit || defaultUnit}</span>
+            <span className="clean-load-unit">kg</span>
             <button
               type="button"
               className="clean-step-btn"
@@ -171,8 +173,10 @@ export default function SetRow({
               outline: 'none',
               fontFamily: 'var(--font-mono)',
               fontSize: '0.75rem',
+              ...(mode === 'tracker' ? { opacity: 0.7, pointerEvents: 'none' } : {})
             }}
             onChange={(e) => onUpdate({ ...set, duration: e.target.value, reps: e.target.value })}
+            readOnly={mode === 'tracker'}
           />
 
           {/* Cardio Distance / Intensity */}
@@ -192,8 +196,10 @@ export default function SetRow({
               fontFamily: 'var(--font-mono)',
               fontSize: '0.75rem',
               textAlign: 'center',
+              ...(mode === 'tracker' ? { opacity: 0.7, pointerEvents: 'none' } : {})
             }}
             onChange={(e) => onUpdate({ ...set, distance: e.target.value })}
+            readOnly={mode === 'tracker'}
           />
         </>
       ) : trackingType === 'time_only' ? (
@@ -215,8 +221,10 @@ export default function SetRow({
               outline: 'none',
               fontFamily: 'var(--font-mono)',
               fontSize: '0.75rem',
+              ...(mode === 'tracker' ? { opacity: 0.7, pointerEvents: 'none' } : {})
             }}
             onChange={(e) => onUpdate({ ...set, duration: e.target.value, reps: e.target.value })}
+            readOnly={mode === 'tracker'}
           />
         </>
       ) : trackingType === 'distance_time' ? (
@@ -237,8 +245,10 @@ export default function SetRow({
               outline: 'none',
               fontFamily: 'var(--font-mono)',
               fontSize: '0.75rem',
+              ...(mode === 'tracker' ? { opacity: 0.7, pointerEvents: 'none' } : {})
             }}
             onChange={(e) => onUpdate({ ...set, distance: e.target.value, reps: e.target.value })}
+            readOnly={mode === 'tracker'}
           />
           {/* Duration */}
           <input
@@ -257,8 +267,10 @@ export default function SetRow({
               fontFamily: 'var(--font-mono)',
               fontSize: '0.75rem',
               textAlign: 'center',
+              ...(mode === 'tracker' ? { opacity: 0.7, pointerEvents: 'none' } : {})
             }}
             onChange={(e) => onUpdate({ ...set, duration: e.target.value })}
+            readOnly={mode === 'tracker'}
           />
         </>
       ) : (
@@ -280,8 +292,10 @@ export default function SetRow({
               outline: 'none',
               fontFamily: 'var(--font-mono)',
               fontSize: '0.78rem',
+              ...(mode === 'tracker' ? { opacity: 0.7, pointerEvents: 'none' } : {})
             }}
             onChange={(e) => onUpdate({ ...set, reps: e.target.value })}
+            readOnly={mode === 'tracker'}
           />
         </>
       )}

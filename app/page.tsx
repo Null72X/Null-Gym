@@ -680,14 +680,6 @@ export default function DashboardPage() {
           <button
             type="button"
             className="unit-toggle-btn"
-            onClick={toggleUnit}
-            title="Toggle default unit (KG / LBS)"
-          >
-            {unit.toUpperCase()}
-          </button>
-          <button
-            type="button"
-            className="unit-toggle-btn"
             style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
             onClick={() => handleStartRest('90s')}
             title="Start 90s Rest Timer"

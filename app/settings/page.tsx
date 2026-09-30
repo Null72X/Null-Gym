@@ -840,25 +840,16 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
               Overload Increment (Every 2nd Week: W1-2, W3-4, W5-6)
             </label>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              {(unit === 'kg' ? [1.25, 2.5, 5] : [2.5, 5, 10]).map((val) => {
-                const isSelected =
-                  unit === 'kg'
-                    ? progressionConfig.weeklyIncrementKg === val
-                    : progressionConfig.weeklyIncrementLbs === val;
+              {[1.25, 2.5, 5].map((val) => {
+                const isSelected = progressionConfig.weeklyIncrementKg === val;
                 return (
                   <button
                     key={val}
                     type="button"
                     className={`btn-clean btn-sm ${isSelected ? 'btn-primary' : ''}`}
-                    onClick={() =>
-                      handleUpdateProgression(
-                        unit === 'kg'
-                          ? { weeklyIncrementKg: val }
-                          : { weeklyIncrementLbs: val }
-                      )
-                    }
+                    onClick={() => handleUpdateProgression({ weeklyIncrementKg: val })}
                   >
-                    +{val} {unit.toUpperCase()} {val === (unit === 'kg' ? 2.5 : 5) ? '(Recommended)' : ''}
+                    +{val} KG {val === 2.5 ? '(Recommended)' : ''}
                   </button>
                 );
               })}
@@ -905,34 +896,6 @@ ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;`;
             </Link>
           </div>
         </div>
-
-        {/* 3. Weight Unit Preference */}
-        <div className="clean-card">
-          <h3 style={{ fontSize: '0.88rem', fontWeight: 800, color: '#fff', marginBottom: '6px' }}>
-            Weight Unit Preference
-          </h3>
-          <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '10px' }}>
-            Primary unit for load tracking and stepper increments across all 6 weeks.
-          </p>
-
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              type="button"
-              className={`btn-clean ${unit === 'kg' ? 'btn-primary' : ''}`}
-              onClick={() => handleUnitChange('kg')}
-            >
-              KG (Kilograms)
-            </button>
-            <button
-              type="button"
-              className={`btn-clean ${unit === 'lbs' ? 'btn-primary' : ''}`}
-              onClick={() => handleUnitChange('lbs')}
-            >
-              LBS (Pounds)
-            </button>
-          </div>
-        </div>
-
         {/* 4. Multi-Device Cloud & Direct Sync */}
         <div className="clean-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
