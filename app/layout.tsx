@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import AuthGuard from '../components/AuthGuard';
 import ServiceWorkerRegistrar from '../components/ServiceWorkerRegistrar';
+import ParticlesBackground from '../components/ParticlesBackground';
 
 export const metadata: Metadata = {
   title: 'Null Gym · 6-Week Workout Planner & Tracker',
@@ -35,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <head>
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
@@ -51,8 +52,9 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body>
-        <div className="app-container">
+      <body className="antialiased selection:bg-red-500/30 selection:text-red-200 min-h-screen relative font-sans">
+        <ParticlesBackground />
+        <div className="app-container relative z-10">
           <AuthGuard>
             <Navbar />
             <main>{children}</main>
@@ -64,3 +66,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+

@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:sw": "tsc -p src/tsconfig.json",
+    "typecheck:scripts": "tsc -p scripts/tsconfig.json",
     "start": "next start",
     "lint": "next lint"
   },
@@ -22,3 +24,4 @@
     "typescript": "^5.6.3"
   }
 }
+

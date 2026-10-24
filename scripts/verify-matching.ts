@@ -1,10 +1,19 @@
-const catalog = require('../lib/exerciseCatalogData.json');
+import catalogData from '../lib/exerciseCatalogData.json';
 
-const PILLARS = ['Chest', 'Back', 'Shoulders', 'Arms', 'Legs', 'Core', 'Functional', 'Neck'];
+interface CatalogItem {
+  name?: string;
+  muscleGroup?: string;
+  subMuscle?: string;
+  category?: string;
+  [key: string]: unknown;
+}
 
-function testMatch(item, pillar, subFilter = 'all') {
+const catalog = catalogData as CatalogItem[];
+
+const PILLARS: string[] = ['Chest', 'Back', 'Shoulders', 'Arms', 'Legs', 'Core', 'Functional', 'Neck'];
+
+function testMatch(item: CatalogItem, pillar: string, subFilter: string = 'all'): boolean {
   const p = pillar.toLowerCase().trim();
-  const sub = (subFilter || 'all').toLowerCase().trim();
   const mg = (item.muscleGroup || '').toLowerCase().trim();
   const sm = (item.subMuscle || '').toLowerCase().trim();
   const cat = (item.category || '').toLowerCase().trim();
@@ -37,7 +46,7 @@ function testMatch(item, pillar, subFilter = 'all') {
   return false;
 }
 
-PILLARS.forEach(pillar => {
-  const matched = catalog.filter(item => testMatch(item, pillar));
+PILLARS.forEach((pillar) => {
+  const matched = catalog.filter((item) => testMatch(item, pillar));
   console.log(`Pillar ${pillar}: ${matched.length} exercises match`);
 });
