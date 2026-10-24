@@ -1674,19 +1674,27 @@ body {
 }
 
 .login-page-wrap {
-  min-height: 100vh;
-  min-height: 100dvh;
+  min-height: calc(100vh - 40px);
+  min-height: calc(100dvh - 40px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px 16px;
-  background: radial-gradient(circle at 50% 20%, rgba(220, 38, 38, 0.12) 0%, rgba(10, 10, 14, 0) 70%), var(--bg);
+  padding: 24px 0;
+  background: transparent;
+  width: 100%;
+}
+
+.app-container:has(.login-page-wrap) {
+  padding-bottom: calc(24px + var(--safe-bottom));
+  justify-content: center;
 }
 
 .login-card {
   width: 100%;
   max-width: 420px;
   background: var(--card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 32px 28px;
@@ -1695,6 +1703,8 @@ body {
   flex-direction: column;
   align-items: center;
   text-align: center;
+  position: relative;
+  z-index: 10;
 }
 
 @media (max-width: 480px) {
@@ -2034,6 +2044,8 @@ body::before {
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
+  transform: translate3d(0, 0, 0);
+  will-change: opacity, transform;
 }
 
 .glow-orb.orb-1 {
@@ -2041,9 +2053,10 @@ body::before {
   left: 16%;
   width: 450px;
   height: 450px;
-  background: rgba(220, 38, 38, 0.10);
+  background: rgba(220, 38, 38, 0.12);
   filter: blur(140px);
-  animation: pulseGlow 4s ease-in-out infinite;
+  -webkit-filter: blur(140px);
+  animation: orbPulse 6s ease-in-out infinite;
 }
 
 .glow-orb.orb-2 {
@@ -2053,16 +2066,18 @@ body::before {
   height: 550px;
   background: rgba(69, 10, 10, 0.20);
   filter: blur(160px);
+  -webkit-filter: blur(160px);
 }
 
 .glow-orb.orb-3 {
   top: 66%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translate3d(0, 0, 0);
   width: 600px;
   height: 300px;
   background: rgba(88, 28, 135, 0.10);
   filter: blur(150px);
+  -webkit-filter: blur(150px);
 }
 
 .particle-dot {
@@ -2087,9 +2102,14 @@ body::before {
   100% { opacity: 1; transform: scale(1); }
 }
 
+@keyframes orbPulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.08); }
+}
+
 @keyframes pulseGlow {
-  0%, 100% { opacity: 0.4; filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.5)); }
-  50% { opacity: 0.8; filter: drop-shadow(0 0 20px rgba(239, 68, 68, 0.8)); }
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.15); }
 }
 
 @keyframes floatSlow {
