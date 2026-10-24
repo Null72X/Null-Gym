@@ -68,10 +68,10 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   // While checking auth on protected routes, show branded splash screen with zero content flash
   if (isChecking && !isPublicRoute) {
     return (
-      <div className="auth-splash-screen" role="status" aria-label="Loading Null Gym">
+      <div className="auth-splash-screen" role="status" aria-label="Loading Null Gym Planner">
         <div className="auth-splash-logo">
           <span style={{ color: 'var(--accent-red)' }}>//</span>
-          <span>NULL GYM</span>
+          <span>NULL GYM PLANNER</span>
         </div>
         <div className="auth-spinner" />
       </div>
@@ -84,7 +84,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       <div className="auth-splash-screen" role="status" aria-label="Redirecting to login">
         <div className="auth-splash-logo">
           <span style={{ color: 'var(--accent-red)' }}>//</span>
-          <span>NULL GYM</span>
+          <span>NULL GYM PLANNER</span>
         </div>
         <div className="auth-spinner" />
       </div>

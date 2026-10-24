@@ -28,7 +28,7 @@ export default function Footer() {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', fontWeight: 800 }}>
-        <span>Null Gym</span>
+        <span>Null Gym Planner</span>
         <span style={{ color: 'var(--text-dim)' }}>·</span>
         <span
           style={{
@@ -45,9 +45,7 @@ export default function Footer() {
         </span>
       </div>
 
-      <p style={{ margin: 0, maxWidth: '440px', lineHeight: 1.5 }}>
-        Built for serious lifters with 1,323 ExerciseDB animated form guides, bi-weekly progressive overload, and offline mode.
-      </p>
+
 
       <div
         style={{

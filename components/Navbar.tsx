@@ -134,7 +134,7 @@ export default function Navbar() {
       <header className="top-bar">
         <Link href="/" className="app-title-group">
           <span className="live-dot" />
-          <span className="app-title">Null Gym</span>
+          <span className="app-title">Null Gym Planner</span>
         </Link>
 
         {/* Desktop Header Navigation (Visible on tablet & desktop >= 768px) */}

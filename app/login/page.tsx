@@ -210,11 +210,8 @@ export default function LoginPage() {
         </div>
 
         <h1 id="login-heading" className="login-title">
-          NULL GYM
+          NULL GYM PLANNER
         </h1>
-        <p className="login-subtitle">
-          Engineering-grade progressive overload tracking, 1,300+ exercise library, and cloud synchronization.
-        </p>
 
         {/* Auth Mode Tabs (Log In vs Create Account) */}
         <div className="auth-tabs" role="tablist" aria-label="Authentication Options">

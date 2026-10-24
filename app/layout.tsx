@@ -7,8 +7,8 @@ import ServiceWorkerRegistrar from '../components/ServiceWorkerRegistrar';
 import ParticlesBackground from '../components/ParticlesBackground';
 
 export const metadata: Metadata = {
-  title: 'Null Gym · 6-Week Workout Planner & Tracker',
-  description: 'Private 6-week workout planner, progressive overload tracker, and 1,323 ExerciseDB exercise library across 7 master muscle pillars with offline support.',
+  title: 'Null Gym Planner',
+  description: 'Null Gym Planner',
   manifest: '/manifest.json',
   icons: {
     icon: '/icons/icon-192.svg',
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Null Gym',
+    title: 'Null Gym Planner',
   },
 };
 

@@ -459,7 +459,7 @@ export default function DashboardPage() {
   };
 
   if (!isLoaded || weeks.length === 0) {
-    return <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-dim)' }}>Loading Null Gym...</div>;
+    return <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-dim)' }}>Loading Null Gym Planner...</div>;
   }
 
   const currentWeekData = weeks[currentWeek - 1] || weeks[0];
