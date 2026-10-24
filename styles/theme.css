@@ -2182,3 +2182,40 @@ body::before {
   background: var(--accent-red);
   box-shadow: 0 0 8px var(--accent-red);
 }
+
+
+
+/* Card Glow Line Matching Null-Auth Card.tsx */
+.card-glow-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.45), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.glass-card:hover .card-glow-line,
+.workout-card:hover .card-glow-line {
+  opacity: 1;
+}
+
+/* Secondary Button - Null-Auth Exact Match */
+.btn-secondary {
+  background: rgba(24, 24, 27, 0.8) !important;
+  border: 1px solid rgba(63, 63, 70, 0.8) !important;
+  color: #e4e4e7 !important;
+  backdrop-filter: blur(8px) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.btn-secondary:hover {
+  background: rgba(39, 39, 42, 0.95) !important;
+  border-color: rgba(113, 113, 122, 0.8) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+}
